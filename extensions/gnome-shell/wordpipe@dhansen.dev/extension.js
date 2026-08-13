@@ -430,6 +430,9 @@ export default class WordpipeExtension extends Extension {
         this._syncingSettings = false;
         this._shortcutBound = false;
         this._pushToTalkActive = false;
+        this._pushToTalkKeyCode = 0;
+        this._pushToTalkModifiers = 0;
+        this._stageCapturedEventId = 0;
         this._injector = new TextInjector();
 
         this._indicator = new Indicator(this);
@@ -439,11 +442,18 @@ export default class WordpipeExtension extends Extension {
         this._syncShortcutBinding();
         this._connectSettings();
         this._connectProxy();
+        this._stageCapturedEventId = global.stage.connect(
+            'captured-event',
+            (_actor, event) => this._handleCapturedEvent(event));
     }
 
     disable() {
         this._settings?.disconnectObject(this);
         this._unbindShortcut();
+        if (this._stageCapturedEventId) {
+            global.stage.disconnect(this._stageCapturedEventId);
+            this._stageCapturedEventId = 0;
+        }
 
         if (this._proxy) {
             for (const id of this._signalIds)
@@ -489,7 +499,8 @@ export default class WordpipeExtension extends Extension {
             this._settings,
             flags,
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
-            (_display, _window, event) => this._handleShortcut(event));
+            (_display, _window, event, binding) =>
+                this._handleShortcut(event, binding));
         this._shortcutBound = true;
     }
 
@@ -501,7 +512,7 @@ export default class WordpipeExtension extends Extension {
         this._shortcutBound = false;
     }
 
-    _handleShortcut(event) {
+    _handleShortcut(event, binding) {
         if (this._settings.get_string('shortcut-mode') !== 'push-to-talk') {
             this.toggleDictation();
             return;
@@ -515,13 +526,33 @@ export default class WordpipeExtension extends Extension {
         if (this._pushToTalkActive)
             return;
         this._pushToTalkActive = true;
+        this._pushToTalkKeyCode = event?.get_key_code() ?? 0;
+        this._pushToTalkModifiers = binding?.get_modifiers() ?? 0;
         this._callRemote('Start');
+    }
+
+    _handleCapturedEvent(event) {
+        if (!this._pushToTalkActive ||
+            event.type() !== Clutter.EventType.KEY_RELEASE)
+            return Clutter.EVENT_PROPAGATE;
+
+        // Mutter cannot match the binding if one of its modifiers is released
+        // before the main key, so that ordering never reaches _handleShortcut.
+        const releasedKeyCode = event.get_key_code();
+        const releasedModifier = modifierMaskForKeySymbol(event.get_key_symbol());
+        if (releasedKeyCode === this._pushToTalkKeyCode ||
+            (releasedModifier & this._pushToTalkModifiers) !== 0)
+            this._stopPushToTalk();
+
+        return Clutter.EVENT_PROPAGATE;
     }
 
     _stopPushToTalk() {
         if (!this._pushToTalkActive)
             return;
         this._pushToTalkActive = false;
+        this._pushToTalkKeyCode = 0;
+        this._pushToTalkModifiers = 0;
         this._callRemote('Stop');
     }
 
@@ -945,6 +976,31 @@ function numberValue(value) {
 function normalizeVoiceLevel(rms) {
     const value = numberValue(rms) ?? 0.0;
     return Math.max(0.0, Math.min(1.0, (value - 0.004) * 18.0));
+}
+
+function modifierMaskForKeySymbol(keySymbol) {
+    switch (keySymbol) {
+    case Clutter.KEY_Shift_L:
+    case Clutter.KEY_Shift_R:
+        return Clutter.ModifierType.SHIFT_MASK;
+    case Clutter.KEY_Control_L:
+    case Clutter.KEY_Control_R:
+        return Clutter.ModifierType.CONTROL_MASK;
+    case Clutter.KEY_Alt_L:
+    case Clutter.KEY_Alt_R:
+        return Clutter.ModifierType.MOD1_MASK;
+    case Clutter.KEY_Meta_L:
+    case Clutter.KEY_Meta_R:
+        return Clutter.ModifierType.META_MASK;
+    case Clutter.KEY_Super_L:
+    case Clutter.KEY_Super_R:
+        return Clutter.ModifierType.SUPER_MASK;
+    case Clutter.KEY_Hyper_L:
+    case Clutter.KEY_Hyper_R:
+        return Clutter.ModifierType.HYPER_MASK;
+    default:
+        return 0;
+    }
 }
 
 function formatError(error) {
