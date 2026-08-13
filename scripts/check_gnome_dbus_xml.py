@@ -51,6 +51,8 @@ def main() -> int:
                 f"{path.relative_to(ROOT)} does not reference settings keys: "
                 + ", ".join(missing_keys)
             )
+        if path.name == "prefs.js":
+            errors.extend(prefs_import_errors(path))
     schema_errors = settings_schema_errors(GNOME_SCHEMA)
     if schema_errors:
         errors.append("\n".join(schema_errors))
@@ -114,6 +116,20 @@ def settings_schema_errors(path: Path) -> list[str]:
 def settings_keys_missing_from_js(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
     return sorted(key for key in EXPECTED_SETTINGS_KEYS if f"'{key}'" not in text)
+
+
+def prefs_import_errors(path: Path) -> list[str]:
+    text = path.read_text(encoding="utf-8")
+    display_path = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+    module_constants, separator, _rest = text.partition("const ShortcutSettingButton")
+    if not separator:
+        return [f"{display_path} is missing ShortcutSettingButton"]
+    if re.search(r"\b_\s*\(", module_constants):
+        return [
+            f"{display_path} calls gettext while importing; "
+            "translate labels after the extension context is initialized"
+        ]
+    return []
 
 
 Signature = tuple[str, tuple[tuple[str, str, str], ...]]

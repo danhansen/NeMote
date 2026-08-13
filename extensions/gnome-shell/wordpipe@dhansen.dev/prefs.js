@@ -54,8 +54,8 @@ const BACKENDS = [
 ];
 
 const SHORTCUT_MODES = [
-    {id: 'toggle', title: _('Toggle')},
-    {id: 'push-to-talk', title: _('Push to Talk')},
+    {id: 'toggle'},
+    {id: 'push-to-talk'},
 ];
 
 const LANGUAGES = [
@@ -505,7 +505,8 @@ class WordpipePage extends Adw.PreferencesPage {
         group.add(shortcutRow);
 
         this._shortcutModeModel = new Gtk.StringList();
-        SHORTCUT_MODES.forEach(mode => this._shortcutModeModel.append(mode.title));
+        SHORTCUT_MODES.forEach(mode =>
+            this._shortcutModeModel.append(shortcutModeTitle(mode.id)));
         this._shortcutModeRow = new Adw.ComboRow({
             title: _('Shortcut Behavior'),
             subtitle: _('Toggle on each press, or hold the shortcut while speaking.'),
@@ -1138,4 +1139,8 @@ function formatError(error) {
 
 function markupSafe(value) {
     return GLib.markup_escape_text(String(value), -1);
+}
+
+function shortcutModeTitle(mode) {
+    return mode === 'push-to-talk' ? _('Push to Talk') : _('Toggle');
 }
