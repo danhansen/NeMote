@@ -53,6 +53,11 @@ const BACKENDS = [
     ['parakeet', 'Parakeet'],
 ];
 
+const SHORTCUT_MODES = [
+    {id: 'toggle', title: _('Toggle')},
+    {id: 'push-to-talk', title: _('Push to Talk')},
+];
+
 const LANGUAGES = [
     ['en-US', 'English (US)'],
     ['en-GB', 'English (UK)'],
@@ -292,7 +297,7 @@ const WordpipePage = GObject.registerClass(
 class WordpipePage extends Adw.PreferencesPage {
     constructor(settings) {
         super({
-            title: _('Wordpipe'),
+            title: _('General'),
             icon_name: 'audio-input-microphone-symbolic',
         });
         this._settings = settings;
@@ -313,28 +318,12 @@ class WordpipePage extends Adw.PreferencesPage {
         this._installButtons = new Map();
         this._installing = false;
         this._installingProfile = '';
-        this._viewStack = new Adw.ViewStack({
-            hexpand: true,
-            vexpand: true,
+        this.advancedPage = new Adw.PreferencesPage({
+            title: _('Advanced'),
+            icon_name: 'preferences-other-symbolic',
         });
-        this._viewStack.add_titled(
-            this._buildGeneralSection(),
-            'general',
-            _('General'));
-        this._viewStack.add_titled(
-            this._buildAdvancedSection(),
-            'advanced',
-            _('Advanced'));
-
-        const viewGroup = new Adw.PreferencesGroup({
-            title: _('View'),
-        });
-        viewGroup.add(new Adw.ViewSwitcher({
-            stack: this._viewStack,
-            halign: Gtk.Align.CENTER,
-        }));
-        viewGroup.add(this._viewStack);
-        this.add(viewGroup);
+        this._buildGeneralSection();
+        this._buildAdvancedSection();
         this._connectProxy();
     }
 
@@ -349,40 +338,19 @@ class WordpipePage extends Adw.PreferencesPage {
     }
 
     _buildGeneralSection() {
-        const section = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 12,
-            margin_bottom: 12,
-            margin_start: 12,
-            margin_end: 12,
-        });
-        this._buildModelGroup(section);
-        this._buildInputGroup(section);
-        this._buildBehaviorGroup(section);
-        return section;
+        this._buildModelGroup(this);
+        this._buildInputGroup(this);
+        this._buildBehaviorGroup(this);
     }
 
     _buildAdvancedSection() {
-        const section = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 12,
-            margin_bottom: 12,
-            margin_start: 12,
-            margin_end: 12,
-        });
-        this._buildAdvancedGroup(section);
-        this._buildTranscriptGroup(section);
-        this._buildServiceGroup(section);
-        return section;
+        this._buildAdvancedGroup(this.advancedPage);
+        this._buildTranscriptGroup(this.advancedPage);
+        this._buildServiceGroup(this.advancedPage);
     }
 
     _appendSection(section, widget) {
-        if (section.append)
-            section.append(widget);
-        else
-            section.add(widget);
+        section.add(widget);
     }
 
     _buildModelGroup(section) {
@@ -535,6 +503,25 @@ class WordpipePage extends Adw.PreferencesPage {
         this._shortcutButton = shortcutButton;
         this._shortcutRow = shortcutRow;
         group.add(shortcutRow);
+
+        this._shortcutModeModel = new Gtk.StringList();
+        SHORTCUT_MODES.forEach(mode => this._shortcutModeModel.append(mode.title));
+        this._shortcutModeRow = new Adw.ComboRow({
+            title: _('Shortcut Behavior'),
+            subtitle: _('Toggle on each press, or hold the shortcut while speaking.'),
+            model: this._shortcutModeModel,
+        });
+        this._shortcutModeRow.selected = this._selectedIndex(
+            SHORTCUT_MODES,
+            this._settings.get_string('shortcut-mode'));
+        this._shortcutModeRow.connect('notify::selected', row => {
+            if (this._syncingSettings)
+                return;
+            const mode = SHORTCUT_MODES[row.selected]?.id;
+            if (mode)
+                this._settings.set_string('shortcut-mode', mode);
+        });
+        group.add(this._shortcutModeRow);
     }
 
     _buildAdvancedGroup(section) {
@@ -867,6 +854,9 @@ class WordpipePage extends Adw.PreferencesPage {
         this._modelInstallerPathRow.text = this._settings.get_string('model-installer-path');
         this._threadsRow.value = this._settings.get_uint('num-threads');
         this._sampleRateRow.value = this._settings.get_uint('sample-rate');
+        this._shortcutModeRow.selected = this._selectedIndex(
+            SHORTCUT_MODES,
+            this._settings.get_string('shortcut-mode'));
         this._syncShortcutValue();
     }
 
@@ -1064,7 +1054,9 @@ class WordpipePage extends Adw.PreferencesPage {
 
 export default class WordpipePreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        window.add(new WordpipePage(this.getSettings()));
+        const generalPage = new WordpipePage(this.getSettings());
+        window.add(generalPage);
+        window.add(generalPage.advancedPage);
     }
 }
 

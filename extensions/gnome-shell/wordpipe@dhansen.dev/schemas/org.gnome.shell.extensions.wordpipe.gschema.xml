@@ -3,8 +3,17 @@
   <schema id="org.gnome.shell.extensions.wordpipe" path="/org/gnome/shell/extensions/wordpipe/">
     <key name="toggle-shortcut" type="as">
       <default>['&lt;Control&gt;&lt;Alt&gt;space']</default>
-      <summary>Toggle dictation shortcut</summary>
-      <description>Keyboard shortcut handled by GNOME Shell to start or stop Wordpipe dictation.</description>
+      <summary>Dictation shortcut</summary>
+      <description>Keyboard shortcut handled by GNOME Shell to control Wordpipe dictation.</description>
+    </key>
+    <key name="shortcut-mode" type="s">
+      <choices>
+        <choice value="toggle"/>
+        <choice value="push-to-talk"/>
+      </choices>
+      <default>'toggle'</default>
+      <summary>Shortcut behavior</summary>
+      <description>Whether the shortcut toggles dictation or starts it while held and stops it when released.</description>
     </key>
     <key name="shortcut-capture-active" type="b">
       <default>false</default>

@@ -429,6 +429,7 @@ export default class WordpipeExtension extends Extension {
         this._signalIds = [];
         this._syncingSettings = false;
         this._shortcutBound = false;
+        this._pushToTalkActive = false;
         this._injector = new TextInjector();
 
         this._indicator = new Indicator(this);
@@ -480,20 +481,48 @@ export default class WordpipeExtension extends Extension {
     _bindShortcut() {
         if (this._shortcutBound)
             return;
+        const pushToTalk = this._settings.get_string('shortcut-mode') === 'push-to-talk';
+        const flags = Meta.KeyBindingFlags.IGNORE_AUTOREPEAT |
+            (pushToTalk ? Meta.KeyBindingFlags.TRIGGER_RELEASE : 0);
         Main.wm.addKeybinding(
             'toggle-shortcut',
             this._settings,
-            Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
+            flags,
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
-            () => this.toggleDictation());
+            (_display, _window, event) => this._handleShortcut(event));
         this._shortcutBound = true;
     }
 
     _unbindShortcut() {
+        this._stopPushToTalk();
         if (!this._shortcutBound)
             return;
         Main.wm.removeKeybinding('toggle-shortcut');
         this._shortcutBound = false;
+    }
+
+    _handleShortcut(event) {
+        if (this._settings.get_string('shortcut-mode') !== 'push-to-talk') {
+            this.toggleDictation();
+            return;
+        }
+
+        if (event?.type() === Clutter.EventType.KEY_RELEASE) {
+            this._stopPushToTalk();
+            return;
+        }
+
+        if (this._pushToTalkActive)
+            return;
+        this._pushToTalkActive = true;
+        this._callRemote('Start');
+    }
+
+    _stopPushToTalk() {
+        if (!this._pushToTalkActive)
+            return;
+        this._pushToTalkActive = false;
+        this._callRemote('Stop');
     }
 
     _syncShortcutBinding() {
@@ -505,6 +534,10 @@ export default class WordpipeExtension extends Extension {
 
     _connectSettings() {
         this._settings.connectObject('changed::shortcut-capture-active', () => {
+            this._syncShortcutBinding();
+        }, this);
+        this._settings.connectObject('changed::shortcut-mode', () => {
+            this._unbindShortcut();
             this._syncShortcutBinding();
         }, this);
         this._settings.connectObject('changed', (_settings, key) => {
