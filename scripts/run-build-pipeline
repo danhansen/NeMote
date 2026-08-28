@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$ROOT"
+
+run_tests() {
+  cargo fmt --all -- --check
+  cargo test --locked --workspace
+  PYTHONPATH=src python3 -m unittest discover -s tests
+  python3 scripts/check_gnome_dbus_xml.py
+  node --input-type=module --check \
+    < extensions/gnome-shell/wordpipe@dhansen.dev/extension.js
+  node --input-type=module --check \
+    < extensions/gnome-shell/wordpipe@dhansen.dev/prefs.js
+  glib-compile-schemas --strict --dry-run \
+    extensions/gnome-shell/wordpipe@dhansen.dev/schemas
+}
+
+package_release() {
+  local version=${1:?package requires a version}
+  local output_dir=${2:-dist}
+  scripts/package-wordpipe-release --version "$version" --output-dir "$output_dir"
+}
+
+case "${1:-test}" in
+  test)
+    run_tests
+    ;;
+  package)
+    package_release "${2:-}" "${3:-dist}"
+    ;;
+  all)
+    run_tests
+    package_release "${2:-}" "${3:-dist}"
+    ;;
+  *)
+    echo "usage: scripts/run-build-pipeline test|package VERSION [OUTPUT_DIR]|all VERSION [OUTPUT_DIR]" >&2
+    exit 2
+    ;;
+esac

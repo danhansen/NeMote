@@ -45,8 +45,10 @@ const SERVICE_XML = `
 const WordpipeProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
 
 const PROFILES = [
-    ['fast', 'Fast', 'FP32 projected-cache model; fastest profile, largest footprint.'],
-    ['compact', 'Compact', 'Dynamic-int8 fixed-shape profile with ORT-format startup.'],
+    ['compact', 'compact', 'Dynamic-int8 fixed-shape multilingual model.', 'compact', 'multilingual'],
+    ['compact-english', 'compact (English only, lower WER)', 'Dynamic-int8 fixed-shape dedicated English model.', 'compact', 'english'],
+    ['fast', 'fast', 'FP32 projected-cache multilingual model; largest footprint.', 'fast', 'multilingual'],
+    ['fast-english', 'fast (English only, lower WER)', 'FP32 projected-cache dedicated English model; largest footprint.', 'fast', 'english'],
 ];
 
 const BACKENDS = [
@@ -305,11 +307,14 @@ class WordpipePage extends Adw.PreferencesPage {
         this._signalIds = [];
         this._syncingSettings = false;
         this._backends = BACKENDS.map(([id, title]) => ({id, title, description: ''}));
-        this._languages = LANGUAGES.map(([id, title]) => ({id, title}));
-        this._profiles = PROFILES.map(([id, title, description]) => ({
+        this._allLanguages = LANGUAGES.map(([id, title]) => ({id, title}));
+        this._languages = [];
+        this._profiles = PROFILES.map(([id, title, description, modelProfile, modelFamily]) => ({
             id,
             title,
             description,
+            model_profile: modelProfile,
+            model_family: modelFamily,
             installed: false,
             runtime_dir: '',
         }));
@@ -381,32 +386,28 @@ class WordpipePage extends Adw.PreferencesPage {
         this._profileModel = new Gtk.StringList();
         this._profiles.forEach(profile => this._profileModel.append(profile.title));
         this._profileRow = new Adw.ComboRow({
-            title: _('Model Profile'),
-            subtitle: _('Choose the speed, memory, and disk footprint tradeoff.'),
+            title: _('Model Preset'),
+            subtitle: _('Choose performance and language coverage.'),
             model: this._profileModel,
         });
         this._profileRow.selected = this._selectedIndex(
-            this._profiles, this._settings.get_string('model-profile'));
+            this._profiles, this._selectedPresetId());
         this._profileRow.connect('notify::selected', row => {
             if (this._syncingSettings)
                 return;
-            const profile = this._profiles[row.selected]?.id;
-            if (!profile)
+            const preset = this._profiles[row.selected];
+            if (!preset)
                 return;
-            this._settings.set_string('model-profile', profile);
-            this._callRemote('SetModelProfile', profile);
+            this._callRemote('SetModelProfile', preset.id);
         });
         this._modelGroup.add(this._profileRow);
 
         this._languageModel = new Gtk.StringList();
-        this._languages.forEach(language => this._languageModel.append(language.title));
         this._languageRow = new Adw.ComboRow({
             title: _('Dictation Language'),
-            subtitle: _('Auto is useful for multilingual dictation, but may be less accurate.'),
             model: this._languageModel,
         });
-        this._languageRow.selected = this._selectedIndex(
-            this._languages, this._settings.get_string('language'));
+        this._updateLanguageOptions();
         this._languageRow.connect('notify::selected', row => {
             if (this._syncingSettings)
                 return;
@@ -750,6 +751,8 @@ class WordpipePage extends Adw.PreferencesPage {
                 id: item.id,
                 title: item.title ?? item.id,
                 description: item.description ?? '',
+                model_profile: item.model_profile ?? item.id,
+                model_family: item.model_family ?? 'multilingual',
                 installed: Boolean(item.installed),
                 runtime_dir: item.runtime_dir ?? '',
             }));
@@ -790,6 +793,8 @@ class WordpipePage extends Adw.PreferencesPage {
                 this._settings.set_string('backend', values.backend);
             if (typeof values.model_profile === 'string')
                 this._settings.set_string('model-profile', values.model_profile);
+            if (typeof values.model_family === 'string')
+                this._settings.set_string('model-family', values.model_family);
             if (typeof values.input_device === 'string')
                 this._settings.set_string('input-device', values.input_device);
             if (typeof values.language === 'string')
@@ -827,11 +832,13 @@ class WordpipePage extends Adw.PreferencesPage {
         if (!this._backendRow || !this._profileRow || !this._languageRow)
             return;
         const backend = this._settings.get_string('backend');
-        const profile = this._settings.get_string('model-profile');
+        const preset = this._selectedPresetId();
+        const family = this._settings.get_string('model-family');
         const language = this._settings.get_string('language');
         this._withSyncing(() => {
+            this._updateLanguageOptions(family, language);
             this._backendRow.selected = this._selectedIndex(this._backends, backend);
-            this._profileRow.selected = this._selectedIndex(this._profiles, profile);
+            this._profileRow.selected = this._selectedIndex(this._profiles, preset);
             this._languageRow.selected = this._selectedIndex(this._languages, language);
         });
     }
@@ -996,6 +1003,26 @@ class WordpipePage extends Adw.PreferencesPage {
 
     _selectedIndex(items, selectedId) {
         return Math.max(0, items.findIndex(item => item.id === selectedId));
+    }
+
+    _selectedPresetId() {
+        const profile = this._settings.get_string('model-profile');
+        const family = this._settings.get_string('model-family');
+        return family === 'english' ? `${profile}-english` : profile;
+    }
+
+    _updateLanguageOptions(
+        family = this._settings.get_string('model-family'),
+        selectedLanguage = this._settings.get_string('language')) {
+        this._languages = family === 'english'
+            ? this._allLanguages.filter(language => language.id.startsWith('en-'))
+            : [...this._allLanguages];
+        clearStringList(this._languageModel);
+        this._languages.forEach(language => this._languageModel.append(language.title));
+        this._languageRow.subtitle = family === 'english'
+            ? _('The selected model supports English only.')
+            : _('Auto is useful for multilingual dictation, but may be less accurate.');
+        this._languageRow.selected = this._selectedIndex(this._languages, selectedLanguage);
     }
 
     _withSyncing(callback) {

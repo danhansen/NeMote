@@ -152,20 +152,20 @@ tokenizer.model
 The earlier sherpa-onnx int8 model remains useful for legacy diagnostics, but it
 is not the default runtime target.
 
-Wordpipe keeps two app-level model profiles:
+Wordpipe keeps two performance profiles, each available with a multilingual or
+dedicated-English checkpoint:
 
 - `fast`: FP32 projected-cache export, best validated speed/accuracy, largest
   footprint.
 - `compact`: dynamic-int8 projected-cache export with fixed shapes and
   ORT-format startup, smaller footprint and sub-second load target.
 
-`wordpipe model-install --profile fast|compact` downloads validated raw ONNX
-profile files from the profile's Hugging Face model repo and installs them under
+`wordpipe model-install --profile fast|compact --model-family
+multilingual|english` downloads only the selected variant and installs it under
 `model_root`. Profiles that use ORT startup, currently `compact`, then convert
-the ONNX profile to a local ORT-format runtime cache. Both profiles can coexist
-under `model_root`; changing `model_profile` or passing
-`--model-profile fast|compact` selects which one the app and daemon load when
-`model_dir` is not explicitly set. The reproducible NeMo export pipeline remains
+the ONNX profile to a local ORT-format runtime cache. All variants can coexist
+under their existing directory names; the service stores `model_profile` and
+`model_family` separately. The reproducible NeMo export pipeline remains
 available with `model-install --build-from-nemo` for release/developer work.
 See [model-publishing.md](model-publishing.md) for packaging and uploading the
 prebuilt profile repos that `model-install` downloads.

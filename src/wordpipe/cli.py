@@ -429,34 +429,27 @@ def _cmd_model_profiles(args: argparse.Namespace) -> int:
     file_config = _load_cli_config(args)
     model_root = Path(args.model_root).expanduser() if args.model_root else file_config.model_root
     rows = []
-    for spec in MODEL_PROFILES.values():
-        runtime_dirs = {
-            family: profile_runtime_dir(model_root, spec.name, family) if model_root else None
-            for family in ("english", "multilingual")
-        }
-        installed_families = {
-            family: bool(model_root and profile_installed(model_root, spec.name, family))
-            for family in ("english", "multilingual")
-        }
-        installed = all(installed_families.values())
+    presets = (
+        ("compact", "compact", "multilingual"),
+        ("compact-english", "compact (English only, lower WER)", "english"),
+        ("fast", "fast", "multilingual"),
+        ("fast-english", "fast (English only, lower WER)", "english"),
+    )
+    for name, title, family in presets:
+        profile = name.removesuffix("-english")
+        spec = MODEL_PROFILES[profile]
+        runtime_dir = profile_runtime_dir(model_root, profile, family) if model_root else None
+        installed = bool(model_root and profile_installed(model_root, profile, family))
         rows.append(
             {
-                "name": spec.name,
-                "title": spec.title,
+                "name": name,
+                "title": title,
+                "model_profile": profile,
+                "model_family": family,
                 "description": spec.description,
                 "build_profile": spec.build_profile,
-                "prebuilt_repo": spec.prebuilt_repo,
-                "english_prebuilt_repo": spec.english_prebuilt_repo,
-                "runtime_dir": (
-                    str(runtime_dirs["multilingual"])
-                    if runtime_dirs["multilingual"] is not None
-                    else None
-                ),
-                "runtime_dirs": {
-                    family: str(path) if path is not None else None
-                    for family, path in runtime_dirs.items()
-                },
-                "installed_families": installed_families,
+                "prebuilt_repo": spec.prebuilt_repo_for_family(family),
+                "runtime_dir": str(runtime_dir) if runtime_dir is not None else None,
                 "installed": installed,
             }
         )
@@ -1133,8 +1126,8 @@ def build_parser() -> argparse.ArgumentParser:
     model_install.add_argument(
         "--model-family",
         choices=("all", "multilingual", "english"),
-        default="all",
-        help="Checkpoint family to install. Defaults to both language families.",
+        default="multilingual",
+        help="Checkpoint family to install. Defaults to multilingual; pass english for English-only.",
     )
     model_install.add_argument(
         "--model-root",

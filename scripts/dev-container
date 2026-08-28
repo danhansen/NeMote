@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ENGINE=${CONTAINER_ENGINE:-}
+IMAGE=${WORDPIPE_DEV_IMAGE:-wordpipe-dev:local}
+
+if [[ -z "$ENGINE" ]]; then
+  if command -v podman >/dev/null 2>&1; then
+    ENGINE=podman
+  elif command -v docker >/dev/null 2>&1; then
+    ENGINE=docker
+  else
+    echo "podman or docker is required" >&2
+    exit 1
+  fi
+fi
+
+build_image() {
+  "$ENGINE" build \
+    --file "$ROOT/containers/Containerfile.dev" \
+    --tag "$IMAGE" \
+    "$ROOT"
+}
+
+run_image() {
+  local -a user_args
+  if [[ "$(basename "$ENGINE")" == "podman" ]]; then
+    user_args=(--userns=keep-id)
+  else
+    user_args=(--user "$(id -u):$(id -g)")
+  fi
+  "$ENGINE" run --rm \
+    "${user_args[@]}" \
+    --volume "$ROOT:/workspace:Z" \
+    --workdir /workspace \
+    "$IMAGE" \
+    "$@"
+}
+
+command=${1:-test}
+shift || true
+
+case "$command" in
+  build)
+    build_image
+    ;;
+  shell)
+    if [[ "${WORDPIPE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
+      build_image
+    fi
+    run_image bash "$@"
+    ;;
+  test|package|all)
+    if [[ "${WORDPIPE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
+      build_image
+    fi
+    run_image scripts/run-build-pipeline "$command" "$@"
+    ;;
+  run)
+    if [[ "${WORDPIPE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
+      build_image
+    fi
+    run_image "$@"
+    ;;
+  *)
+    echo "usage: scripts/dev-container build|shell|test|package VERSION [OUTPUT_DIR]|all VERSION [OUTPUT_DIR]|run COMMAND..." >&2
+    exit 2
+    ;;
+esac

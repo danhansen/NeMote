@@ -121,6 +121,8 @@ stale events after toggles, restarts, or extension reloads.
 | `seq` | `t` | Monotonic transcript event sequence within the current service lifetime. |
 | `backend` | `s` | Selected backend id, currently `parakeet`. |
 | `model_profile` | `s` | Selected model profile id, currently `fast` or `compact`. |
+| `model_family` | `s` | Selected checkpoint family, `multilingual` or `english`. |
+| `model_preset` | `s` | Combined UI preset id, such as `compact-english`. |
 | `input_device` | `s` | Selected CPAL input-device selector, or empty for system default. |
 | `partial_text` | `s` | Most recent full partial transcript for UI display. |
 | `last_commit_text` | `s` | Most recent committed/final transcript payload. |
@@ -136,6 +138,8 @@ stale events after toggles, restarts, or extension reloads.
 | --- | --- | --- |
 | `backend` | `s` | Backend id. Unknown values are rejected. |
 | `model_profile` | `s` | Model profile id. Unknown values are rejected. |
+| `model_family` | `s` | Checkpoint family selected by the model preset. |
+| `model_preset` | `s` | Combined UI preset id. |
 | `input_device` | `s` | CPAL input-device selector, or empty for default. |
 | `shortcut` | `s` | GNOME accelerator string mirrored from extension settings. |
 | `model_root` | `s` | Root directory for installed model profiles. Empty input is normalized to the service default. |
@@ -156,13 +160,15 @@ stale events after toggles, restarts, or extension reloads.
 | `title` | `s` | User-facing backend label. |
 | `description` | `s` | User-facing backend description. |
 
-`ListModelProfiles` returns one map per model profile:
+`ListModelProfiles` returns one map per profile/family preset:
 
 | Key | Type | Meaning |
 | --- | --- | --- |
-| `id` | `s` | Profile id used by `SetModelProfile` and `InstallModel`. |
-| `title` | `s` | User-facing profile label. |
+| `id` | `s` | Preset id used by `SetModelProfile` and `InstallModel`. |
+| `title` | `s` | User-facing preset label. |
 | `description` | `s` | User-facing profile description. |
+| `model_profile` | `s` | Performance profile, `fast` or `compact`. |
+| `model_family` | `s` | Checkpoint family, `multilingual` or `english`. |
 | `build_profile` | `s` | Installer/export recipe name. |
 | `output_name` | `s` | Installed model directory base name. |
 | `prebuilt_repo` | `s` | Default Hugging Face model repo for raw prebuilt profile files. |
@@ -356,9 +362,10 @@ The Rust service persists user-facing configuration in:
 ```
 
 Use `wordpipe-service --config /path/to/service.json` for isolated testing.
-When no saved `model_profile` exists yet, the service keeps the default profile
-only if it is installed; otherwise it selects the first installed profile it can
-find under `model_root`. An explicitly saved valid profile remains authoritative
+When no saved `model_family` exists, the service infers it once from the saved
+language so existing installations keep using the same model path. The service
+keeps the selected family while looking for an installed performance profile
+under `model_root`. An explicitly saved valid preset remains authoritative
 even when its model files are not installed yet, so the UI can still drive that
 profile's install flow.
 The GNOME extension mirrors service config on startup before pushing GSettings

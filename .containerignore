@@ -1,0 +1,12 @@
+.git
+.agents
+.codex
+.venv
+.venv-*
+build
+dist
+models
+target
+__pycache__
+*.pyc
+*.egg-info

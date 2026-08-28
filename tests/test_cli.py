@@ -63,6 +63,18 @@ def _toggle_args(
 
 
 class CliModelResolutionTests(unittest.TestCase):
+    def test_model_install_defaults_to_one_multilingual_family(self) -> None:
+        args = build_parser().parse_args(["model-install", "--profile", "compact"])
+
+        self.assertEqual(args.model_family, "multilingual")
+
+    def test_model_install_accepts_explicit_english_family(self) -> None:
+        args = build_parser().parse_args(
+            ["model-install", "--profile", "compact", "--model-family", "english"]
+        )
+
+        self.assertEqual(args.model_family, "english")
+
     def test_voice_keyboard_parser_accepts_profile_and_shortcut(self) -> None:
         args = build_parser().parse_args(
             [

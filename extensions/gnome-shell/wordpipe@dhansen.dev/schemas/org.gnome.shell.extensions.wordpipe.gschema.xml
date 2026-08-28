@@ -30,6 +30,15 @@
       <summary>Model profile</summary>
       <description>Wordpipe model profile, such as fast or compact.</description>
     </key>
+    <key name="model-family" type="s">
+      <choices>
+        <choice value="multilingual"/>
+        <choice value="english"/>
+      </choices>
+      <default>'english'</default>
+      <summary>Model language family</summary>
+      <description>Whether the selected profile uses the multilingual or dedicated English model.</description>
+    </key>
     <key name="input-device" type="s">
       <default>''</default>
       <summary>Input device selector</summary>
@@ -38,7 +47,7 @@
     <key name="language" type="s">
       <default>'en-US'</default>
       <summary>Dictation language</summary>
-      <description>Target language prompt passed to the multilingual ASR model. Auto enables language detection.</description>
+      <description>Target language prompt. Available values depend on the selected model family.</description>
     </key>
     <key name="model-root" type="s">
       <default>''</default>

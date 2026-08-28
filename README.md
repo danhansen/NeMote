@@ -68,7 +68,9 @@ gnome-extensions prefs wordpipe@dhansen.dev
 Install the compact model profile:
 
 ```sh
-~/.local/libexec/wordpipe/bin/wordpipe-model-install --profile compact
+~/.local/libexec/wordpipe/bin/wordpipe-model-install \
+  --profile compact \
+  --model-family multilingual
 ```
 
 Release builds also publish `wordpipe@dhansen.dev.shell-extension.zip`, which
@@ -78,7 +80,21 @@ service from the composed release archive.
 
 ## Local Development
 
-Run tests:
+The checked-in development container is the canonical build environment. It
+pins the Rust image and Python model-tool dependencies and includes ALSA, GNOME
+schema, Node syntax-check, and release packaging tools. With Podman or Docker:
+
+```sh
+scripts/dev-container test
+scripts/dev-container shell
+scripts/dev-container package dev-local dist
+```
+
+The GitHub CI and Release workflows use this same image and
+`scripts/run-build-pipeline`, so local container results exercise the same
+commands used to publish releases.
+
+To run only the lightweight host-side Python tests:
 
 ```sh
 PYTHONPATH=src python3 -m unittest discover -s tests
@@ -450,38 +466,37 @@ because it loads the projected-cache Nemotron encoder reliably here.
 
 ### Building A Wordpipe Nemotron Model
 
-Wordpipe has two named app profiles:
+Wordpipe exposes four model presets backed by two performance profiles and two
+checkpoint families:
 
-- `fast`: FP32 projected-cache model. This is the fastest/most accurate
+- `compact`: multilingual dynamic-int8 projected-cache model.
+- `compact (English only, lower WER)`: dedicated-English compact model.
+- `fast`: multilingual FP32 projected-cache model. This is the fastest
   validated profile so far and has the largest disk/RAM footprint.
-- `compact`: dynamic-int8 projected-cache model with fixed shapes and native
-  ORT-format startup. This is the small model option and loads in under a
-  second on the test machine.
+- `fast (English only, lower WER)`: dedicated-English fast model.
 
-List profile status:
+List preset status:
 
 ```sh
 PYTHONPATH=src python3 -m wordpipe model-profiles
 ```
 
-The app window can install these profiles interactively. Each performance
-profile contains two optimized checkpoint families: the dedicated
-`nvidia/nemotron-speech-streaming-en-0.6b` model for English and
-`nvidia/nemotron-3.5-asr-streaming-0.6b` for auto-detect and every non-English
-language. Wordpipe reloads the appropriate family when the language selection
-crosses that boundary. The CLI command below installs both families and, for
-`compact`, converts/caches their local ORT-format runtime directories.
+The app installs only the selected preset. The dedicated
+`nvidia/nemotron-speech-streaming-en-0.6b` presets expose English (US/UK), while
+the `nvidia/nemotron-3.5-asr-streaming-0.6b` presets expose auto-detect and all
+supported languages. Existing model directory names are unchanged.
 
-Install the compact profile:
+Install the multilingual compact preset:
 
 ```sh
 PYTHONPATH=src python3 -m wordpipe model-install \
-  --profile compact
+  --profile compact \
+  --model-family multilingual
 ```
 
 Wordpipe uses `huggingface_hub` and enables `HF_HUB_ENABLE_HF_TRANSFER=1` when
-`hf_transfer` is installed. Run `model-install` again with the other profile
-when you want to try it; both artifacts can coexist under `model_root`.
+`hf_transfer` is installed. Run `model-install` again with another preset
+when you want to try it; its artifact can coexist under `model_root`.
 See [docs/model-publishing.md](docs/model-publishing.md) for packaging and
 uploading the prebuilt profile archives that this command downloads.
 

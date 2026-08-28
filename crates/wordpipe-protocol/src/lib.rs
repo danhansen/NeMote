@@ -4,6 +4,7 @@ pub const INTERFACE_NAME: &str = "dev.wordpipe.Service1";
 
 pub const DEFAULT_BACKEND: &str = "parakeet";
 pub const DEFAULT_MODEL_PROFILE: &str = "fast";
+pub const DEFAULT_MODEL_FAMILY: &str = "english";
 pub const DEFAULT_SHORTCUT: &str = "<Control><Alt>space";
 pub const DEFAULT_LANGUAGE: &str = "en-US";
 pub const DEFAULT_SAMPLE_RATE: u32 = 16_000;
@@ -37,6 +38,33 @@ pub const MODEL_PROFILES: &[ModelProfileSpec] = &[
         english_output_name: "nemotron-wordpipe-en-compact-fixed-shape",
         english_prebuilt_repo: "fractalyzer/wordpipe-nemotron-en-compact-fixed-shape",
         ort_format: true,
+    },
+];
+
+pub const MODEL_PRESETS: &[ModelPresetSpec] = &[
+    ModelPresetSpec {
+        id: "compact",
+        title: "compact",
+        model_profile: "compact",
+        model_family: "multilingual",
+    },
+    ModelPresetSpec {
+        id: "compact-english",
+        title: "compact (English only, lower WER)",
+        model_profile: "compact",
+        model_family: "english",
+    },
+    ModelPresetSpec {
+        id: "fast",
+        title: "fast",
+        model_profile: "fast",
+        model_family: "multilingual",
+    },
+    ModelPresetSpec {
+        id: "fast-english",
+        title: "fast (English only, lower WER)",
+        model_profile: "fast",
+        model_family: "english",
     },
 ];
 
@@ -228,6 +256,14 @@ pub struct ModelProfileSpec {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ModelPresetSpec {
+    pub id: &'static str,
+    pub title: &'static str,
+    pub model_profile: &'static str,
+    pub model_family: &'static str,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct LanguageSpec {
     pub id: &'static str,
     pub title: &'static str,
@@ -241,6 +277,21 @@ pub fn is_model_profile(value: &str) -> bool {
     MODEL_PROFILES.iter().any(|profile| profile.id == value)
 }
 
+pub fn is_model_family(value: &str) -> bool {
+    matches!(value, "multilingual" | "english")
+}
+
+pub fn model_preset(value: &str) -> Option<&'static ModelPresetSpec> {
+    MODEL_PRESETS.iter().find(|preset| preset.id == value)
+}
+
+pub fn model_preset_id(profile: &str, family: &str) -> Option<&'static str> {
+    MODEL_PRESETS
+        .iter()
+        .find(|preset| preset.model_profile == profile && preset.model_family == family)
+        .map(|preset| preset.id)
+}
+
 pub fn is_language(value: &str) -> bool {
     LANGUAGE_OPTIONS.iter().any(|language| language.id == value)
 }
@@ -248,6 +299,10 @@ pub fn is_language(value: &str) -> bool {
 pub fn is_english_language(value: &str) -> bool {
     let normalized = value.trim().to_ascii_lowercase();
     normalized == "en" || normalized.starts_with("en-")
+}
+
+pub fn language_available_for_model_family(family: &str, language: &str) -> bool {
+    is_language(language) && (family != "english" || is_english_language(language))
 }
 
 pub const INTROSPECTION_XML: &str = r#"
@@ -344,5 +399,35 @@ mod tests {
         assert!(is_english_language("en-GB"));
         assert!(!is_english_language("auto"));
         assert!(!is_english_language("fr-FR"));
+    }
+
+    #[test]
+    fn presets_keep_profile_and_family_separate() {
+        assert_eq!(
+            MODEL_PRESETS
+                .iter()
+                .map(|preset| preset.title)
+                .collect::<Vec<_>>(),
+            [
+                "compact",
+                "compact (English only, lower WER)",
+                "fast",
+                "fast (English only, lower WER)",
+            ]
+        );
+        let preset = model_preset("compact-english").unwrap();
+        assert_eq!(preset.model_profile, "compact");
+        assert_eq!(preset.model_family, "english");
+        assert_eq!(model_preset_id("fast", "multilingual"), Some("fast"));
+        assert_eq!(model_preset_id("fast", "english"), Some("fast-english"));
+    }
+
+    #[test]
+    fn english_family_only_exposes_english_languages() {
+        assert!(language_available_for_model_family("english", "en-US"));
+        assert!(language_available_for_model_family("english", "en-GB"));
+        assert!(!language_available_for_model_family("english", "auto"));
+        assert!(!language_available_for_model_family("english", "fr-FR"));
+        assert!(language_available_for_model_family("multilingual", "fr-FR"));
     }
 }

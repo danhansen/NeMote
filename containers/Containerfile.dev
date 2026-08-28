@@ -1,0 +1,40 @@
+# docker.io/library/rust:1.97.1-bookworm
+FROM docker.io/library/rust@sha256:0e2bcaef56d041a486784e54104a81aebe0da44bd03019bd70bc0401e42e4a97
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN rustup component add rustfmt
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        git \
+        libasound2-dev \
+        libglib2.0-bin \
+        nodejs \
+        pkg-config \
+        python3 \
+        python3-gi \
+        python3-pip \
+        python3-venv \
+        zip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv --system-site-packages /opt/wordpipe-venv
+COPY containers/requirements-dev.lock /tmp/wordpipe-requirements-dev.lock
+RUN /opt/wordpipe-venv/bin/python -m pip install --no-cache-dir \
+        -r /tmp/wordpipe-requirements-dev.lock \
+    && rm /tmp/wordpipe-requirements-dev.lock
+
+COPY containers/entrypoint.sh /usr/local/bin/wordpipe-container-entrypoint
+RUN chmod 0755 /usr/local/bin/wordpipe-container-entrypoint
+
+ENV PATH="/opt/wordpipe-venv/bin:/usr/local/cargo/bin:${PATH}" \
+    PYTHONPATH="/workspace/src" \
+    HOME="/tmp/wordpipe-home" \
+    CARGO_HOME="/workspace/target/container-cargo-home" \
+    CARGO_TARGET_DIR="/workspace/target/container"
+
+WORKDIR /workspace
+ENTRYPOINT ["wordpipe-container-entrypoint"]
+CMD ["scripts/run-build-pipeline", "test"]

@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    env:
+      CONTAINER_ENGINE: docker
+      WORDPIPE_DEV_IMAGE: wordpipe-dev:${{ github.sha }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build reproducible development image
+        run: scripts/dev-container build
+
+      - name: Run build pipeline tests inside development image
+        env:
+          WORDPIPE_CONTAINER_SKIP_BUILD: "1"
+        run: scripts/dev-container test

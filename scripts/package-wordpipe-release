@@ -41,6 +41,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RUST_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
 UUID="wordpipe@dhansen.dev"
 ARCH="$(uname -m)"
 
@@ -102,8 +103,8 @@ mkdir -p \
   "$STAGE_ROOT/share/systemd/user" \
   "$STAGE_ROOT/share/gnome-shell/extensions"
 
-install -m 0755 "$ROOT/target/release/wordpipe-service" "$STAGE_ROOT/bin/wordpipe-service"
-install -m 0755 "$ROOT/target/release/wordpipe-parakeet-worker" "$STAGE_ROOT/bin/wordpipe-parakeet-worker"
+install -m 0755 "$RUST_TARGET_DIR/release/wordpipe-service" "$STAGE_ROOT/bin/wordpipe-service"
+install -m 0755 "$RUST_TARGET_DIR/release/wordpipe-parakeet-worker" "$STAGE_ROOT/bin/wordpipe-parakeet-worker"
 install -m 0644 "$ROOT/packaging/requirements-release-model-install.txt" \
   "$STAGE_ROOT/share/wordpipe/requirements-model-install.txt"
 

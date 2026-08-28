@@ -12,48 +12,26 @@ permissions:
 jobs:
   package:
     runs-on: ubuntu-24.04
+    env:
+      CONTAINER_ENGINE: docker
+      WORDPIPE_DEV_IMAGE: wordpipe-dev:${{ github.sha }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libasound2-dev \
-            libglib2.0-bin \
-            pkg-config \
-            python3 \
-            python3-gi \
-            python3-venv \
-            zip
+      - name: Build reproducible development image
+        run: scripts/dev-container build
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Python test dependencies
-        run: |
-          python3 -m venv --system-site-packages .venv-ci
-          .venv-ci/bin/python -m pip install --upgrade pip
-          .venv-ci/bin/python -m pip install -e ".[model-tools]"
-
-      - name: Run Rust tests
-        run: cargo test --locked --workspace
-
-      - name: Run Python tests
-        run: PYTHONPATH=src .venv-ci/bin/python -m unittest discover -s tests
-
-      - name: Check GNOME D-Bus XML
-        run: .venv-ci/bin/python scripts/check_gnome_dbus_xml.py
-
-      - name: Package release assets
+      - name: Test and package inside development image
+        env:
+          WORDPIPE_CONTAINER_SKIP_BUILD: "1"
         run: |
           version="${GITHUB_REF_NAME#v}"
           if [ "$GITHUB_REF_TYPE" != "tag" ]; then
             version="dev-${GITHUB_SHA::12}"
           fi
-          scripts/package-wordpipe-release --version "$version" --output-dir dist
+          scripts/dev-container all "$version" dist
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4

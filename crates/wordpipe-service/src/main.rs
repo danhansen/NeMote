@@ -12,9 +12,11 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use wordpipe_protocol::{
-    is_backend, is_english_language, is_language, is_model_profile, BACKENDS, BUS_NAME,
-    DEFAULT_BACKEND, DEFAULT_LANGUAGE, DEFAULT_MODEL_PROFILE, DEFAULT_NUM_THREADS,
-    DEFAULT_SAMPLE_RATE, DEFAULT_SHORTCUT, MODEL_PROFILES, OBJECT_PATH,
+    is_backend, is_english_language, is_language, is_model_family, is_model_profile,
+    language_available_for_model_family, model_preset, model_preset_id, ModelPresetSpec, BACKENDS,
+    BUS_NAME, DEFAULT_BACKEND, DEFAULT_LANGUAGE, DEFAULT_MODEL_FAMILY, DEFAULT_MODEL_PROFILE,
+    DEFAULT_NUM_THREADS, DEFAULT_SAMPLE_RATE, DEFAULT_SHORTCUT, MODEL_PRESETS, MODEL_PROFILES,
+    OBJECT_PATH,
 };
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedValue, Value};
@@ -35,6 +37,7 @@ struct Args {
 struct ServiceConfig {
     backend: String,
     model_profile: String,
+    model_family: String,
     input_device: String,
     language: String,
     shortcut: String,
@@ -53,6 +56,7 @@ struct ServiceConfig {
 struct PersistedConfig {
     backend: Option<String>,
     model_profile: Option<String>,
+    model_family: Option<String>,
     input_device: Option<String>,
     language: Option<String>,
     shortcut: Option<String>,
@@ -72,6 +76,7 @@ impl From<&ServiceConfig> for PersistedConfig {
         Self {
             backend: Some(config.backend.clone()),
             model_profile: Some(config.model_profile.clone()),
+            model_family: Some(config.model_family.clone()),
             input_device: Some(config.input_device.clone()),
             language: Some(config.language.clone()),
             shortcut: Some(config.shortcut.clone()),
@@ -93,6 +98,7 @@ impl Default for ServiceConfig {
         Self {
             backend: DEFAULT_BACKEND.to_string(),
             model_profile: DEFAULT_MODEL_PROFILE.to_string(),
+            model_family: DEFAULT_MODEL_FAMILY.to_string(),
             input_device: String::new(),
             language: DEFAULT_LANGUAGE.to_string(),
             shortcut: DEFAULT_SHORTCUT.to_string(),
@@ -311,43 +317,41 @@ impl WordpipeService {
             .lock()
             .map(|data| data.config.model_root.clone())
             .unwrap_or_default();
-        MODEL_PROFILES
+        MODEL_PRESETS
             .iter()
-            .map(|profile| {
-                let runtime_dir =
-                    profile_runtime_dir(&model_root, profile.output_name, profile.ort_format);
-                let english_runtime_dir = profile_runtime_dir(
-                    &model_root,
-                    profile.english_output_name,
-                    profile.ort_format,
-                );
+            .filter_map(|preset| {
+                let profile = MODEL_PROFILES
+                    .iter()
+                    .find(|profile| profile.id == preset.model_profile)?;
+                let english = preset.model_family == "english";
+                let output_name = if english {
+                    profile.english_output_name
+                } else {
+                    profile.output_name
+                };
+                let prebuilt_repo = if english {
+                    profile.english_prebuilt_repo
+                } else {
+                    profile.prebuilt_repo
+                };
+                let runtime_dir = profile_runtime_dir(&model_root, output_name, profile.ort_format);
                 let mut item = VariantMap::new();
-                insert_str(&mut item, "id", profile.id);
-                insert_str(&mut item, "title", profile.title);
+                insert_str(&mut item, "id", preset.id);
+                insert_str(&mut item, "title", preset.title);
                 insert_str(&mut item, "description", profile.description);
+                insert_str(&mut item, "model_profile", preset.model_profile);
+                insert_str(&mut item, "model_family", preset.model_family);
                 insert_str(&mut item, "build_profile", profile.build_profile);
-                insert_str(&mut item, "output_name", profile.output_name);
-                insert_str(&mut item, "prebuilt_repo", profile.prebuilt_repo);
-                insert_str(
-                    &mut item,
-                    "english_output_name",
-                    profile.english_output_name,
-                );
-                insert_str(
-                    &mut item,
-                    "english_prebuilt_repo",
-                    profile.english_prebuilt_repo,
-                );
+                insert_str(&mut item, "output_name", output_name);
+                insert_str(&mut item, "prebuilt_repo", prebuilt_repo);
                 insert_bool(&mut item, "ort_format", profile.ort_format);
                 insert_str(&mut item, "runtime_dir", &runtime_dir);
-                insert_str(&mut item, "english_runtime_dir", &english_runtime_dir);
                 insert_bool(
                     &mut item,
                     "installed",
-                    profile_installed(&runtime_dir, profile.id)
-                        && profile_installed(&english_runtime_dir, profile.id),
+                    profile_installed(&runtime_dir, profile.id),
                 );
-                item
+                Some(item)
             })
             .collect()
     }
@@ -383,18 +387,17 @@ impl WordpipeService {
 
     async fn set_model_profile(
         &self,
-        profile: &str,
+        preset_id: &str,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
     ) -> zbus::fdo::Result<()> {
-        if !is_model_profile(profile) {
+        let Some(preset) = model_preset(preset_id) else {
             return Err(zbus::fdo::Error::InvalidArgs(format!(
-                "unknown model profile: {profile}"
+                "unknown model preset: {preset_id}"
             )));
-        }
+        };
         let (config_data, config, state) = {
             let mut data = self.lock_data()?;
-            if data.config.model_profile != profile {
-                data.config.model_profile = profile.to_string();
+            if apply_model_preset(&mut data.config, preset) {
                 shutdown_worker(&mut data);
             }
             let config_data = data.config.clone();
@@ -502,10 +505,14 @@ impl WordpipeService {
                         "unknown language: {value}"
                     )));
                 }
+                if !language_available_for_model_family(&data.config.model_family, &value) {
+                    return Err(zbus::fdo::Error::InvalidArgs(format!(
+                        "language {value} is not available for the {} model family",
+                        data.config.model_family
+                    )));
+                }
                 if data.config.language != value {
-                    if is_english_language(&data.config.language) != is_english_language(&value) {
-                        restart_worker = true;
-                    } else if !data.listening && !data.stopping {
+                    if !data.listening && !data.stopping {
                         language_update = data
                             .worker
                             .as_ref()
@@ -566,16 +573,16 @@ impl WordpipeService {
 
     async fn install_model(
         &self,
-        profile: &str,
+        preset_id: &str,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
     ) -> zbus::fdo::Result<()> {
-        if !is_model_profile(profile) {
+        let Some(preset) = model_preset(preset_id) else {
             return Err(zbus::fdo::Error::InvalidArgs(format!(
-                "unknown model profile: {profile}"
+                "unknown model preset: {preset_id}"
             )));
-        }
+        };
         let mut progress = VariantMap::new();
-        insert_str(&mut progress, "profile", profile);
+        insert_str(&mut progress, "profile", preset.id);
         insert_str(&mut progress, "phase", "starting");
         insert_str(&mut progress, "message", "starting model installer");
         insert_f64(&mut progress, "fraction", 0.0);
@@ -587,7 +594,7 @@ impl WordpipeService {
                 ));
             }
             data.installing = true;
-            data.installing_profile = profile.to_string();
+            data.installing_profile = preset.id.to_string();
             data.last_install_progress = progress.clone();
             (
                 data.config.model_installer_path.clone(),
@@ -595,16 +602,25 @@ impl WordpipeService {
                 state_map(&data),
             )
         };
-        Self::install_progress(&emitter, profile, progress).await?;
+        Self::install_progress(&emitter, preset.id, progress).await?;
         Self::state_changed(&emitter, state).await?;
 
         let service = self.clone();
-        let profile = profile.to_string();
+        let profile = preset.model_profile.to_string();
+        let family = preset.model_family.to_string();
+        let preset_id = preset.id.to_string();
         let emitter = emitter.to_owned();
         std::thread::Builder::new()
             .name("wordpipe-model-install".to_string())
             .spawn(move || {
-                service.run_model_installer(installer_path, model_root, profile, emitter);
+                service.run_model_installer(
+                    installer_path,
+                    model_root,
+                    profile,
+                    family,
+                    preset_id,
+                    emitter,
+                );
             })
             .map_err(|err| zbus::fdo::Error::Failed(err.to_string()))?;
         Ok(())
@@ -971,18 +987,13 @@ impl WordpipeService {
         installer_path: String,
         model_root: String,
         profile: String,
+        family: String,
+        preset_id: String,
         emitter: SignalEmitter<'static>,
     ) {
-        let mut command = Command::new(&installer_path);
-        command
-            .arg("--profile")
-            .arg(&profile)
-            .arg("--model-root")
-            .arg(&model_root)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        let command = model_installer_command(&installer_path, &model_root, &profile, &family);
 
-        let result = run_progress_command(command, &profile, &emitter, Arc::clone(&self.data));
+        let result = run_progress_command(command, &preset_id, &emitter, Arc::clone(&self.data));
         let state = {
             let mut data = match self.data.lock() {
                 Ok(data) => data,
@@ -994,22 +1005,22 @@ impl WordpipeService {
                 Ok(()) => {
                     data.last_error.clear();
                     let mut progress = VariantMap::new();
-                    insert_str(&mut progress, "profile", &profile);
+                    insert_str(&mut progress, "profile", &preset_id);
                     insert_str(&mut progress, "phase", "complete");
                     insert_str(&mut progress, "message", "model profile installed");
                     insert_f64(&mut progress, "fraction", 1.0);
                     data.last_install_progress = progress.clone();
-                    let _ = zbus::block_on(Self::install_progress(&emitter, &profile, progress));
+                    let _ = zbus::block_on(Self::install_progress(&emitter, &preset_id, progress));
                 }
                 Err(err) => {
                     data.last_error = err.to_string();
                     let mut progress = VariantMap::new();
-                    insert_str(&mut progress, "profile", &profile);
+                    insert_str(&mut progress, "profile", &preset_id);
                     insert_str(&mut progress, "phase", "error");
                     insert_str(&mut progress, "message", &err.to_string());
                     insert_f64(&mut progress, "fraction", 0.0);
                     data.last_install_progress = progress.clone();
-                    let _ = zbus::block_on(Self::install_progress(&emitter, &profile, progress));
+                    let _ = zbus::block_on(Self::install_progress(&emitter, &preset_id, progress));
                     let _ = zbus::block_on(Self::error(&emitter, &err.to_string()));
                 }
             }
@@ -1017,6 +1028,39 @@ impl WordpipeService {
         };
         let _ = zbus::block_on(Self::state_changed(&emitter, state));
     }
+}
+
+fn model_installer_command(
+    installer_path: &str,
+    model_root: &str,
+    profile: &str,
+    family: &str,
+) -> Command {
+    let mut command = Command::new(installer_path);
+    command
+        .arg("--profile")
+        .arg(profile)
+        .arg("--model-family")
+        .arg(family)
+        .arg("--model-root")
+        .arg(model_root)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    command
+}
+
+fn apply_model_preset(config: &mut ServiceConfig, preset: &ModelPresetSpec) -> bool {
+    let changed =
+        config.model_profile != preset.model_profile || config.model_family != preset.model_family;
+    if !changed {
+        return false;
+    }
+    config.model_profile = preset.model_profile.to_string();
+    config.model_family = preset.model_family.to_string();
+    if !language_available_for_model_family(&config.model_family, &config.language) {
+        config.language = DEFAULT_LANGUAGE.to_string();
+    }
+    true
 }
 
 fn main() -> Result<()> {
@@ -1062,6 +1106,10 @@ fn state_map(data: &ServiceData) -> VariantMap {
     insert_u64(&mut map, "seq", data.seq);
     insert_str(&mut map, "backend", &data.config.backend);
     insert_str(&mut map, "model_profile", &data.config.model_profile);
+    insert_str(&mut map, "model_family", &data.config.model_family);
+    if let Some(preset) = model_preset_id(&data.config.model_profile, &data.config.model_family) {
+        insert_str(&mut map, "model_preset", preset);
+    }
     insert_str(&mut map, "input_device", &data.config.input_device);
     insert_str(&mut map, "partial_text", &data.partial_text);
     insert_str(&mut map, "last_commit_text", &data.last_commit_text);
@@ -1085,6 +1133,10 @@ fn config_map(config: &ServiceConfig) -> VariantMap {
     let mut map = VariantMap::new();
     insert_str(&mut map, "backend", &config.backend);
     insert_str(&mut map, "model_profile", &config.model_profile);
+    insert_str(&mut map, "model_family", &config.model_family);
+    if let Some(preset) = model_preset_id(&config.model_profile, &config.model_family) {
+        insert_str(&mut map, "model_preset", preset);
+    }
     insert_str(&mut map, "input_device", &config.input_device);
     insert_str(&mut map, "language", &config.language);
     insert_str(&mut map, "shortcut", &config.shortcut);
@@ -1140,6 +1192,7 @@ fn apply_persisted_config(
     mut config: ServiceConfig,
     persisted: PersistedConfig,
 ) -> Result<ServiceConfig> {
+    let migrate_family_from_language = persisted.model_family.is_none();
     if let Some(value) = persisted.backend {
         if !is_backend(&value) {
             return Err(anyhow!("unknown backend in service config: {value}"));
@@ -1152,6 +1205,12 @@ fn apply_persisted_config(
         }
         config.model_profile = value;
     }
+    if let Some(value) = persisted.model_family {
+        if !is_model_family(&value) {
+            return Err(anyhow!("unknown model family in service config: {value}"));
+        }
+        config.model_family = value;
+    }
     if let Some(value) = persisted.input_device {
         config.input_device = value;
     }
@@ -1161,6 +1220,17 @@ fn apply_persisted_config(
             return Err(anyhow!("unknown language in service config: {value}"));
         }
         config.language = value;
+    }
+    if migrate_family_from_language {
+        config.model_family = if is_english_language(&config.language) {
+            "english"
+        } else {
+            "multilingual"
+        }
+        .to_string();
+    }
+    if !language_available_for_model_family(&config.model_family, &config.language) {
+        config.language = DEFAULT_LANGUAGE.to_string();
     }
     if let Some(value) = persisted.shortcut {
         config.shortcut = value;
@@ -1497,7 +1567,7 @@ fn selected_runtime_dir(config: &ServiceConfig) -> String {
     else {
         return config.model_root.clone();
     };
-    let output_name = if is_english_language(&config.language) {
+    let output_name = if config.model_family == "english" {
         profile.english_output_name
     } else {
         profile.output_name
@@ -1510,7 +1580,7 @@ fn select_installed_model_profile(config: &mut ServiceConfig) {
         return;
     }
     for profile in MODEL_PROFILES {
-        let output_name = if is_english_language(&config.language) {
+        let output_name = if config.model_family == "english" {
             profile.english_output_name
         } else {
             profile.output_name
@@ -1994,9 +2064,7 @@ fn progress_from_line(profile: &str, line: &str) -> VariantMap {
     if let Some(payload) = line.strip_prefix(PREFIX) {
         if let Ok(value) = serde_json::from_str::<JsonValue>(payload) {
             let mut progress = json_to_variant_map(&value);
-            if !progress.contains_key("profile") {
-                insert_str(&mut progress, "profile", profile);
-            }
+            insert_str(&mut progress, "profile", profile);
             return progress;
         }
     }
@@ -2060,12 +2128,52 @@ mod tests {
         .unwrap();
 
         assert_eq!(config.model_profile, "compact");
+        assert_eq!(config.model_family, "english");
         assert_eq!(config.input_device, "pipewire");
         assert_eq!(config.language, "en-GB");
         assert_eq!(config.num_threads, 4);
         assert_eq!(config.sample_rate, 16_000);
         assert!(!config.show_overlay);
         assert_eq!(config.backend, DEFAULT_BACKEND);
+    }
+
+    #[test]
+    fn legacy_config_infers_family_from_saved_language() {
+        let english = apply_persisted_config(
+            ServiceConfig::default(),
+            PersistedConfig {
+                language: Some("en-GB".to_string()),
+                ..PersistedConfig::default()
+            },
+        )
+        .unwrap();
+        let multilingual = apply_persisted_config(
+            ServiceConfig::default(),
+            PersistedConfig {
+                language: Some("fr-FR".to_string()),
+                ..PersistedConfig::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(english.model_family, "english");
+        assert_eq!(multilingual.model_family, "multilingual");
+    }
+
+    #[test]
+    fn explicit_english_family_rejects_non_english_saved_language() {
+        let config = apply_persisted_config(
+            ServiceConfig::default(),
+            PersistedConfig {
+                model_family: Some("english".to_string()),
+                language: Some("fr-FR".to_string()),
+                ..PersistedConfig::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(config.model_family, "english");
+        assert_eq!(config.language, DEFAULT_LANGUAGE);
     }
 
     #[test]
@@ -2079,7 +2187,9 @@ mod tests {
                 "input_device",
                 "insert_partials",
                 "language",
+                "model_family",
                 "model_installer_path",
+                "model_preset",
                 "model_profile",
                 "model_root",
                 "num_threads",
@@ -2110,7 +2220,9 @@ mod tests {
                 "last_metrics",
                 "listening",
                 "loading_model",
+                "model_family",
                 "model_loaded",
+                "model_preset",
                 "model_profile",
                 "partial_text",
                 "selected_model_installed",
@@ -2147,16 +2259,16 @@ mod tests {
         let profiles = service.list_model_profiles();
 
         assert!(!profiles.is_empty());
+        assert_eq!(profiles.len(), 4);
         assert_eq!(
             sorted_keys(&profiles[0]),
             vec![
                 "build_profile",
                 "description",
-                "english_output_name",
-                "english_prebuilt_repo",
-                "english_runtime_dir",
                 "id",
                 "installed",
+                "model_family",
+                "model_profile",
                 "ort_format",
                 "output_name",
                 "prebuilt_repo",
@@ -2165,6 +2277,79 @@ mod tests {
             ]
         );
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn installer_command_downloads_only_the_selected_family() {
+        let command = model_installer_command(
+            "/usr/bin/wordpipe-model-install",
+            "/models",
+            "compact",
+            "english",
+        );
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            args,
+            [
+                "--profile",
+                "compact",
+                "--model-family",
+                "english",
+                "--model-root",
+                "/models",
+            ]
+        );
+    }
+
+    #[test]
+    fn selecting_english_preset_keeps_paths_and_limits_language() {
+        let mut config = ServiceConfig {
+            model_profile: "compact".to_string(),
+            model_family: "multilingual".to_string(),
+            language: "fr-FR".to_string(),
+            model_root: "/models".to_string(),
+            ..ServiceConfig::default()
+        };
+
+        assert!(apply_model_preset(
+            &mut config,
+            model_preset("compact-english").unwrap()
+        ));
+
+        assert_eq!(config.model_profile, "compact");
+        assert_eq!(config.model_family, "english");
+        assert_eq!(config.language, DEFAULT_LANGUAGE);
+        assert_eq!(
+            selected_runtime_dir(&config),
+            "/models/nemotron-wordpipe-en-compact-fixed-shape-ort-format"
+        );
+    }
+
+    #[test]
+    fn selecting_multilingual_preset_does_not_change_existing_model_path() {
+        let mut config = ServiceConfig {
+            model_profile: "compact".to_string(),
+            model_family: "english".to_string(),
+            language: "en-US".to_string(),
+            model_root: "/models".to_string(),
+            ..ServiceConfig::default()
+        };
+
+        assert!(apply_model_preset(
+            &mut config,
+            model_preset("compact").unwrap()
+        ));
+
+        assert_eq!(config.model_family, "multilingual");
+        assert_eq!(config.language, "en-US");
+        assert_eq!(
+            selected_runtime_dir(&config),
+            "/models/nemotron-wordpipe-compact-fixed-shape-ort-format"
+        );
     }
 
     #[test]
@@ -2409,6 +2594,7 @@ mod tests {
         let mut config = ServiceConfig {
             model_root: root.to_string_lossy().to_string(),
             model_profile: "fast".to_string(),
+            model_family: "multilingual".to_string(),
             language: "auto".to_string(),
             ..ServiceConfig::default()
         };
@@ -2431,6 +2617,7 @@ mod tests {
             &ServiceConfig {
                 model_root: model_root.to_string_lossy().to_string(),
                 model_profile: "fast".to_string(),
+                model_family: "multilingual".to_string(),
                 language: "auto".to_string(),
                 ..ServiceConfig::default()
             },
@@ -2453,6 +2640,7 @@ mod tests {
         let mut config = ServiceConfig {
             model_root: root.to_string_lossy().to_string(),
             model_profile: "fast".to_string(),
+            model_family: "multilingual".to_string(),
             language: "auto".to_string(),
             ..ServiceConfig::default()
         };
@@ -2472,6 +2660,7 @@ mod tests {
             config: ServiceConfig {
                 model_root: root.to_string_lossy().to_string(),
                 model_profile: "compact".to_string(),
+                model_family: "multilingual".to_string(),
                 language: "auto".to_string(),
                 ..ServiceConfig::default()
             },
@@ -2492,11 +2681,12 @@ mod tests {
     }
 
     #[test]
-    fn selected_runtime_uses_english_model_for_english_locales() {
+    fn selected_runtime_uses_explicit_english_model_family() {
         let root = unique_temp_dir("english-runtime-selection");
         let config = ServiceConfig {
             model_root: root.to_string_lossy().to_string(),
             model_profile: "fast".to_string(),
+            model_family: "english".to_string(),
             language: "en-GB".to_string(),
             ..ServiceConfig::default()
         };
@@ -2509,12 +2699,13 @@ mod tests {
     }
 
     #[test]
-    fn selected_runtime_uses_multilingual_model_for_auto_and_non_english() {
+    fn selected_runtime_uses_explicit_multilingual_model_for_any_language() {
         let root = unique_temp_dir("multilingual-runtime-selection");
         for language in ["auto", "fr-FR"] {
             let config = ServiceConfig {
                 model_root: root.to_string_lossy().to_string(),
                 model_profile: "fast".to_string(),
+                model_family: "multilingual".to_string(),
                 language: language.to_string(),
                 ..ServiceConfig::default()
             };

@@ -24,6 +24,7 @@ EXPECTED_SETTINGS_KEYS = {
     "shortcut-capture-active": "b",
     "backend": "s",
     "model-profile": "s",
+    "model-family": "s",
     "input-device": "s",
     "language": "s",
     "model-root": "s",

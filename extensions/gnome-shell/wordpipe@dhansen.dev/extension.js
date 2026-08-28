@@ -479,12 +479,6 @@ export default class WordpipeExtension extends Extension {
     selectModelProfile(profile) {
         this._selectedProfile = profile;
         this._syncProfileMenu();
-        this._syncingSettings = true;
-        try {
-            this._settings.set_string('model-profile', profile);
-        } finally {
-            this._syncingSettings = false;
-        }
         this._callRemote('SetModelProfile', profile, () => this._refreshConfigFromService());
     }
 
@@ -688,14 +682,20 @@ export default class WordpipeExtension extends Extension {
     }
 
     _syncSettingsFromConfig(config) {
-        if (typeof config.model_profile === 'string')
-            this._selectedProfile = config.model_profile;
+        if (typeof config.model_preset === 'string')
+            this._selectedProfile = config.model_preset;
+        else if (typeof config.model_profile === 'string')
+            this._selectedProfile = config.model_family === 'english'
+                ? `${config.model_profile}-english`
+                : config.model_profile;
         this._syncingSettings = true;
         try {
             if (typeof config.backend === 'string')
                 this._settings.set_string('backend', config.backend);
             if (typeof config.model_profile === 'string')
                 this._settings.set_string('model-profile', config.model_profile);
+            if (typeof config.model_family === 'string')
+                this._settings.set_string('model-family', config.model_family);
             if (typeof config.input_device === 'string')
                 this._settings.set_string('input-device', config.input_device);
             if (typeof config.language === 'string')
@@ -734,7 +734,9 @@ export default class WordpipeExtension extends Extension {
             this._callRemote('SetBackend', this._settings.get_string('backend'));
             break;
         case 'model-profile':
-            this._callRemote('SetModelProfile', this._settings.get_string('model-profile'));
+        case 'model-family':
+            // Preset changes are sent atomically by the menu/preferences client.
+            // These keys mirror service state and must not be pushed separately.
             break;
         case 'input-device':
             this._callRemote('SetInputDevice', this._settings.get_string('input-device'));
@@ -794,9 +796,12 @@ export default class WordpipeExtension extends Extension {
     }
 
     _syncProfileMenu() {
+        const profile = this._settings.get_string('model-profile');
+        const family = this._settings.get_string('model-family');
+        const preset = family === 'english' ? `${profile}-english` : profile;
         this._indicator?.setProfiles(
             this._profiles,
-            this._selectedProfile || this._settings.get_string('model-profile'));
+            this._selectedProfile || preset);
     }
 
     _callRemote(method, ...args) {
@@ -824,8 +829,13 @@ export default class WordpipeExtension extends Extension {
 
     _handleState(state) {
         this._state = state;
-        if (typeof state.model_profile === 'string') {
-            this._selectedProfile = state.model_profile;
+        if (typeof state.model_preset === 'string') {
+            this._selectedProfile = state.model_preset;
+            this._syncProfileMenu();
+        } else if (typeof state.model_profile === 'string') {
+            this._selectedProfile = state.model_family === 'english'
+                ? `${state.model_profile}-english`
+                : state.model_profile;
             this._syncProfileMenu();
         }
         this._indicator?.setState(this._state, true);
