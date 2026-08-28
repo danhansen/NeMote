@@ -397,6 +397,11 @@ impl WordpipeService {
         };
         let (config_data, config, state) = {
             let mut data = self.lock_data()?;
+            if !model_preset_installed(&data.config, preset) {
+                return Err(zbus::fdo::Error::Failed(format!(
+                    "model preset '{preset_id}' is not installed; install it before selecting it"
+                )));
+            }
             if apply_model_preset(&mut data.config, preset) {
                 shutdown_worker(&mut data);
             }
@@ -1575,6 +1580,22 @@ fn selected_runtime_dir(config: &ServiceConfig) -> String {
     profile_runtime_dir(&config.model_root, output_name, profile.ort_format)
 }
 
+fn model_preset_installed(config: &ServiceConfig, preset: &ModelPresetSpec) -> bool {
+    let Some(profile) = MODEL_PROFILES
+        .iter()
+        .find(|profile| profile.id == preset.model_profile)
+    else {
+        return false;
+    };
+    let output_name = if preset.model_family == "english" {
+        profile.english_output_name
+    } else {
+        profile.output_name
+    };
+    let runtime_dir = profile_runtime_dir(&config.model_root, output_name, profile.ort_format);
+    profile_installed(&runtime_dir, profile.id)
+}
+
 fn select_installed_model_profile(config: &mut ServiceConfig) {
     if profile_installed(&selected_runtime_dir(config), &config.model_profile) {
         return;
@@ -2648,6 +2669,31 @@ mod tests {
         select_installed_model_profile(&mut config);
 
         assert_eq!(config.model_profile, "fast");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn unavailable_model_presets_cannot_be_selected() {
+        let root = unique_temp_dir("selectable-model-presets");
+        let compact_runtime = root.join("nemotron-wordpipe-compact-fixed-shape-ort-format");
+        write_test_runtime_profile(&compact_runtime);
+        let config = ServiceConfig {
+            model_root: root.to_string_lossy().to_string(),
+            ..ServiceConfig::default()
+        };
+
+        assert!(model_preset_installed(
+            &config,
+            model_preset("compact").unwrap()
+        ));
+        assert!(!model_preset_installed(
+            &config,
+            model_preset("compact-english").unwrap()
+        ));
+        assert!(!model_preset_installed(
+            &config,
+            model_preset("fast").unwrap()
+        ));
         fs::remove_dir_all(root).unwrap();
     }
 

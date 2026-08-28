@@ -7,6 +7,8 @@ import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
+import {installedModelProfiles} from './modelState.js';
+
 const BUS_NAME = 'dev.wordpipe.Service';
 const OBJECT_PATH = '/dev/wordpipe/Service';
 
@@ -321,6 +323,7 @@ class WordpipePage extends Adw.PreferencesPage {
             installed: false,
             runtime_dir: '',
         }));
+        this._selectableProfiles = installedModelProfiles(this._profiles);
         this._deviceSelectors = [''];
         this._installRows = new Map();
         this._installButtons = new Map();
@@ -387,18 +390,19 @@ class WordpipePage extends Adw.PreferencesPage {
         this._modelGroup.add(this._backendRow);
 
         this._profileModel = new Gtk.StringList();
-        this._profiles.forEach(profile => this._profileModel.append(profile.title));
+        this._selectableProfiles.forEach(profile => this._profileModel.append(profile.title));
         this._profileRow = new Adw.ComboRow({
             title: _('Model Preset'),
-            subtitle: _('Choose performance and language coverage.'),
+            subtitle: _('Install a model below before selecting it.'),
             model: this._profileModel,
+            sensitive: this._selectableProfiles.length > 0,
         });
         this._profileRow.selected = this._selectedIndex(
-            this._profiles, this._selectedPresetId());
+            this._selectableProfiles, this._selectedPresetId());
         this._profileRow.connect('notify::selected', row => {
             if (this._syncingSettings)
                 return;
-            const preset = this._profiles[row.selected];
+            const preset = this._selectableProfiles[row.selected];
             if (!preset)
                 return;
             this._selectedPreset = preset.id;
@@ -764,8 +768,7 @@ class WordpipePage extends Adw.PreferencesPage {
                 installed: Boolean(item.installed),
                 runtime_dir: item.runtime_dir ?? '',
             }));
-            clearStringList(this._profileModel);
-            this._profiles.forEach(profile => this._profileModel.append(profile.title));
+            this._rebuildProfileOptions();
             this._rebuildProfileRows();
             this._syncComboSelections();
         });
@@ -849,7 +852,8 @@ class WordpipePage extends Adw.PreferencesPage {
         this._withSyncing(() => {
             this._updateLanguageOptions(family, language);
             this._backendRow.selected = this._selectedIndex(this._backends, backend);
-            this._profileRow.selected = this._selectedIndex(this._profiles, preset);
+            this._profileRow.selected = this._selectedIndex(
+                this._selectableProfiles, preset);
             this._languageRow.selected = this._selectedIndex(this._languages, language);
         });
     }
@@ -937,7 +941,7 @@ class WordpipePage extends Adw.PreferencesPage {
             if (this._profileRow) {
                 this._withSyncing(() => {
                     this._profileRow.selected = this._selectedIndex(
-                        this._profiles, selectedPreset);
+                        this._selectableProfiles, selectedPreset);
                 });
             }
         }
@@ -1020,6 +1024,19 @@ class WordpipePage extends Adw.PreferencesPage {
             const profile = this._profiles.find(item => item.id === profileId);
             button.sensitive = Boolean(profile && !profile.installed && !this._installing);
         }
+    }
+
+    _rebuildProfileOptions() {
+        this._selectableProfiles = installedModelProfiles(this._profiles);
+        clearStringList(this._profileModel);
+        this._selectableProfiles.forEach(profile =>
+            this._profileModel.append(profile.title));
+        if (!this._profileRow)
+            return;
+        this._profileRow.sensitive = this._selectableProfiles.length > 0;
+        this._profileRow.subtitle = this._selectableProfiles.length > 0
+            ? _('Choose among installed models.')
+            : _('Install a model below before selecting it.');
     }
 
     _selectedIndex(items, selectedId) {
