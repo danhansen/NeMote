@@ -60,6 +60,23 @@ Before uploading, review the generated model card for:
 
 ## Publish Profiles
 
+The full build-and-publish path for both performance profiles is automated by
+the family release wrapper:
+
+```sh
+PYTHONPATH=src python3 scripts/publish_wordpipe_model_family.py \
+  --model-family english \
+  --python .venv-nemo-export/bin/python \
+  --force \
+  --upload
+```
+
+It downloads/reuses the family checkpoint, builds `fast` and `compact` with the
+correct family-specific cache contract, validates and packages each repository,
+then uploads both. Use `--model-family multilingual` for the multilingual pair,
+`--dry-run` to inspect the commands without changing anything, or `--skip-build`
+to repackage and upload already-built artifacts.
+
 Publish one profile per Hugging Face model repo. From canonical installed
 profile names under a model root:
 
