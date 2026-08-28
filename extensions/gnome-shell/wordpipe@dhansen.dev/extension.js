@@ -11,6 +11,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import {requiredModifiersHeld} from './shortcutState.js';
+
 const BUS_NAME = 'dev.wordpipe.Service';
 const OBJECT_PATH = '/dev/wordpipe/Service';
 
@@ -106,8 +108,7 @@ class Indicator extends PanelMenu.Button {
         });
         this.menu.addMenuItem(this._profileStatusItem);
 
-        this._profileItems = [];
-        this._installProfileItems = new Map();
+        this._profileItems = new Map();
         this._installProgressByProfile = new Map();
         this._installing = false;
         this._installingProfile = '';
@@ -149,59 +150,89 @@ class Indicator extends PanelMenu.Button {
             previousInstallingProfile !== this._installingProfile
         )
             this.setProfiles(this._profiles, this._selectedProfile);
-        else
-            this._syncInstallActions();
     }
 
     setProfiles(profiles, selectedProfile) {
+        const currentIds = [...this._profileItems.keys()];
+        const nextIds = profiles.map(profile => profile.id);
+        const inventoryChanged = currentIds.length !== nextIds.length ||
+            currentIds.some((id, index) => id !== nextIds[index]);
         this._profiles = profiles;
         this._selectedProfile = selectedProfile;
-        for (const item of this._profileItems)
-            item.destroy();
-        this._profileItems = [];
-        this._installProfileItems.clear();
 
         this._profileStatusItem.label.text = _('Model');
 
-        if (!profiles.length)
-            return;
-
-        for (const profile of profiles) {
-            const isSelected = profile.id === selectedProfile;
-            const installing = this._installingProfile === profile.id;
-            const rowReactive = profile.installed && !isSelected;
-            const selectItem = new PopupMenu.PopupBaseMenuItem({
-                reactive: rowReactive,
-                can_focus: rowReactive,
-            });
-            const titleLabel = new St.Label({
-                text: profile.title,
-                x_expand: true,
-                y_align: Clutter.ActorAlign.CENTER,
-            });
-            if (!profile.installed)
-                titleLabel.style_class = 'wordpipe-model-title-missing';
-            selectItem.add_child(titleLabel);
-            if (!profile.installed) {
-                const progress = this._installProgressByProfile.get(profile.id) ?? {};
-                const fraction = numberValue(progress.fraction);
-                selectItem.add_child(installing
-                    ? createInstallProgress(fraction)
-                    : createInstallButton(this._installing,
-                        () => this._extension.installModel(profile.id)));
+        if (inventoryChanged) {
+            for (const row of this._profileItems.values())
+                row.item.destroy();
+            this._profileItems.clear();
+            for (const profile of profiles) {
+                const row = this._createProfileRow(profile);
+                this._profileItems.set(profile.id, row);
+                this._profileSection.addMenuItem(row.item);
             }
-            selectItem.setOrnament(isSelected
+        }
+
+        for (const profile of profiles)
+            this._updateProfileRow(this._profileItems.get(profile.id), profile);
+    }
+
+    setSelectedProfile(selectedProfile) {
+        this._selectedProfile = selectedProfile;
+        for (const [profileId, row] of this._profileItems.entries()) {
+            row.item.setOrnament(profileId === selectedProfile
                 ? PopupMenu.Ornament.CHECK
                 : PopupMenu.Ornament.NONE);
-            if (profile.installed && !isSelected) {
-                selectItem.connect('activate',
-                    () => this._extension.selectModelProfile(profile.id));
-            }
-            if (!profile.installed)
-                this._installProfileItems.set(profile.id, selectItem);
-            this._profileSection.addMenuItem(selectItem);
-            this._profileItems.push(selectItem);
         }
+    }
+
+    _createProfileRow(profile) {
+        const item = new PopupMenu.PopupBaseMenuItem();
+        const titleLabel = new St.Label({
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        const installButton = createInstallButton(
+            () => this._extension.installModel(profile.id));
+        const progress = createInstallProgress();
+        item.add_child(titleLabel);
+        item.add_child(installButton);
+        item.add_child(progress.box);
+        item.connect('activate', () => {
+            const current = this._profiles.find(candidate => candidate.id === profile.id);
+            if (current?.installed)
+                this._extension.selectModelProfile(profile.id);
+        });
+        return {item, titleLabel, installButton, progress};
+    }
+
+    _updateProfileRow(row, profile) {
+        if (!row)
+            return;
+        const installing = this._installingProfile === profile.id;
+        const progress = this._installProgressByProfile.get(profile.id) ?? {};
+        const fraction = numberValue(progress.fraction);
+        const installEnabled = !this._installing;
+
+        row.titleLabel.text = profile.title;
+        row.titleLabel.style_class = profile.installed
+            ? ''
+            : 'wordpipe-model-title-missing';
+        row.item.reactive = profile.installed;
+        row.item.can_focus = profile.installed;
+        row.installButton.visible = !profile.installed && !installing;
+        row.installButton.reactive = installEnabled;
+        row.installButton.can_focus = installEnabled;
+        row.installButton.style_class = installEnabled
+            ? 'wordpipe-model-download-button'
+            : 'wordpipe-model-download-button wordpipe-model-download-disabled';
+        row.progress.box.visible = !profile.installed && installing;
+        row.progress.fill.style =
+            `width: ${Math.round(Math.max(0.0, Math.min(1.0, fraction ?? 0.0)) * 64)}px;`;
+        row.progress.label.text = installProgressLabel(fraction);
+        row.item.setOrnament(profile.id === this._selectedProfile
+            ? PopupMenu.Ornament.CHECK
+            : PopupMenu.Ornament.NONE);
     }
 
     setMetrics(summary) {
@@ -236,11 +267,6 @@ class Indicator extends PanelMenu.Button {
     destroy() {
         this._stopVoiceAnimation();
         super.destroy();
-    }
-
-    _syncInstallActions() {
-        if (this._installProfileItems.size)
-            this.setProfiles(this._profiles, this._selectedProfile);
     }
 
     _setListening(listening) {
@@ -431,7 +457,7 @@ export default class WordpipeExtension extends Extension {
         this._shortcutBound = false;
         this._pushToTalkActive = false;
         this._pushToTalkKeyCode = 0;
-        this._pushToTalkModifiers = 0;
+        this._pushToTalkModifierMask = 0;
         this._stageCapturedEventId = 0;
         this._injector = new TextInjector();
 
@@ -478,6 +504,7 @@ export default class WordpipeExtension extends Extension {
 
     selectModelProfile(profile) {
         this._selectedProfile = profile;
+        this._indicator?.setSelectedProfile(profile);
         this._syncProfileMenu();
         this._callRemote('SetModelProfile', profile, () => this._refreshConfigFromService());
     }
@@ -521,22 +548,29 @@ export default class WordpipeExtension extends Extension {
             return;
         this._pushToTalkActive = true;
         this._pushToTalkKeyCode = event?.get_key_code() ?? 0;
-        this._pushToTalkModifiers = binding?.get_modifiers() ?? 0;
+        // get_mask() is the resolved, physical modifier mask used by the
+        // keyboard state events. get_modifiers() returns virtual masks such
+        // as SUPER_MASK, which cannot be compared to a physical MOD4 state.
+        this._pushToTalkModifierMask = binding?.get_mask() ?? 0;
         this._callRemote('Start');
     }
 
     _handleCapturedEvent(event) {
-        if (!this._pushToTalkActive ||
-            event.type() !== Clutter.EventType.KEY_RELEASE)
+        if (!this._pushToTalkActive)
             return Clutter.EVENT_PROPAGATE;
 
-        // Mutter cannot match the binding if one of its modifiers is released
-        // before the main key, so that ordering never reaches _handleShortcut.
-        const releasedKeyCode = event.get_key_code();
-        const releasedModifier = modifierMaskForKeySymbol(event.get_key_symbol());
-        if (releasedKeyCode === this._pushToTalkKeyCode ||
-            (releasedModifier & this._pushToTalkModifiers) !== 0)
-            this._stopPushToTalk();
+        if (event.type() === Clutter.EventType.KEY_RELEASE) {
+            if (event.get_key_code() === this._pushToTalkKeyCode)
+                this._stopPushToTalk();
+        } else if (event.type() === Clutter.EventType.KEY_STATE) {
+            // Mutter emits a complete modifier-state event even when it
+            // consumes the original release (notably Super). Checking the
+            // resulting state makes release order irrelevant.
+            const [pressed, latched, locked] = event.get_key_state();
+            if (!requiredModifiersHeld(
+                this._pushToTalkModifierMask, pressed, latched, locked))
+                this._stopPushToTalk();
+        }
 
         return Clutter.EVENT_PROPAGATE;
     }
@@ -546,7 +580,7 @@ export default class WordpipeExtension extends Extension {
             return;
         this._pushToTalkActive = false;
         this._pushToTalkKeyCode = 0;
-        this._pushToTalkModifiers = 0;
+        this._pushToTalkModifierMask = 0;
         this._callRemote('Stop');
     }
 
@@ -674,10 +708,12 @@ export default class WordpipeExtension extends Extension {
                 return {
                     id: values.id ?? '',
                     title: values.title ?? values.id ?? '',
+                    model_profile: values.model_profile ?? values.id ?? '',
+                    model_family: values.model_family ?? 'multilingual',
                     installed: Boolean(values.installed),
                 };
             }).filter(profile => profile.id);
-            this._syncProfileMenu();
+            this._syncProfileMenu(true);
         });
     }
 
@@ -795,13 +831,20 @@ export default class WordpipeExtension extends Extension {
         });
     }
 
-    _syncProfileMenu() {
+    _syncProfileMenu(rebuild = false) {
+        if (!this._settings)
+            return;
         const profile = this._settings.get_string('model-profile');
         const family = this._settings.get_string('model-family');
         const preset = family === 'english' ? `${profile}-english` : profile;
-        this._indicator?.setProfiles(
-            this._profiles,
-            this._selectedProfile || preset);
+        const selected = this._profiles.some(item => item.id === this._selectedProfile)
+            ? this._selectedProfile
+            : preset;
+        this._selectedProfile = selected;
+        if (rebuild)
+            this._indicator?.setProfiles(this._profiles, selected);
+        else
+            this._indicator?.setSelectedProfile(selected);
     }
 
     _callRemote(method, ...args) {
@@ -925,7 +968,7 @@ function installProgressLabel(fraction) {
     return `${Math.round(Math.max(0.0, Math.min(1.0, fraction)) * 100)}%`;
 }
 
-function createInstallButton(disabled, onClicked) {
+function createInstallButton(onClicked) {
     const content = new St.BoxLayout({
         style_class: 'wordpipe-model-download-content',
         y_align: Clutter.ActorAlign.CENTER,
@@ -939,21 +982,17 @@ function createInstallButton(disabled, onClicked) {
         y_align: Clutter.ActorAlign.CENTER,
     }));
     const button = new St.Button({
-        style_class: disabled
-            ? 'wordpipe-model-download-button wordpipe-model-download-disabled'
-            : 'wordpipe-model-download-button',
+        style_class: 'wordpipe-model-download-button',
         child: content,
-        reactive: !disabled,
-        can_focus: !disabled,
+        reactive: true,
+        can_focus: true,
         y_align: Clutter.ActorAlign.CENTER,
     });
-    if (!disabled)
-        button.connect('clicked', onClicked);
+    button.connect('clicked', onClicked);
     return button;
 }
 
-function createInstallProgress(fraction) {
-    const progress = Math.max(0.0, Math.min(1.0, fraction ?? 0.0));
+function createInstallProgress() {
     const box = new St.BoxLayout({
         style_class: 'wordpipe-model-progress',
         y_align: Clutter.ActorAlign.CENTER,
@@ -964,17 +1003,18 @@ function createInstallProgress(fraction) {
     });
     const fill = new St.Bin({
         style_class: 'wordpipe-model-progress-fill',
-        style: `width: ${Math.round(progress * 64)}px;`,
+        style: 'width: 0px;',
         x_align: Clutter.ActorAlign.START,
     });
     track.add_child(fill);
     box.add_child(track);
-    box.add_child(new St.Label({
-        text: installProgressLabel(fraction),
+    const label = new St.Label({
+        text: installProgressLabel(null),
         style_class: 'wordpipe-model-progress-label',
         y_align: Clutter.ActorAlign.CENTER,
-    }));
-    return box;
+    });
+    box.add_child(label);
+    return {box, fill, label};
 }
 
 function numberValue(value) {
@@ -986,31 +1026,6 @@ function numberValue(value) {
 function normalizeVoiceLevel(rms) {
     const value = numberValue(rms) ?? 0.0;
     return Math.max(0.0, Math.min(1.0, (value - 0.004) * 18.0));
-}
-
-function modifierMaskForKeySymbol(keySymbol) {
-    switch (keySymbol) {
-    case Clutter.KEY_Shift_L:
-    case Clutter.KEY_Shift_R:
-        return Clutter.ModifierType.SHIFT_MASK;
-    case Clutter.KEY_Control_L:
-    case Clutter.KEY_Control_R:
-        return Clutter.ModifierType.CONTROL_MASK;
-    case Clutter.KEY_Alt_L:
-    case Clutter.KEY_Alt_R:
-        return Clutter.ModifierType.MOD1_MASK;
-    case Clutter.KEY_Meta_L:
-    case Clutter.KEY_Meta_R:
-        return Clutter.ModifierType.META_MASK;
-    case Clutter.KEY_Super_L:
-    case Clutter.KEY_Super_R:
-        return Clutter.ModifierType.SUPER_MASK;
-    case Clutter.KEY_Hyper_L:
-    case Clutter.KEY_Hyper_R:
-        return Clutter.ModifierType.HYPER_MASK;
-    default:
-        return 0;
-    }
 }
 
 function formatError(error) {

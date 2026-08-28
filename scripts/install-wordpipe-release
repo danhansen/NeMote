@@ -139,6 +139,10 @@ if command -v systemctl >/dev/null 2>&1; then
 fi
 
 echo "Installing GNOME Shell extension"
+extension_upgrade=0
+if [ -d "$EXTENSION_DIR" ]; then
+  extension_upgrade=1
+fi
 tmp_extension="${EXTENSION_DIR}.tmp.$$"
 rm -rf "$tmp_extension"
 mkdir -p "$(dirname "$EXTENSION_DIR")"
@@ -155,6 +159,10 @@ if command -v gnome-extensions >/dev/null 2>&1; then
   else
     echo "GNOME Shell has not discovered $UUID yet; log out and back in, then enable it."
   fi
+fi
+
+if [ "$extension_upgrade" = "1" ]; then
+  echo "GNOME Shell caches loaded extension code. Log out and back in to activate this upgrade."
 fi
 
 echo "Installed Wordpipe"

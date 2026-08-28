@@ -47,6 +47,10 @@ The GitHub release archive contains the GNOME Shell extension, Rust D-Bus
 service, ASR worker, user D-Bus activation file, systemd user unit, and the
 Python model-install helper.
 
+GNOME Shell caches loaded extension modules. After upgrading Wordpipe, log out
+and back in so the Wayland session loads the new JavaScript. For development,
+the official GNOME workflow uses a nested Shell session.
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/danhansen/wordpipe/main/scripts/install-wordpipe-release | sh
 ```

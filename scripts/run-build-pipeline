@@ -9,10 +9,13 @@ run_tests() {
   cargo test --locked --workspace
   PYTHONPATH=src python3 -m unittest discover -s tests
   python3 scripts/check_gnome_dbus_xml.py
+  sh -n scripts/install-wordpipe-release
+  bash -n scripts/install-wordpipe-gnome
   node --input-type=module --check \
     < extensions/gnome-shell/wordpipe@dhansen.dev/extension.js
   node --input-type=module --check \
     < extensions/gnome-shell/wordpipe@dhansen.dev/prefs.js
+  node --test tests/test_shortcut_state.mjs
   glib-compile-schemas --strict --dry-run \
     extensions/gnome-shell/wordpipe@dhansen.dev/schemas
 }

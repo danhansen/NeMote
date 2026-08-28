@@ -306,6 +306,9 @@ class WordpipePage extends Adw.PreferencesPage {
         this._proxy = null;
         this._signalIds = [];
         this._syncingSettings = false;
+        this._selectedPreset = modelPresetId(
+            this._settings.get_string('model-profile'),
+            this._settings.get_string('model-family'));
         this._backends = BACKENDS.map(([id, title]) => ({id, title, description: ''}));
         this._allLanguages = LANGUAGES.map(([id, title]) => ({id, title}));
         this._languages = [];
@@ -398,6 +401,11 @@ class WordpipePage extends Adw.PreferencesPage {
             const preset = this._profiles[row.selected];
             if (!preset)
                 return;
+            this._selectedPreset = preset.id;
+            this._withSyncing(() => {
+                this._settings.set_string('model-profile', preset.model_profile);
+                this._settings.set_string('model-family', preset.model_family);
+            });
             this._callRemote('SetModelProfile', preset.id);
         });
         this._modelGroup.add(this._profileRow);
@@ -787,6 +795,9 @@ class WordpipePage extends Adw.PreferencesPage {
     }
 
     _syncFromConfig(values) {
+        const selectedPreset = modelPresetFromValues(values);
+        if (selectedPreset)
+            this._selectedPreset = selectedPreset;
         this._syncingSettings = true;
         try {
             if (typeof values.backend === 'string')
@@ -920,6 +931,16 @@ class WordpipePage extends Adw.PreferencesPage {
     }
 
     _handleState(values) {
+        const selectedPreset = modelPresetFromValues(values);
+        if (selectedPreset && selectedPreset !== this._selectedPreset) {
+            this._selectedPreset = selectedPreset;
+            if (this._profileRow) {
+                this._withSyncing(() => {
+                    this._profileRow.selected = this._selectedIndex(
+                        this._profiles, selectedPreset);
+                });
+            }
+        }
         const previousInstalling = this._installing;
         const previousInstallingProfile = this._installingProfile;
         this._installing = Boolean(values.installing);
@@ -1006,9 +1027,11 @@ class WordpipePage extends Adw.PreferencesPage {
     }
 
     _selectedPresetId() {
+        if (this._selectedPreset)
+            return this._selectedPreset;
         const profile = this._settings.get_string('model-profile');
         const family = this._settings.get_string('model-family');
-        return family === 'english' ? `${profile}-english` : profile;
+        return modelPresetId(profile, family);
     }
 
     _updateLanguageOptions(
@@ -1072,6 +1095,8 @@ class WordpipePage extends Adw.PreferencesPage {
             if (error) {
                 this._statusRow.subtitle = formatError(error);
                 logError(error, `Wordpipe ${method} failed`);
+                if (method === 'SetModelProfile')
+                    this._refreshConfig();
                 return;
             }
             if (callback)
@@ -1110,6 +1135,18 @@ function deepUnpackValue(value) {
 function clearStringList(model) {
     while (model.get_n_items() > 0)
         model.remove(0);
+}
+
+function modelPresetId(profile, family) {
+    return family === 'english' ? `${profile}-english` : profile;
+}
+
+function modelPresetFromValues(values) {
+    if (typeof values.model_preset === 'string')
+        return values.model_preset;
+    if (typeof values.model_profile === 'string')
+        return modelPresetId(values.model_profile, values.model_family);
+    return '';
 }
 
 function formatMetrics(metrics) {

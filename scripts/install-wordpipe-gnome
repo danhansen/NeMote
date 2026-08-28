@@ -81,6 +81,8 @@ echo "Enabling GNOME Shell extension"
 if gnome-extensions info "$UUID" >/dev/null 2>&1; then
     gnome-extensions enable "$UUID"
     echo "Enabled $UUID"
+    echo "GNOME Shell caches loaded extension code. Restart Shell to load this build."
+    echo "On Wayland, log out and back in or test in a nested development session."
 else
     echo "GNOME Shell has not discovered $UUID in this running session yet."
     echo "On Wayland, log out/in so GNOME Shell rescans user extensions, then run:"
