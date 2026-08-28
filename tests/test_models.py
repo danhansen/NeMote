@@ -27,6 +27,7 @@ from wordpipe.models import (
     make_download_plan,
     model_file_url,
     model_runtime_dir_valid,
+    model_family_for_language,
     profile_build_dir,
     profile_runtime_dir_valid,
     profile_runtime_dir,
@@ -95,6 +96,28 @@ class ModelDownloadTests(unittest.TestCase):
             profile_runtime_dir(Path("/models/wordpipe"), "compact"),
             Path("/models/wordpipe/nemotron-wordpipe-compact-fixed-shape-ort-format"),
         )
+
+    def test_english_profile_uses_family_specific_paths_and_pipeline(self) -> None:
+        command = build_profile_command(
+            source=Path("/models/nemotron-speech-streaming-en-0.6b.nemo"),
+            model_root=Path("/models/wordpipe"),
+            profile="compact",
+            family="english",
+            python=Path("/venv/bin/python"),
+        )
+
+        self.assertIn("--model-family", command)
+        self.assertEqual(command[command.index("--model-family") + 1], "english")
+        self.assertEqual(
+            profile_runtime_dir(Path("/models/wordpipe"), "compact", "english"),
+            Path("/models/wordpipe/nemotron-wordpipe-en-compact-fixed-shape-ort-format"),
+        )
+
+    def test_language_selects_dedicated_english_only_for_english_locales(self) -> None:
+        self.assertEqual(model_family_for_language("en-US"), "english")
+        self.assertEqual(model_family_for_language("en-GB"), "english")
+        self.assertEqual(model_family_for_language("auto"), "multilingual")
+        self.assertEqual(model_family_for_language("fr-FR"), "multilingual")
 
     def test_download_prebuilt_profile_downloads_raw_hub_files(self) -> None:
         class EntryNotFoundError(Exception):

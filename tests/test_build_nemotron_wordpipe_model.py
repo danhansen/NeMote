@@ -66,6 +66,19 @@ class NemotronWordpipePipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "not part of profile"):
             builder.validate_args(_args(profile="compact-fixed-shape", stop_after="ffn-fp32"))
 
+    def test_english_family_defaults_to_c70_cache(self) -> None:
+        builder = _load_builder()
+        args = _args(
+            model_family="english",
+            left_context=None,
+            cache_len=None,
+        )
+
+        builder.validate_args(args)
+
+        self.assertEqual(args.left_context, 70)
+        self.assertEqual(args.cache_len, 70)
+
 
 if __name__ == "__main__":
     unittest.main()

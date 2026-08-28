@@ -286,7 +286,21 @@ def _cmd_download_model(args: argparse.Namespace) -> int:
 
 
 def _cmd_model_install(args: argparse.Namespace) -> int:
+    requested_family = getattr(args, "model_family", "multilingual")
+    families = ("multilingual", "english") if requested_family == "all" else (requested_family,)
+    if len(families) > 1 and (args.source or getattr(args, "prebuilt_repo", None)):
+        raise SystemExit(
+            "--source and --prebuilt-repo install one checkpoint family; "
+            "pass --model-family multilingual or --model-family english"
+        )
+    for family in families:
+        _cmd_model_install_family(args, family)
+    return 0
+
+
+def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
     from .models import (
+        DEFAULT_ENGLISH_NEMO_SOURCE_REPO,
         build_model_profile,
         download_prebuilt_profile,
         default_nemo_source_path,
@@ -313,7 +327,7 @@ def _cmd_model_install(args: argparse.Namespace) -> int:
     build_from_nemo = getattr(args, "build_from_nemo", bool(args.source))
     prebuilt_repo = getattr(args, "prebuilt_repo", None)
     source_candidate = Path(args.source).expanduser() if args.source else None
-    runtime_dir = profile_runtime_dir(model_root, profile)
+    runtime_dir = profile_runtime_dir(model_root, profile, family)
     if (
         not args.force
         and not args.force_source
@@ -321,7 +335,7 @@ def _cmd_model_install(args: argparse.Namespace) -> int:
         and source_candidate is None
         and model_runtime_dir_valid(runtime_dir)
     ):
-        runtime_dir = ensure_profile_completion_marker(model_root, profile)
+        runtime_dir = ensure_profile_completion_marker(model_root, profile, family)
         report(f"Using installed model profile: {runtime_dir}")
         print(runtime_dir)
         return 0
@@ -332,6 +346,7 @@ def _cmd_model_install(args: argparse.Namespace) -> int:
             source=source_candidate,
             model_root=model_root,
             profile=profile,
+            family=family,
             force=args.force,
         )
         print(runtime_dir)
@@ -344,12 +359,13 @@ def _cmd_model_install(args: argparse.Namespace) -> int:
                 "--build-from-nemo is used"
             )
         elif args.dry_run:
-            selected_repo = prebuilt_repo or profile_spec(profile).prebuilt_repo
+            selected_repo = prebuilt_repo or profile_spec(profile).prebuilt_repo_for_family(family)
             source_path = model_root / "downloads" / selected_repo.replace("/", "--") / profile
         else:
             source_path = download_prebuilt_profile(
                 profile=profile,
                 model_root=model_root,
+                family=family,
                 repo_id=prebuilt_repo,
                 force=args.force_source,
                 progress=report,
@@ -361,6 +377,7 @@ def _cmd_model_install(args: argparse.Namespace) -> int:
             source=source_path,
             model_root=model_root,
             profile=profile,
+            family=family,
             python=Path(args.python).expanduser(),
             force=args.force,
             progress=report,
@@ -368,22 +385,34 @@ def _cmd_model_install(args: argparse.Namespace) -> int:
         print(runtime_dir)
         return 0
 
-    source_value = args.source or file_config.nemo_source
+    source_value = args.source or (
+        DEFAULT_ENGLISH_NEMO_SOURCE_REPO if family == "english" else file_config.nemo_source
+    )
     source_candidate = Path(source_value).expanduser()
     source_output = Path(args.source_output).expanduser() if args.source_output else None
     if args.dry_run:
-        source_path = source_candidate if source_candidate.exists() else source_output or default_nemo_source_path(model_root)
+        source_path = (
+            source_candidate
+            if source_candidate.exists()
+            else source_output or default_nemo_source_path(model_root, family)
+        )
     else:
+        download_kwargs = {
+            "force": args.force_source,
+            "progress": report,
+        }
+        if family == "english":
+            download_kwargs["family"] = family
         source_path = download_nemo_source(
             source_value,
-            source_output or default_nemo_source_path(model_root),
-            force=args.force_source,
-            progress=report,
+            source_output or default_nemo_source_path(model_root, family),
+            **download_kwargs,
         )
     runtime_dir = build_model_profile(
         source=source_path,
         model_root=model_root,
         profile=profile,
+        family=family,
         python=Path(args.python).expanduser(),
         force=args.force,
         dry_run=args.dry_run,
@@ -401,8 +430,15 @@ def _cmd_model_profiles(args: argparse.Namespace) -> int:
     model_root = Path(args.model_root).expanduser() if args.model_root else file_config.model_root
     rows = []
     for spec in MODEL_PROFILES.values():
-        runtime_dir = profile_runtime_dir(model_root, spec.name) if model_root else None
-        installed = bool(model_root and profile_installed(model_root, spec.name))
+        runtime_dirs = {
+            family: profile_runtime_dir(model_root, spec.name, family) if model_root else None
+            for family in ("english", "multilingual")
+        }
+        installed_families = {
+            family: bool(model_root and profile_installed(model_root, spec.name, family))
+            for family in ("english", "multilingual")
+        }
+        installed = all(installed_families.values())
         rows.append(
             {
                 "name": spec.name,
@@ -410,7 +446,17 @@ def _cmd_model_profiles(args: argparse.Namespace) -> int:
                 "description": spec.description,
                 "build_profile": spec.build_profile,
                 "prebuilt_repo": spec.prebuilt_repo,
-                "runtime_dir": str(runtime_dir) if runtime_dir is not None else None,
+                "english_prebuilt_repo": spec.english_prebuilt_repo,
+                "runtime_dir": (
+                    str(runtime_dirs["multilingual"])
+                    if runtime_dirs["multilingual"] is not None
+                    else None
+                ),
+                "runtime_dirs": {
+                    family: str(path) if path is not None else None
+                    for family, path in runtime_dirs.items()
+                },
+                "installed_families": installed_families,
                 "installed": installed,
             }
         )
@@ -422,6 +468,7 @@ def _cmd_model_profiles(args: argparse.Namespace) -> int:
             print(f"{row['name']}: {state}")
             print(f"  {row['description']}")
             print(f"  runtime: {row['runtime_dir']}")
+            print(f"  english: {row['runtime_dirs']['english']}")
     return 0
 
 
@@ -1082,6 +1129,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--profile",
         choices=("fast", "compact"),
         help="Profile to build. Defaults to config.toml model_profile.",
+    )
+    model_install.add_argument(
+        "--model-family",
+        choices=("all", "multilingual", "english"),
+        default="all",
+        help="Checkpoint family to install. Defaults to both language families.",
     )
     model_install.add_argument(
         "--model-root",

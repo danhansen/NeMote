@@ -19,8 +19,9 @@ Pipeline:
    compact and mixed profiles first run one coherent dynamic QUInt8 pass.
 
 3. Specialize fixed streaming shapes.
-   Wordpipe currently runs the Nemotron c56 streaming shape: 65 mel frames in,
-   7 encoder frames out, 56 projected-cache frames. Fixing these shapes removes
+   Wordpipe runs 65 mel frames in and 7 encoder frames out. The projected-cache
+   length follows the checkpoint family: 56 for Nemotron 3.5 multilingual and
+   70 for Nemotron Speech Streaming English. Fixing these shapes removes
    symbolic shape plumbing and lets ORT fold more graph work.
 
 4. Optionally dequantize feed-forward MatMul/Gemm blocks back to FP32.
@@ -50,6 +51,7 @@ ROOT = SCRIPT_DIR.parent
 DEFAULT_WORK_DIR = Path.cwd() / "build" / "nemotron-wordpipe-pipeline"
 PHASES = ("export", "transform", "fixed-shape", "ffn-fp32")
 PROFILES = ("fp32-projected", "compact-fixed-shape", "ffn-fp32")
+MODEL_FAMILIES = ("auto", "multilingual", "english")
 POSITIVE_INT_ARGS = (
     "left_context",
     "right_context",
@@ -88,6 +90,12 @@ def parse_args() -> argparse.Namespace:
             "encoder; ffn-fp32 adds FP32 feed-forward blocks to that compact base."
         ),
     )
+    parser.add_argument(
+        "--model-family",
+        choices=MODEL_FAMILIES,
+        default="auto",
+        help="Checkpoint family. auto recognizes NVIDIA's English checkpoint name.",
+    )
     parser.add_argument("--python", type=Path, default=Path(sys.executable))
     parser.add_argument("--force", action="store_true", help="Delete existing phase/output dirs before writing.")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without running them.")
@@ -103,14 +111,14 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Stop after this phase.",
     )
-    parser.add_argument("--left-context", type=int, default=56)
+    parser.add_argument("--left-context", type=int)
     parser.add_argument("--right-context", type=int, default=6)
     parser.add_argument("--sample-rate", type=int, default=16000)
     parser.add_argument("--verify-lang", default="en-US")
     parser.add_argument("--input-frames", type=int, default=65)
     parser.add_argument("--output-frames", type=int, default=7)
     parser.add_argument("--num-layers", type=int, default=24)
-    parser.add_argument("--cache-len", type=int, default=56)
+    parser.add_argument("--cache-len", type=int)
     parser.add_argument("--hidden-dim", type=int, default=1024)
     parser.add_argument("--conv-context", type=int, default=8)
     parser.add_argument(
@@ -193,6 +201,16 @@ def active_phases(args: argparse.Namespace) -> tuple[str, ...]:
 
 
 def validate_args(args: argparse.Namespace) -> None:
+    family = getattr(args, "model_family", "multilingual")
+    if family == "auto":
+        source_name = str(getattr(args, "input", "")).lower()
+        family = "english" if "nemotron-speech-streaming-en-0.6b" in source_name else "multilingual"
+    args.model_family = family
+    default_cache_len = 70 if family == "english" else 56
+    if getattr(args, "left_context", None) is None:
+        args.left_context = default_cache_len
+    if getattr(args, "cache_len", None) is None:
+        args.cache_len = default_cache_len
     for name in POSITIVE_INT_ARGS:
         if getattr(args, name) <= 0:
             option = name.replace("_", "-")
@@ -281,6 +299,8 @@ def main() -> None:
                 str(args.sample_rate),
                 "--verify-lang",
                 args.verify_lang,
+                "--model-family",
+                args.model_family,
                 "--export-only",
             ],
             dry_run=args.dry_run,

@@ -7,6 +7,8 @@ ONNX files at the repository root:
 ```text
 fractalyzer/wordpipe-nemotron-fast-fp32-projected
 fractalyzer/wordpipe-nemotron-compact-fixed-shape
+fractalyzer/wordpipe-nemotron-en-fast-fp32-projected
+fractalyzer/wordpipe-nemotron-en-compact-fixed-shape
 ```
 
 Each repo should contain:
@@ -35,6 +37,11 @@ so the Hub can index the repository correctly:
 - `base_model: nvidia/nemotron-3.5-asr-streaming-0.6b`
 - `license: openmdw-1.1`
 - `language: multilingual`
+
+English-family cards instead identify
+`nvidia/nemotron-speech-streaming-en-0.6b`, use `language: en`, and preserve its
+NVIDIA Open Model License metadata. The English optimized graphs use a c70
+attention cache; multilingual graphs remain c56.
 
 The card should make clear that NVIDIA is the upstream model developer and that
 Wordpipe publishes derived inference artifacts: export, graph specialization,
@@ -70,6 +77,11 @@ PYTHONPATH=src python3 scripts/publish_wordpipe_model_profiles.py \
   --force
 ```
 
+Repeat each command with `--model-family english` and a separate output
+directory to package the dedicated-English artifacts. The family selects the
+canonical source directory, destination Hub repo, model card, and c70
+validation contract automatically.
+
 Or from explicit build directories:
 
 ```sh
@@ -93,8 +105,8 @@ scripts used by the Wordpipe source tree.
 
 `MODEL_SPEC.md` documents the assumptions baked into the published graphs:
 
-- c56 streaming shape: 65 mel input frames, 7 encoder output frames, and 56
-  projected-cache frames.
+- 65 mel input frames and 7 encoder output frames, with 56 projected-cache
+  frames for multilingual or 70 for dedicated English.
 - Batch size 1, 24 layers, hidden size 1024, and convolution cache context 8.
 - The projected K/V cache ABI: per-layer `cache_key_layer_N` and
   `cache_value_layer_N` inputs plus `projected_current_*` outputs.

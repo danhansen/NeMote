@@ -115,6 +115,17 @@ class PublishWordpipeModelProfilesTests(unittest.TestCase):
         self.assertIn("caller, not the graph, rolls the projected K/V cache", spec)
         self.assertIn("scripts/build_nemotron_wordpipe_model.py", spec)
 
+    def test_english_model_card_and_spec_use_english_checkpoint_contract(self) -> None:
+        module = _load_script()
+
+        card = module.render_model_card("fractalyzer/wordpipe-nemotron-en-fast-fp32-projected", ("fast",), "english")
+        spec = module.render_model_spec(("fast",), "english")
+
+        self.assertIn("language:\n- en", card)
+        self.assertIn("base_model: nvidia/nemotron-speech-streaming-en-0.6b", card)
+        self.assertIn("NVIDIA Open Model License", card)
+        self.assertIn("cache_len=70", spec)
+
     def test_copy_reproducibility_scripts(self) -> None:
         module = _load_script()
 

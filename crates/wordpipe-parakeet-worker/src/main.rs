@@ -583,7 +583,11 @@ fn apply_language(model: &mut Nemotron, language: &str) -> Result<()> {
         model
             .set_target_lang(language)
             .with_context(|| format!("failed to set target language to {language:?}"))?;
-    } else if !matches!(language, "" | "auto" | "en" | "en-US") {
+    } else if !language.is_empty()
+        && language != "auto"
+        && language != "en"
+        && !language.to_ascii_lowercase().starts_with("en-")
+    {
         return Err(anyhow!(
             "language {language:?} requires a multilingual Nemotron model"
         ));

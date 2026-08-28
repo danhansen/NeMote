@@ -51,13 +51,15 @@ def main() -> int:
             "Publish one profile per Hugging Face model repo. Run this script once for fast and once for compact."
         )
     spec = profile_spec(profiles[0])
-    repo_id = args.repo_id or spec.prebuilt_repo
+    family = args.model_family
+    repo_id = args.repo_id or spec.prebuilt_repo_for_family(family)
     output_dir = args.output_dir.expanduser()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     manifest: dict[str, object] = {
         "repo_id": repo_id,
-        "source_model": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+        "source_model": source_model_for_family(family),
+        "model_family": family,
         "model_spec": "MODEL_SPEC.md",
         "reproducibility_scripts": [f"scripts/{name}" for name in REPRODUCIBILITY_SCRIPTS],
         "profiles": {},
@@ -65,14 +67,14 @@ def main() -> int:
 
     for profile_name in profiles:
         spec = profile_spec(profile_name)
-        source = resolve_profile_source(args, spec)
-        validate_publish_source(source, spec)
+        source = resolve_profile_source(args, spec, family)
+        validate_publish_source(source, spec, family)
         copied = copy_profile_files(
             source,
             output_dir,
             force=args.force,
         )
-        manifest["profiles"][profile_name] = profile_metadata(copied, source, spec)
+        manifest["profiles"][profile_name] = profile_metadata(copied, source, spec, family)
         print(f"{profile_name}: {output_dir}")
 
     manifest_path = output_dir / "wordpipe-model-profiles-manifest.json"
@@ -81,12 +83,12 @@ def main() -> int:
 
     readme_path = output_dir / "README.md"
     if not readme_path.exists() or args.force_card:
-        readme_path.write_text(render_model_card(repo_id, profiles), encoding="utf-8")
+        readme_path.write_text(render_model_card(repo_id, profiles, family), encoding="utf-8")
         print(f"model card: {readme_path}")
 
     model_spec_path = output_dir / "MODEL_SPEC.md"
     if not model_spec_path.exists() or args.force_card:
-        model_spec_path.write_text(render_model_spec(profiles), encoding="utf-8")
+        model_spec_path.write_text(render_model_spec(profiles, family), encoding="utf-8")
         print(f"model spec: {model_spec_path}")
 
     copy_reproducibility_scripts(output_dir, force=args.force)
@@ -115,6 +117,12 @@ def parse_args() -> argparse.Namespace:
         action="append",
         choices=tuple(MODEL_PROFILES),
         help="Profile to publish. Defaults to fast. Publish one profile per Hugging Face model repo.",
+    )
+    parser.add_argument(
+        "--model-family",
+        choices=("multilingual", "english"),
+        default="multilingual",
+        help="Checkpoint family being packaged.",
     )
     parser.add_argument(
         "--model-root",
@@ -158,16 +166,24 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_profile_source(args: argparse.Namespace, spec: ModelProfileSpec) -> Path:
+def resolve_profile_source(
+    args: argparse.Namespace,
+    spec: ModelProfileSpec,
+    family: str = "multilingual",
+) -> Path:
     override = getattr(args, f"{spec.name}_dir")
     if override is not None:
         return override.expanduser()
     if args.model_root is not None:
-        return spec.output_dir(args.model_root.expanduser())
+        return spec.output_dir(args.model_root.expanduser(), family)
     raise SystemExit(f"{spec.name}: pass --{spec.name}-dir or --model-root")
 
 
-def validate_publish_source(source: Path, spec: ModelProfileSpec) -> None:
+def validate_publish_source(
+    source: Path,
+    spec: ModelProfileSpec,
+    family: str = "multilingual",
+) -> None:
     source = source.expanduser()
     if not source.is_dir():
         raise SystemExit(f"{source} is not a directory")
@@ -181,10 +197,14 @@ def validate_publish_source(source: Path, spec: ModelProfileSpec) -> None:
             f"{source} is not publishable as a prebuilt profile; missing {', '.join(missing)}. "
             "Publish the ONNX profile directory, not the local ORT runtime cache."
         )
-    validate_profile_config(source, spec)
+    validate_profile_config(source, spec, family)
 
 
-def validate_profile_config(source: Path, spec: ModelProfileSpec) -> None:
+def validate_profile_config(
+    source: Path,
+    spec: ModelProfileSpec,
+    family: str = "multilingual",
+) -> None:
     config_path = source / "config.json"
     if not config_path.is_file():
         raise SystemExit(f"{source} is missing config.json")
@@ -205,7 +225,7 @@ def validate_profile_config(source: Path, spec: ModelProfileSpec) -> None:
         "input_frames": 65,
         "output_frames": 7,
         "num_layers": 24,
-        "cache_len": 56,
+        "cache_len": 70 if family == "english" else 56,
         "hidden_dim": 1024,
         "conv_context": 8,
     }
@@ -222,6 +242,12 @@ def validate_profile_config(source: Path, spec: ModelProfileSpec) -> None:
 
     if config.get("projected_cache") is not True:
         raise SystemExit(f"{source} is not publishable as {spec.name}: projected_cache must be true")
+
+    configured_family = config.get("model_family")
+    if family == "english" and configured_family != "english":
+        raise SystemExit(f"{source} is not publishable as English: model_family must be english")
+    if configured_family is not None and configured_family != family:
+        raise SystemExit(f"{source} model_family does not match {family}")
 
     quantized = bool(config.get("dynamic_quint8_quantization"))
     if spec.name == "fast" and quantized:
@@ -252,12 +278,18 @@ def publish_files(source: Path) -> list[Path]:
     return [source / name for name in names if (source / name).is_file()]
 
 
-def profile_metadata(files: list[Path], source: Path, spec: ModelProfileSpec) -> dict[str, object]:
+def profile_metadata(
+    files: list[Path],
+    source: Path,
+    spec: ModelProfileSpec,
+    family: str = "multilingual",
+) -> dict[str, object]:
     return {
         "title": spec.title,
         "description": spec.description,
         "build_profile": spec.build_profile,
-        "repo": spec.prebuilt_repo,
+        "repo": spec.prebuilt_repo_for_family(family),
+        "model_family": family,
         "source_dir": str(source),
         "files": {
             path.name: {
@@ -288,19 +320,37 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def render_model_card(repo_id: str, profiles: Iterable[str]) -> str:
+def source_model_for_family(family: str) -> str:
+    return (
+        "nvidia/nemotron-speech-streaming-en-0.6b"
+        if family == "english"
+        else "nvidia/nemotron-3.5-asr-streaming-0.6b"
+    )
+
+
+def render_model_card(
+    repo_id: str,
+    profiles: Iterable[str],
+    family: str = "multilingual",
+) -> str:
     selected = tuple(profiles)
     if len(selected) != 1:
         raise ValueError("model cards are generated for one profile per repo")
     profile_name = selected[0]
     spec = profile_spec(profile_name)
+    source_model = source_model_for_family(family)
+    language = "en" if family == "english" else "multilingual"
+    license_id = "other" if family == "english" else "openmdw-1.1"
+    model_title = "Nemotron Speech Streaming English" if family == "english" else "Nemotron 3.5 ASR Streaming"
+    license_text = "the NVIDIA Open Model License" if family == "english" else "the OpenMDW 1.1 license"
+    license_terms = "NVIDIA Open Model License" if family == "english" else "OpenMDW"
     return f"""---
 language:
-- multilingual
-license: openmdw-1.1
+- {language}
+license: {license_id}
 library_name: onnx
 pipeline_tag: automatic-speech-recognition
-base_model: nvidia/nemotron-3.5-asr-streaming-0.6b
+base_model: {source_model}
 tags:
 - automatic-speech-recognition
 - onnx
@@ -310,10 +360,10 @@ tags:
 - desktop-dictation
 ---
 
-# Wordpipe Nemotron 3.5 ASR Streaming {spec.title} Profile
+# Wordpipe {model_title} {spec.title} Profile
 
 This repository contains a Wordpipe-specialized ONNX profile derived from
-[`nvidia/nemotron-3.5-asr-streaming-0.6b`](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b).
+[`{source_model}`](https://huggingface.co/{source_model}).
 NVIDIA is the upstream model developer. Wordpipe adds export, graph
 specialization, packaging, and local desktop runtime integration; this profile
 is not a separately trained checkpoint.
@@ -326,7 +376,7 @@ This repository publishes the `{profile_name}` Wordpipe profile:
 It is consumed by Wordpipe with:
 
 ```sh
-wordpipe model-install --profile {profile_name} --prebuilt-repo {repo_id}
+wordpipe model-install --profile {profile_name} --model-family {family} --prebuilt-repo {repo_id}
 ```
 
 ## Files
@@ -372,28 +422,35 @@ startup-time behavior.
 ## License and Attribution
 
 The upstream model card states that use of
-`nvidia/nemotron-3.5-asr-streaming-0.6b` is governed by the OpenMDW 1.1 license.
-Review the upstream NVIDIA model card and OpenMDW terms before redistribution or
+`{source_model}` is governed by {license_text}.
+Review the upstream NVIDIA model card and {license_terms} terms before redistribution or
 deployment. This repository preserves that attribution and publishes derived
 inference artifacts for Wordpipe.
 """
 
 
-def render_model_spec(profiles: Iterable[str]) -> str:
+def render_model_spec(
+    profiles: Iterable[str],
+    family: str = "multilingual",
+) -> str:
     selected = tuple(profiles)
+    source_model = source_model_for_family(family)
+    cache_len = 70 if family == "english" else 56
+    fast_output_name = profile_spec("fast").output_name_for_family(family)
+    compact_output_name = profile_spec("compact").output_name_for_family(family)
     profile_rows = []
     for profile_name in selected:
         spec = profile_spec(profile_name)
         if profile_name == "fast":
             recipe = (
-                "FP32 export, projected K/V cache rewrite, fixed c56 streaming "
+                f"FP32 export, projected K/V cache rewrite, fixed c{cache_len} streaming "
                 "shapes, ORT extended graph serialization."
             )
             quantization = "None; encoder and decoder_joint remain FP32."
         elif profile_name == "compact":
             recipe = (
                 "Dynamic QUInt8 export transform, projected K/V cache rewrite, "
-                "fixed c56 streaming shapes, ORT extended graph serialization; "
+                f"fixed c{cache_len} streaming shapes, ORT extended graph serialization; "
                 "Wordpipe converts the installed ONNX profile to ORT format locally."
             )
             quantization = "Dynamic QUInt8 for encoder and decoder_joint before fixed-shape specialization."
@@ -406,7 +463,7 @@ def render_model_spec(profiles: Iterable[str]) -> str:
     return f"""# Wordpipe Nemotron Model Specification
 
 This repository contains derived inference artifacts for
-`nvidia/nemotron-3.5-asr-streaming-0.6b`. They are not NeMo checkpoints and are
+`{source_model}`. They are not NeMo checkpoints and are
 not intended to be drop-in replacements for NVIDIA's standard NeMo runtime.
 
 ## Published Profiles
@@ -424,9 +481,9 @@ Both profiles target Wordpipe's Parakeet/Nemotron streaming runtime ABI:
 - Encoder input shape `processed_signal=[1, 128, 65]`.
 - Encoder output shape `encoded=[1, 1024, 7]`.
 - Streaming cache shape assumptions: `num_layers=24`, `hidden_dim=1024`,
-  `cache_len=56`, and `conv_context=8`.
+  `cache_len={cache_len}`, and `conv_context=8`.
 - The graph exposes per-layer projected attention cache inputs
-  `cache_key_layer_N` and `cache_value_layer_N` with shape `[1, 56, 1024]`.
+  `cache_key_layer_N` and `cache_value_layer_N` with shape `[1, {cache_len}, 1024]`.
 - The graph emits `projected_current_key_layer_N` and
   `projected_current_value_layer_N` with shape `[1, 7, 1024]`.
 - The caller, not the graph, rolls the projected K/V cache between streaming
@@ -450,14 +507,16 @@ The high-level entry point is:
 
 ```sh
 python scripts/build_nemotron_wordpipe_model.py \\
-  nvidia/nemotron-3.5-asr-streaming-0.6b \\
-  build/nemotron-wordpipe-fast-fp32-projected \\
-  --profile fp32-projected
+  {source_model} \\
+  build/{fast_output_name} \\
+  --profile fp32-projected \\
+  --model-family {family}
 
 python scripts/build_nemotron_wordpipe_model.py \\
-  nvidia/nemotron-3.5-asr-streaming-0.6b \\
-  build/nemotron-wordpipe-compact-fixed-shape \\
-  --profile compact-fixed-shape
+  {source_model} \\
+  build/{compact_output_name} \\
+  --profile compact-fixed-shape \\
+  --model-family {family}
 ```
 
 These commands require the Wordpipe source tree and its Python export

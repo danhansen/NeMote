@@ -374,6 +374,11 @@ def main() -> None:
     parser.add_argument("input", help=".nemo path or NeMo/Hugging Face model id")
     parser.add_argument("output_dir", type=Path)
     parser.add_argument(
+        "--model-family",
+        choices=("multilingual", "english"),
+        default="multilingual",
+    )
+    parser.add_argument(
         "--left-context",
         type=int,
         default=56,
@@ -538,6 +543,7 @@ def main() -> None:
 
     config = {
         "model_name": args.input,
+        "model_family": args.model_family,
         "sample_rate": args.sample_rate,
         "n_mels": 128,
         "subsampling_factor": int(cfg_get(model.cfg.encoder, "subsampling_factor", 8)),

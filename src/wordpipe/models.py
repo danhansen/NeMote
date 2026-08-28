@@ -28,6 +28,8 @@ DEFAULT_MODEL_FILES = (
 )
 DEFAULT_NEMO_SOURCE_REPO = "nvidia/nemotron-3.5-asr-streaming-0.6b"
 DEFAULT_NEMO_SOURCE_FILENAME = "nemotron-3.5-asr-streaming-0.6b.nemo"
+DEFAULT_ENGLISH_NEMO_SOURCE_REPO = "nvidia/nemotron-speech-streaming-en-0.6b"
+DEFAULT_ENGLISH_NEMO_SOURCE_FILENAME = "nemotron-speech-streaming-en-0.6b.nemo"
 DEFAULT_PREBUILT_PROFILE_REPO = "fractalyzer/wordpipe-nemotron-fast-fp32-projected"
 PREBUILT_PROFILE_FILES = (
     "tokenizer.model",
@@ -43,6 +45,7 @@ REQUIRED_PREBUILT_PROFILE_FILES = ("tokenizer.model", "encoder.onnx", "decoder_j
 PROFILE_COMPLETION_MARKER = ".wordpipe-profile.json"
 RANGED_DOWNLOAD_MIN_SIZE = 64 * 1024 * 1024
 ModelProfile = Literal["fast", "compact"]
+ModelFamily = Literal["multilingual", "english"]
 ProgressCallback = Callable[[str], None]
 
 
@@ -65,13 +68,21 @@ class ModelProfileSpec:
     build_profile: str
     output_name: str
     prebuilt_repo: str
+    english_output_name: str
+    english_prebuilt_repo: str
     emit_ort_format: bool = False
 
-    def output_dir(self, model_root: Path) -> Path:
-        return model_root.expanduser() / self.output_name
+    def output_name_for_family(self, family: ModelFamily) -> str:
+        return self.english_output_name if family == "english" else self.output_name
 
-    def runtime_dir(self, model_root: Path) -> Path:
-        output = self.output_dir(model_root)
+    def prebuilt_repo_for_family(self, family: ModelFamily) -> str:
+        return self.english_prebuilt_repo if family == "english" else self.prebuilt_repo
+
+    def output_dir(self, model_root: Path, family: ModelFamily = "multilingual") -> Path:
+        return model_root.expanduser() / self.output_name_for_family(family)
+
+    def runtime_dir(self, model_root: Path, family: ModelFamily = "multilingual") -> Path:
+        output = self.output_dir(model_root, family)
         if self.emit_ort_format:
             return output.with_name(f"{output.name}-ort-format")
         return output
@@ -98,6 +109,8 @@ MODEL_PROFILES: dict[ModelProfile, ModelProfileSpec] = {
         build_profile="fp32-projected",
         output_name="nemotron-wordpipe-fast-fp32-projected",
         prebuilt_repo="fractalyzer/wordpipe-nemotron-fast-fp32-projected",
+        english_output_name="nemotron-wordpipe-en-fast-fp32-projected",
+        english_prebuilt_repo="fractalyzer/wordpipe-nemotron-en-fast-fp32-projected",
     ),
     "compact": ModelProfileSpec(
         name="compact",
@@ -106,6 +119,8 @@ MODEL_PROFILES: dict[ModelProfile, ModelProfileSpec] = {
         build_profile="compact-fixed-shape",
         output_name="nemotron-wordpipe-compact-fixed-shape",
         prebuilt_repo="fractalyzer/wordpipe-nemotron-compact-fixed-shape",
+        english_output_name="nemotron-wordpipe-en-compact-fixed-shape",
+        english_prebuilt_repo="fractalyzer/wordpipe-nemotron-en-compact-fixed-shape",
         emit_ort_format=True,
     ),
 }
@@ -172,9 +187,22 @@ def default_model_root() -> Path:
     return Path.home() / ".local" / "share" / "wordpipe" / "models"
 
 
-def default_nemo_source_path(model_root: Path | None = None) -> Path:
+def default_nemo_source_path(
+    model_root: Path | None = None,
+    family: ModelFamily = "multilingual",
+) -> Path:
     root = model_root.expanduser() if model_root is not None else default_model_root()
-    return root / "sources" / DEFAULT_NEMO_SOURCE_FILENAME
+    filename = (
+        DEFAULT_ENGLISH_NEMO_SOURCE_FILENAME
+        if family == "english"
+        else DEFAULT_NEMO_SOURCE_FILENAME
+    )
+    return root / "sources" / filename
+
+
+def model_family_for_language(language: str) -> ModelFamily:
+    normalized = language.strip().lower()
+    return "english" if normalized == "en" or normalized.startswith("en-") else "multilingual"
 
 
 def profile_spec(name: str) -> ModelProfileSpec:
@@ -183,21 +211,33 @@ def profile_spec(name: str) -> ModelProfileSpec:
     return MODEL_PROFILES[name]  # type: ignore[index]
 
 
-def profile_runtime_dir(model_root: Path, profile: str) -> Path:
-    return profile_spec(profile).runtime_dir(model_root)
+def profile_runtime_dir(
+    model_root: Path,
+    profile: str,
+    family: ModelFamily = "multilingual",
+) -> Path:
+    return profile_spec(profile).runtime_dir(model_root, family)
 
 
-def profile_installed(model_root: Path, profile: str) -> bool:
-    runtime_dir = profile_runtime_dir(model_root, profile)
-    return profile_runtime_dir_valid(runtime_dir, profile)
+def profile_installed(
+    model_root: Path,
+    profile: str,
+    family: ModelFamily = "multilingual",
+) -> bool:
+    runtime_dir = profile_runtime_dir(model_root, profile, family)
+    return profile_runtime_dir_valid(runtime_dir, profile, family)
 
 
-def ensure_profile_completion_marker(model_root: Path, profile: str) -> Path:
-    runtime_dir = profile_runtime_dir(model_root, profile)
-    if not profile_runtime_dir_valid(runtime_dir, profile):
+def ensure_profile_completion_marker(
+    model_root: Path,
+    profile: str,
+    family: ModelFamily = "multilingual",
+) -> Path:
+    runtime_dir = profile_runtime_dir(model_root, profile, family)
+    if not profile_runtime_dir_valid(runtime_dir, profile, family):
         raise RuntimeError(f"model profile {profile!r} is not installed at {runtime_dir}")
     if not _profile_completion_marker(runtime_dir).exists():
-        _write_profile_completion_marker(runtime_dir, profile=profile)
+        _write_profile_completion_marker(runtime_dir, profile=profile, family=family)
     return runtime_dir
 
 
@@ -208,8 +248,14 @@ def model_runtime_dir_valid(runtime_dir: Path) -> bool:
     return not marker.exists() or _profile_completion_marker_valid(runtime_dir, verify_hashes=False)
 
 
-def profile_runtime_dir_valid(runtime_dir: Path, profile: str) -> bool:
-    return model_runtime_dir_valid(runtime_dir) and _profile_config_valid_if_present(runtime_dir, profile)
+def profile_runtime_dir_valid(
+    runtime_dir: Path,
+    profile: str,
+    family: ModelFamily = "multilingual",
+) -> bool:
+    return model_runtime_dir_valid(runtime_dir) and _profile_config_valid_if_present(
+        runtime_dir, profile, family
+    )
 
 
 def _runtime_structure_valid(runtime_dir: Path) -> bool:
@@ -249,7 +295,11 @@ def _onnx_references_external_data(onnx_path: Path, marker: str) -> bool:
     return False
 
 
-def _profile_config_valid_if_present(runtime_dir: Path, profile: str) -> bool:
+def _profile_config_valid_if_present(
+    runtime_dir: Path,
+    profile: str,
+    family: ModelFamily = "multilingual",
+) -> bool:
     config_path = runtime_dir / "config.json"
     if not config_path.exists():
         return True
@@ -265,13 +315,18 @@ def _profile_config_valid_if_present(runtime_dir: Path, profile: str) -> bool:
         "input_frames": 65,
         "output_frames": 7,
         "num_layers": 24,
-        "cache_len": 56,
+        "cache_len": 70 if family == "english" else 56,
         "hidden_dim": 1024,
         "conv_context": 8,
     }
     if any(fixed.get(key) != value for key, value in expected_fixed.items()):
         return False
     if config.get("projected_cache") is not True:
+        return False
+    configured_family = config.get("model_family")
+    if configured_family is not None and configured_family != family:
+        return False
+    if family == "english" and configured_family != "english":
         return False
     quantized = bool(config.get("dynamic_quint8_quantization"))
     if profile == "fast":
@@ -301,10 +356,11 @@ def install_built_profile(
     source: Path,
     model_root: Path,
     profile: str,
+    family: ModelFamily = "multilingual",
     force: bool = False,
 ) -> Path:
     prepared_source = _prepare_built_profile_source(source)
-    destination = profile_runtime_dir(model_root, profile)
+    destination = profile_runtime_dir(model_root, profile, family)
     if destination.exists():
         if not force:
             raise RuntimeError(f"profile {profile!r} is already installed at {destination}; pass --force to overwrite it")
@@ -314,7 +370,7 @@ def install_built_profile(
         shutil.rmtree(temporary)
     try:
         shutil.copytree(prepared_source.path, temporary)
-        _write_profile_completion_marker(temporary, profile=profile)
+        _write_profile_completion_marker(temporary, profile=profile, family=family)
         if destination.exists():
             shutil.rmtree(destination)
         temporary.replace(destination)
@@ -329,17 +385,18 @@ def download_prebuilt_profile(
     *,
     profile: str,
     model_root: Path,
+    family: ModelFamily = "multilingual",
     repo_id: str | None = None,
     force: bool = False,
     progress: ProgressCallback | None = None,
 ) -> Path:
     spec = profile_spec(profile)
-    selected_repo = repo_id or spec.prebuilt_repo
+    selected_repo = repo_id or spec.prebuilt_repo_for_family(family)
     output_dir = prebuilt_profile_cache_dir(model_root, selected_repo, profile)
     output_dir.mkdir(parents=True, exist_ok=True)
-    if source_is_built_profile(output_dir) and _profile_config_valid_if_present(output_dir, profile) and not force:
+    if source_is_built_profile(output_dir) and _profile_config_valid_if_present(output_dir, profile, family) and not force:
         if not _profile_completion_marker(output_dir).exists():
-            _write_profile_completion_marker(output_dir, profile=profile)
+            _write_profile_completion_marker(output_dir, profile=profile, family=family)
         _progress(progress, f"Using cached prebuilt profile: {output_dir}")
         return output_dir
     if _profile_completion_marker(output_dir).exists() and not _profile_completion_marker_valid(output_dir, verify_hashes=False):
@@ -420,12 +477,12 @@ def download_prebuilt_profile(
                     os.environ.pop("HF_HUB_ENABLE_HF_TRANSFER", None)
                 else:
                     os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = env_value
-        if not _profile_config_valid_if_present(output_dir, profile):
+        if not _profile_config_valid_if_present(output_dir, profile, family):
             raise RuntimeError(
                 f"downloaded {profile!r} profile at {output_dir} does not match Wordpipe's "
                 "fixed-shape projected-cache runtime contract"
             )
-        _write_profile_completion_marker(output_dir, profile=profile)
+        _write_profile_completion_marker(output_dir, profile=profile, family=family)
         _progress(progress, f"Prebuilt profile ready: {output_dir}")
         return output_dir
     except ImportError as exc:
@@ -570,27 +627,34 @@ def install_prebuilt_profile(
     source: Path,
     model_root: Path,
     profile: str,
+    family: ModelFamily = "multilingual",
     python: Path = Path(sys.executable),
     force: bool = False,
     progress: ProgressCallback | None = None,
 ) -> Path:
     spec = profile_spec(profile)
-    runtime_dir = spec.runtime_dir(model_root)
-    if runtime_dir.exists() and not force and profile_runtime_dir_valid(runtime_dir, profile):
+    runtime_dir = spec.runtime_dir(model_root, family)
+    if runtime_dir.exists() and not force and profile_runtime_dir_valid(runtime_dir, profile, family):
         if not _profile_completion_marker(runtime_dir).exists():
-            _write_profile_completion_marker(runtime_dir, profile=profile)
+            _write_profile_completion_marker(runtime_dir, profile=profile, family=family)
         _progress(progress, f"Using installed model profile: {runtime_dir}")
         return runtime_dir
 
-    onnx_dir = spec.output_dir(model_root)
-    if onnx_dir.exists() and not force and profile_runtime_dir_valid(onnx_dir, profile):
+    onnx_dir = spec.output_dir(model_root, family)
+    if onnx_dir.exists() and not force and profile_runtime_dir_valid(onnx_dir, profile, family):
         if not _profile_completion_marker(onnx_dir).exists():
-            _write_profile_completion_marker(onnx_dir, profile=profile)
+            _write_profile_completion_marker(onnx_dir, profile=profile, family=family)
         _progress(progress, f"Using cached ONNX profile: {onnx_dir}")
     else:
         prepared_source = _prepare_built_profile_source(source)
         try:
-            _install_prepared_profile(prepared_source.path, onnx_dir, profile=profile, force=force)
+            _install_prepared_profile(
+                prepared_source.path,
+                onnx_dir,
+                profile=profile,
+                family=family,
+                force=force,
+            )
         finally:
             if prepared_source.cleanup_dir is not None:
                 shutil.rmtree(prepared_source.cleanup_dir, ignore_errors=True)
@@ -599,9 +663,9 @@ def install_prebuilt_profile(
         _progress(progress, f"Model profile ready: {onnx_dir}")
         return onnx_dir
 
-    if runtime_dir.exists() and not force and profile_runtime_dir_valid(runtime_dir, profile):
+    if runtime_dir.exists() and not force and profile_runtime_dir_valid(runtime_dir, profile, family):
         if not _profile_completion_marker(runtime_dir).exists():
-            _write_profile_completion_marker(runtime_dir, profile=profile)
+            _write_profile_completion_marker(runtime_dir, profile=profile, family=family)
         _progress(progress, f"Using cached ORT runtime profile: {runtime_dir}")
         return runtime_dir
 
@@ -614,12 +678,19 @@ def install_prebuilt_profile(
     ]
     _progress(progress, " ".join(command))
     _run_with_progress(command, progress)
-    _write_profile_completion_marker(runtime_dir, profile=profile)
+    _write_profile_completion_marker(runtime_dir, profile=profile, family=family)
     _progress(progress, f"Model profile ready: {runtime_dir}")
     return runtime_dir
 
 
-def _install_prepared_profile(source: Path, destination: Path, *, profile: str, force: bool) -> None:
+def _install_prepared_profile(
+    source: Path,
+    destination: Path,
+    *,
+    profile: str,
+    family: ModelFamily,
+    force: bool,
+) -> None:
     if destination.exists():
         if not force:
             raise RuntimeError(
@@ -631,7 +702,7 @@ def _install_prepared_profile(source: Path, destination: Path, *, profile: str, 
         shutil.rmtree(temporary)
     try:
         shutil.copytree(source, temporary)
-        _write_profile_completion_marker(temporary, profile=profile)
+        _write_profile_completion_marker(temporary, profile=profile, family=family)
         if destination.exists():
             shutil.rmtree(destination)
         temporary.replace(destination)
@@ -711,6 +782,7 @@ def download_nemo_source(
     source: str = DEFAULT_NEMO_SOURCE_REPO,
     output_path: Path | None = None,
     *,
+    family: ModelFamily = "multilingual",
     force: bool = False,
     progress: ProgressCallback | None = None,
 ) -> Path:
@@ -719,7 +791,11 @@ def download_nemo_source(
         _progress(progress, f"Using local source model: {candidate}")
         return candidate
 
-    destination = output_path.expanduser() if output_path is not None else default_nemo_source_path()
+    destination = (
+        output_path.expanduser()
+        if output_path is not None
+        else default_nemo_source_path(family=family)
+    )
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists() and not force:
         _progress(progress, f"Using cached source model: {destination}")
@@ -740,7 +816,11 @@ def download_nemo_source(
         try:
             downloaded = hf_hub_download(
                 repo_id=source,
-                filename=DEFAULT_NEMO_SOURCE_FILENAME,
+                filename=(
+                    DEFAULT_ENGLISH_NEMO_SOURCE_FILENAME
+                    if family == "english"
+                    else DEFAULT_NEMO_SOURCE_FILENAME
+                ),
                 local_dir=destination.parent,
                 local_dir_use_symlinks=False,
                 force_download=force,
@@ -770,12 +850,13 @@ def build_profile_command(
     source: Path,
     model_root: Path,
     profile: str,
+    family: ModelFamily = "multilingual",
     python: Path,
     force: bool = False,
 ) -> list[str]:
     spec = profile_spec(profile)
-    output_dir = spec.output_dir(model_root)
-    work_dir = profile_build_dir(model_root, profile)
+    output_dir = spec.output_dir(model_root, family)
+    work_dir = profile_build_dir(model_root, profile, family)
     return [
         str(python),
         str(wordpipe_scripts_dir() / "build_nemotron_wordpipe_model.py"),
@@ -785,14 +866,21 @@ def build_profile_command(
         str(work_dir),
         "--profile",
         spec.build_profile,
+        "--model-family",
+        family,
         *(["--emit-ort-format"] if spec.emit_ort_format else []),
         *(["--force"] if force else []),
     ]
 
 
-def profile_build_dir(model_root: Path, profile: str) -> Path:
+def profile_build_dir(
+    model_root: Path,
+    profile: str,
+    family: ModelFamily = "multilingual",
+) -> Path:
     spec = profile_spec(profile)
-    return model_root.expanduser() / "build" / spec.name
+    base = model_root.expanduser() / "build"
+    return base / spec.name if family == "multilingual" else base / family / spec.name
 
 
 def wordpipe_scripts_dir() -> Path:
@@ -820,6 +908,7 @@ def build_model_profile(
     source: Path,
     model_root: Path,
     profile: str,
+    family: ModelFamily = "multilingual",
     python: Path = Path(sys.executable),
     force: bool = False,
     dry_run: bool = False,
@@ -830,20 +919,25 @@ def build_model_profile(
         source=source,
         model_root=model_root,
         profile=profile,
+        family=family,
         python=python,
         force=force,
     )
     rendered_command = " ".join(command)
     print(rendered_command, file=sys.stderr)
     _progress(progress, rendered_command)
-    build_dir = profile_build_dir(model_root, profile)
+    build_dir = profile_build_dir(model_root, profile, family)
     if not dry_run:
         _run_with_progress(command, progress)
-        _write_profile_completion_marker(profile_runtime_dir(model_root, profile), profile=profile)
+        _write_profile_completion_marker(
+            profile_runtime_dir(model_root, profile, family),
+            profile=profile,
+            family=family,
+        )
         if not keep_build_dir and build_dir.exists():
             _progress(progress, f"Removing build intermediates: {build_dir}")
             shutil.rmtree(build_dir)
-    runtime_dir = profile_runtime_dir(model_root, profile)
+    runtime_dir = profile_runtime_dir(model_root, profile, family)
     _progress(progress, f"Model profile ready: {runtime_dir}")
     return runtime_dir
 
@@ -889,13 +983,18 @@ def _profile_completion_marker(runtime_dir: Path) -> Path:
     return runtime_dir / PROFILE_COMPLETION_MARKER
 
 
-def _write_profile_completion_marker(runtime_dir: Path, *, profile: str) -> None:
+def _write_profile_completion_marker(
+    runtime_dir: Path,
+    *,
+    profile: str,
+    family: ModelFamily = "multilingual",
+) -> None:
     if not _runtime_structure_valid(runtime_dir):
         raise RuntimeError(
             f"model runtime profile is incomplete at {runtime_dir}; expected tokenizer.model "
             "plus encoder and decoder_joint ONNX/ORT graphs"
         )
-    if not _profile_config_valid_if_present(runtime_dir, profile):
+    if not _profile_config_valid_if_present(runtime_dir, profile, family):
         raise RuntimeError(
             f"model runtime profile at {runtime_dir} does not match Wordpipe's "
             f"{profile!r} fixed-shape projected-cache contract"
@@ -914,6 +1013,7 @@ def _write_profile_completion_marker(runtime_dir: Path, *, profile: str) -> None
     payload = {
         "format": 1,
         "profile": profile,
+        "model_family": family,
         "created_at_unix": int(time.time()),
         "files": files,
     }

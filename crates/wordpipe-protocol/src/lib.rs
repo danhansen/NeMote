@@ -23,6 +23,8 @@ pub const MODEL_PROFILES: &[ModelProfileSpec] = &[
         build_profile: "fp32-projected",
         output_name: "nemotron-wordpipe-fast-fp32-projected",
         prebuilt_repo: "fractalyzer/wordpipe-nemotron-fast-fp32-projected",
+        english_output_name: "nemotron-wordpipe-en-fast-fp32-projected",
+        english_prebuilt_repo: "fractalyzer/wordpipe-nemotron-en-fast-fp32-projected",
         ort_format: false,
     },
     ModelProfileSpec {
@@ -32,6 +34,8 @@ pub const MODEL_PROFILES: &[ModelProfileSpec] = &[
         build_profile: "compact-fixed-shape",
         output_name: "nemotron-wordpipe-compact-fixed-shape",
         prebuilt_repo: "fractalyzer/wordpipe-nemotron-compact-fixed-shape",
+        english_output_name: "nemotron-wordpipe-en-compact-fixed-shape",
+        english_prebuilt_repo: "fractalyzer/wordpipe-nemotron-en-compact-fixed-shape",
         ort_format: true,
     },
 ];
@@ -218,6 +222,8 @@ pub struct ModelProfileSpec {
     pub build_profile: &'static str,
     pub output_name: &'static str,
     pub prebuilt_repo: &'static str,
+    pub english_output_name: &'static str,
+    pub english_prebuilt_repo: &'static str,
     pub ort_format: bool,
 }
 
@@ -237,6 +243,11 @@ pub fn is_model_profile(value: &str) -> bool {
 
 pub fn is_language(value: &str) -> bool {
     LANGUAGE_OPTIONS.iter().any(|language| language.id == value)
+}
+
+pub fn is_english_language(value: &str) -> bool {
+    let normalized = value.trim().to_ascii_lowercase();
+    normalized == "en" || normalized.starts_with("en-")
 }
 
 pub const INTROSPECTION_XML: &str = r#"
@@ -322,3 +333,16 @@ pub const INTROSPECTION_XML: &str = r#"
   </interface>
 </node>
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn english_locales_select_the_dedicated_family() {
+        assert!(is_english_language("en-US"));
+        assert!(is_english_language("en-GB"));
+        assert!(!is_english_language("auto"));
+        assert!(!is_english_language("fr-FR"));
+    }
+}

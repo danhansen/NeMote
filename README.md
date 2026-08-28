@@ -464,9 +464,13 @@ List profile status:
 PYTHONPATH=src python3 -m wordpipe model-profiles
 ```
 
-The app window can install these profiles interactively. The CLI command below
-downloads a prebuilt optimized ONNX profile archive from Hugging Face, validates
-it, and for `compact` converts/caches the local ORT-format runtime directory.
+The app window can install these profiles interactively. Each performance
+profile contains two optimized checkpoint families: the dedicated
+`nvidia/nemotron-speech-streaming-en-0.6b` model for English and
+`nvidia/nemotron-3.5-asr-streaming-0.6b` for auto-detect and every non-English
+language. Wordpipe reloads the appropriate family when the language selection
+crosses that boundary. The CLI command below installs both families and, for
+`compact`, converts/caches their local ORT-format runtime directories.
 
 Install the compact profile:
 
@@ -496,7 +500,20 @@ PYTHONPATH=src python3 -m wordpipe model-install \
   --python .venv-nemo-export/bin/python
 ```
 
-After a successful source build, Wordpipe removes `model_root/build/<profile>`
+Build the English checkpoint with the identical projected-cache, fixed-shape,
+quantization, and optional ORT-format stages. Its checkpoint-defined attention
+cache is 70 frames rather than the multilingual model's 56:
+
+```sh
+PYTHONPATH=src python3 -m wordpipe model-install \
+  --profile compact \
+  --model-family english \
+  --build-from-nemo \
+  --source nvidia/nemotron-speech-streaming-en-0.6b \
+  --python .venv-nemo-export/bin/python
+```
+
+After a successful source build, Wordpipe removes the family-specific build
 intermediates by default; pass `--keep-build-dir` when you need to inspect or
 reuse those files.
 

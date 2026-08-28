@@ -12,9 +12,9 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use wordpipe_protocol::{
-    is_backend, is_language, is_model_profile, BACKENDS, BUS_NAME, DEFAULT_BACKEND,
-    DEFAULT_LANGUAGE, DEFAULT_MODEL_PROFILE, DEFAULT_NUM_THREADS, DEFAULT_SAMPLE_RATE,
-    DEFAULT_SHORTCUT, MODEL_PROFILES, OBJECT_PATH,
+    is_backend, is_english_language, is_language, is_model_profile, BACKENDS, BUS_NAME,
+    DEFAULT_BACKEND, DEFAULT_LANGUAGE, DEFAULT_MODEL_PROFILE, DEFAULT_NUM_THREADS,
+    DEFAULT_SAMPLE_RATE, DEFAULT_SHORTCUT, MODEL_PROFILES, OBJECT_PATH,
 };
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedValue, Value};
@@ -316,6 +316,11 @@ impl WordpipeService {
             .map(|profile| {
                 let runtime_dir =
                     profile_runtime_dir(&model_root, profile.output_name, profile.ort_format);
+                let english_runtime_dir = profile_runtime_dir(
+                    &model_root,
+                    profile.english_output_name,
+                    profile.ort_format,
+                );
                 let mut item = VariantMap::new();
                 insert_str(&mut item, "id", profile.id);
                 insert_str(&mut item, "title", profile.title);
@@ -323,12 +328,24 @@ impl WordpipeService {
                 insert_str(&mut item, "build_profile", profile.build_profile);
                 insert_str(&mut item, "output_name", profile.output_name);
                 insert_str(&mut item, "prebuilt_repo", profile.prebuilt_repo);
+                insert_str(
+                    &mut item,
+                    "english_output_name",
+                    profile.english_output_name,
+                );
+                insert_str(
+                    &mut item,
+                    "english_prebuilt_repo",
+                    profile.english_prebuilt_repo,
+                );
                 insert_bool(&mut item, "ort_format", profile.ort_format);
                 insert_str(&mut item, "runtime_dir", &runtime_dir);
+                insert_str(&mut item, "english_runtime_dir", &english_runtime_dir);
                 insert_bool(
                     &mut item,
                     "installed",
-                    profile_installed(&runtime_dir, profile.id),
+                    profile_installed(&runtime_dir, profile.id)
+                        && profile_installed(&english_runtime_dir, profile.id),
                 );
                 item
             })
@@ -486,7 +503,9 @@ impl WordpipeService {
                     )));
                 }
                 if data.config.language != value {
-                    if !data.listening && !data.stopping {
+                    if is_english_language(&data.config.language) != is_english_language(&value) {
+                        restart_worker = true;
+                    } else if !data.listening && !data.stopping {
                         language_update = data
                             .worker
                             .as_ref()
@@ -528,6 +547,7 @@ impl WordpipeService {
                 restart_worker |= data.config.model_profile != previous_profile;
             }
             if restart_worker {
+                language_update = None;
                 shutdown_worker(&mut data);
             }
             let config_data = data.config.clone();
@@ -1354,11 +1374,16 @@ fn model_profile_metadata_valid_if_present(runtime_dir: &Path, profile: &str) ->
     let Some(fixed) = payload.get("fixed_streaming_shapes") else {
         return false;
     };
+    let cache_len = match payload.get("model_family").and_then(JsonValue::as_str) {
+        Some("english") => 70,
+        Some("multilingual") | None => 56,
+        Some(_) => return false,
+    };
     let expected = [
         ("input_frames", 65_u64),
         ("output_frames", 7),
         ("num_layers", 24),
-        ("cache_len", 56),
+        ("cache_len", cache_len),
         ("hidden_dim", 1024),
         ("conv_context", 8),
     ];
@@ -1472,7 +1497,12 @@ fn selected_runtime_dir(config: &ServiceConfig) -> String {
     else {
         return config.model_root.clone();
     };
-    profile_runtime_dir(&config.model_root, profile.output_name, profile.ort_format)
+    let output_name = if is_english_language(&config.language) {
+        profile.english_output_name
+    } else {
+        profile.output_name
+    };
+    profile_runtime_dir(&config.model_root, output_name, profile.ort_format)
 }
 
 fn select_installed_model_profile(config: &mut ServiceConfig) {
@@ -1480,8 +1510,12 @@ fn select_installed_model_profile(config: &mut ServiceConfig) {
         return;
     }
     for profile in MODEL_PROFILES {
-        let runtime_dir =
-            profile_runtime_dir(&config.model_root, profile.output_name, profile.ort_format);
+        let output_name = if is_english_language(&config.language) {
+            profile.english_output_name
+        } else {
+            profile.output_name
+        };
+        let runtime_dir = profile_runtime_dir(&config.model_root, output_name, profile.ort_format);
         if profile_installed(&runtime_dir, profile.id) {
             config.model_profile = profile.id.to_string();
             return;
@@ -2118,6 +2152,9 @@ mod tests {
             vec![
                 "build_profile",
                 "description",
+                "english_output_name",
+                "english_prebuilt_repo",
+                "english_runtime_dir",
                 "id",
                 "installed",
                 "ort_format",
@@ -2372,6 +2409,7 @@ mod tests {
         let mut config = ServiceConfig {
             model_root: root.to_string_lossy().to_string(),
             model_profile: "fast".to_string(),
+            language: "auto".to_string(),
             ..ServiceConfig::default()
         };
 
@@ -2393,6 +2431,7 @@ mod tests {
             &ServiceConfig {
                 model_root: model_root.to_string_lossy().to_string(),
                 model_profile: "fast".to_string(),
+                language: "auto".to_string(),
                 ..ServiceConfig::default()
             },
         )
@@ -2414,6 +2453,7 @@ mod tests {
         let mut config = ServiceConfig {
             model_root: root.to_string_lossy().to_string(),
             model_profile: "fast".to_string(),
+            language: "auto".to_string(),
             ..ServiceConfig::default()
         };
 
@@ -2432,6 +2472,7 @@ mod tests {
             config: ServiceConfig {
                 model_root: root.to_string_lossy().to_string(),
                 model_profile: "compact".to_string(),
+                language: "auto".to_string(),
                 ..ServiceConfig::default()
             },
             ..ServiceData::default()
@@ -2448,6 +2489,41 @@ mod tests {
             compact_runtime.to_string_lossy()
         );
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn selected_runtime_uses_english_model_for_english_locales() {
+        let root = unique_temp_dir("english-runtime-selection");
+        let config = ServiceConfig {
+            model_root: root.to_string_lossy().to_string(),
+            model_profile: "fast".to_string(),
+            language: "en-GB".to_string(),
+            ..ServiceConfig::default()
+        };
+
+        assert_eq!(
+            selected_runtime_dir(&config),
+            root.join("nemotron-wordpipe-en-fast-fp32-projected")
+                .to_string_lossy()
+        );
+    }
+
+    #[test]
+    fn selected_runtime_uses_multilingual_model_for_auto_and_non_english() {
+        let root = unique_temp_dir("multilingual-runtime-selection");
+        for language in ["auto", "fr-FR"] {
+            let config = ServiceConfig {
+                model_root: root.to_string_lossy().to_string(),
+                model_profile: "fast".to_string(),
+                language: language.to_string(),
+                ..ServiceConfig::default()
+            };
+            assert_eq!(
+                selected_runtime_dir(&config),
+                root.join("nemotron-wordpipe-fast-fp32-projected")
+                    .to_string_lossy()
+            );
+        }
     }
 
     #[test]
