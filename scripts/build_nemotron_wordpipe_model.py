@@ -112,11 +112,12 @@ def parse_args() -> argparse.Namespace:
         help="Stop after this phase.",
     )
     parser.add_argument("--left-context", type=int)
-    parser.add_argument("--right-context", type=int, default=6)
+    parser.add_argument("--streaming-latency-ms", type=int, choices=(560, 1120), default=560)
+    parser.add_argument("--right-context", type=int)
     parser.add_argument("--sample-rate", type=int, default=16000)
     parser.add_argument("--verify-lang", default="en-US")
-    parser.add_argument("--input-frames", type=int, default=65)
-    parser.add_argument("--output-frames", type=int, default=7)
+    parser.add_argument("--input-frames", type=int)
+    parser.add_argument("--output-frames", type=int)
     parser.add_argument("--num-layers", type=int, default=24)
     parser.add_argument("--cache-len", type=int)
     parser.add_argument("--hidden-dim", type=int, default=1024)
@@ -201,6 +202,20 @@ def active_phases(args: argparse.Namespace) -> tuple[str, ...]:
 
 
 def validate_args(args: argparse.Namespace) -> None:
+    latency = getattr(args, "streaming_latency_ms", 560)
+    output_frames = latency // 80
+    for name, expected in (
+        ("right_context", output_frames - 1),
+        ("input_frames", output_frames * 8 + 9),
+        ("output_frames", output_frames),
+    ):
+        value = getattr(args, name, None)
+        if value is None:
+            setattr(args, name, expected)
+        elif value <= 0:
+            raise SystemExit(f"--{name.replace('_', '-')} must be positive")
+        elif value != expected:
+            raise SystemExit(f"--{name.replace('_', '-')} must be {expected} for {latency} ms")
     family = getattr(args, "model_family", "multilingual")
     if family == "auto":
         source_name = str(getattr(args, "input", "")).lower()

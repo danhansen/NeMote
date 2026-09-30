@@ -25,6 +25,7 @@ EXPECTED_SETTINGS_KEYS = {
     "backend": "s",
     "model-profile": "s",
     "model-family": "s",
+    "streaming-latency-ms": "u",
     "input-device": "s",
     "language": "s",
     "model-root": "s",

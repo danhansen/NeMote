@@ -509,9 +509,9 @@ def main() -> None:
         prompt_index = torch.tensor([verified_prompt_index], dtype=torch.long)
     input_names = list(INPUT_NAMES)
     dynamic_axes = {
-        "processed_signal": {0: "batch", 2: "time"},
+        "processed_signal": {0: "batch", 2: "mel_frames"},
         "processed_signal_length": {0: "batch"},
-        "encoded": {0: "batch", 2: "time"},
+        "encoded": {0: "batch", 2: "encoder_frames"},
         "encoded_len": {0: "batch"},
     }
     if prompted:

@@ -211,7 +211,8 @@ def update_config(source_dir: Path, output_dir: Path, args: argparse.Namespace) 
 
 
 def set_metadata(model: onnx.ModelProto, args: argparse.Namespace) -> None:
-    kept = [item for item in model.metadata_props if not item.key.startswith(METADATA_PREFIX)]
+    kept = [item for item in model.metadata_props if not item.key.startswith(METADATA_PREFIX)
+            and item.key not in ("chunk_size_output_frames", "pre_encode_cache")]
     del model.metadata_props[:]
     model.metadata_props.extend(kept)
     for key in (
@@ -225,6 +226,13 @@ def set_metadata(model: onnx.ModelProto, args: argparse.Namespace) -> None:
         item = model.metadata_props.add()
         item.key = f"{METADATA_PREFIX}{key}"
         item.value = str(getattr(args, key))
+    for key, value in (
+        ("chunk_size_output_frames", args.output_frames),
+        ("pre_encode_cache", args.input_frames - args.output_frames * 8),
+    ):
+        item = model.metadata_props.add()
+        item.key = key
+        item.value = str(value)
 
 
 def ort_optimize_to_file(input_path: Path, output_path: Path, level: str, threads: int) -> None:

@@ -23,6 +23,7 @@ PROFILES = ("fast", "compact")
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-family", choices=tuple(FAMILY_SOURCES), required=True)
+    parser.add_argument("--streaming-latency-ms", type=int, choices=(560, 1120), default=560)
     parser.add_argument("--source", help="Local .nemo path or Hugging Face model id.")
     parser.add_argument("--model-root", type=Path, default=DEFAULT_MODEL_ROOT)
     parser.add_argument("--release-root", type=Path, default=DEFAULT_RELEASE_ROOT)
@@ -40,54 +41,42 @@ def parse_args() -> argparse.Namespace:
 
 def commands(args: argparse.Namespace) -> list[list[str]]:
     python = str(args.python.expanduser())
-    model_root = str(args.model_root.expanduser())
+    model_root = args.model_root.expanduser()
     source = args.source or FAMILY_SOURCES[args.model_family]
+    latency = getattr(args, "streaming_latency_ms", 560)
+    latencies = (560, 1120) if latency == 1120 else (560,)
     result: list[list[str]] = []
     if not args.skip_build:
-        for profile in PROFILES:
-            result.append(
-                [
-                    python,
-                    "-m",
-                    "wordpipe",
-                    "model-install",
-                    "--profile",
-                    profile,
-                    "--model-family",
-                    args.model_family,
-                    "--model-root",
-                    model_root,
-                    "--build-from-nemo",
-                    "--source",
-                    source,
-                    "--python",
-                    python,
+        for mode in latencies:
+            for profile in PROFILES:
+                result.append([
+                    python, "-m", "wordpipe", "model-install",
+                    "--profile", profile, "--model-family", args.model_family,
+                    "--model-root", str(model_root), "--build-from-nemo",
+                    "--source", source, "--python", python,
+                    *(["--streaming-latency-ms", str(mode)] if mode != 560 else []),
                     *(["--force"] if args.force else []),
                     *(["--force-source"] if args.force_source else []),
                     *(["--keep-build-dir"] if args.keep_build_dir else []),
                     *(["--dry-run"] if args.dry_run else []),
-                ]
-            )
+                ])
+    if str(SRC) not in sys.path:
+        sys.path.insert(0, str(SRC))
+    from wordpipe.models import profile_spec
     for profile in PROFILES:
-        result.append(
-            [
-                python,
-                str(ROOT / "scripts" / "publish_wordpipe_model_profiles.py"),
-                "--profile",
-                profile,
-                "--model-family",
-                args.model_family,
-                "--model-root",
-                model_root,
-                "--output-dir",
-                str(args.release_root.expanduser() / args.model_family / profile),
-                "--force-card",
-                *(["--force"] if args.force else []),
-                *(["--upload"] if args.upload else []),
-                *(["--private"] if args.private else []),
-                *(["--revision", args.revision] if args.revision else []),
-            ]
-        )
+        mode_dir = profile_spec(profile).output_dir(model_root / "1120ms", args.model_family)
+        result.append([
+            python, str(ROOT / "scripts" / "publish_wordpipe_model_profiles.py"),
+            "--profile", profile, "--model-family", args.model_family,
+            "--model-root", str(model_root),
+            *(["--1120ms-dir", str(mode_dir)] if latency == 1120 else []),
+            "--output-dir", str(args.release_root.expanduser() / args.model_family / profile),
+            "--force-card",
+            *(["--force"] if args.force else []),
+            *(["--upload"] if args.upload else []),
+            *(["--private"] if args.private else []),
+            *(["--revision", args.revision] if args.revision else []),
+        ])
     return result
 
 

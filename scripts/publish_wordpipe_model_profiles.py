@@ -21,6 +21,7 @@ from wordpipe.models import (  # noqa: E402
     ModelProfileSpec,
     model_runtime_dir_valid,
     profile_spec,
+    profile_streaming_latency,
 )
 
 
@@ -28,6 +29,7 @@ DEFAULT_OUTPUT_DIR = ROOT / "build" / "model-release"
 REQUIRED_ONNX_FILES = ("tokenizer.model", "encoder.onnx", "decoder_joint.onnx")
 OPTIONAL_PROFILE_FILES = (
     "encoder.onnx.data",
+    "encoder.shared-weights.data",
     "decoder_joint.onnx.data",
     "config.json",
     "preprocessor_config.json",
@@ -40,6 +42,7 @@ REPRODUCIBILITY_SCRIPTS = (
     "rewrite_nemotron_projected_kv_cache.py",
     "build_nemotron_fixed_shape_model.py",
     "convert_nemotron_to_ort_format.py",
+    "bundle_nemotron_streaming_modes.py",
 )
 
 
@@ -52,6 +55,7 @@ def main() -> int:
         )
     spec = profile_spec(profiles[0])
     family = args.model_family
+    latency_ms = 560
     repo_id = args.repo_id or spec.prebuilt_repo_for_family(family)
     output_dir = args.output_dir.expanduser()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -60,6 +64,7 @@ def main() -> int:
         "repo_id": repo_id,
         "source_model": source_model_for_family(family),
         "model_family": family,
+        "streaming_latency_ms": latency_ms,
         "model_spec": "MODEL_SPEC.md",
         "reproducibility_scripts": [f"scripts/{name}" for name in REPRODUCIBILITY_SCRIPTS],
         "profiles": {},
@@ -69,6 +74,8 @@ def main() -> int:
         spec = profile_spec(profile_name)
         source = resolve_profile_source(args, spec, family)
         validate_publish_source(source, spec, family)
+        if profile_streaming_latency(source) != latency_ms:
+            raise SystemExit("publication mode does not match the model's streaming latency")
         copied = copy_profile_files(
             source,
             output_dir,
@@ -77,18 +84,29 @@ def main() -> int:
         manifest["profiles"][profile_name] = profile_metadata(copied, source, spec, family)
         print(f"{profile_name}: {output_dir}")
 
+    if args.mode_1120_dir is not None:
+        from bundle_nemotron_streaming_modes import append_mode
+        validate_publish_source(args.mode_1120_dir, spec, family)
+        append_mode(output_dir, args.mode_1120_dir, 1120)
+        manifest["streaming_bundle"] = "wordpipe-streaming-bundle.json"
+        manifest["profiles"][spec.name] = profile_metadata(
+            publish_files(output_dir), source, spec, family)
+
     manifest_path = output_dir / "wordpipe-model-profiles-manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"manifest: {manifest_path}")
 
     readme_path = output_dir / "README.md"
     if not readme_path.exists() or args.force_card:
-        readme_path.write_text(render_model_card(repo_id, profiles, family), encoding="utf-8")
+        card = render_model_card(repo_id, profiles, family)
+        if args.mode_1120_dir is not None:
+            card += "\n## Streaming Modes\n\nThis bundle provides 560 ms and 1120 ms encoders sharing one set of weights.\n"
+        readme_path.write_text(card, encoding="utf-8")
         print(f"model card: {readme_path}")
 
     model_spec_path = output_dir / "MODEL_SPEC.md"
     if not model_spec_path.exists() or args.force_card:
-        model_spec_path.write_text(render_model_spec(profiles, family), encoding="utf-8")
+        model_spec_path.write_text(render_model_spec(profiles, family, latency_ms), encoding="utf-8")
         print(f"model spec: {model_spec_path}")
 
     copy_reproducibility_scripts(output_dir, force=args.force)
@@ -124,6 +142,8 @@ def parse_args() -> argparse.Namespace:
         default="multilingual",
         help="Checkpoint family being packaged.",
     )
+    parser.add_argument("--1120ms-dir", dest="mode_1120_dir", type=Path,
+                        help="Add a 1120 ms encoder sharing the base 560 ms weights in the same repo.")
     parser.add_argument(
         "--model-root",
         type=Path,
@@ -221,9 +241,13 @@ def validate_profile_config(
             "the intermediate transform/export directory."
         )
 
+    right_context = config.get("right_context", 6)
+    if right_context not in (6, 13):
+        raise SystemExit("unsupported streaming right context")
+    output_frames = right_context + 1
     expected_fixed = {
-        "input_frames": 65,
-        "output_frames": 7,
+        "input_frames": output_frames * 8 + 9,
+        "output_frames": output_frames,
         "num_layers": 24,
         "cache_len": 70 if family == "english" else 56,
         "hidden_dim": 1024,
@@ -432,10 +456,13 @@ inference artifacts for Wordpipe.
 def render_model_spec(
     profiles: Iterable[str],
     family: str = "multilingual",
+    latency_ms: int = 560,
 ) -> str:
     selected = tuple(profiles)
     source_model = source_model_for_family(family)
     cache_len = 70 if family == "english" else 56
+    output_frames = latency_ms // 80
+    input_frames = output_frames * 8 + 9
     fast_output_name = profile_spec("fast").output_name_for_family(family)
     compact_output_name = profile_spec("compact").output_name_for_family(family)
     profile_rows = []
@@ -478,14 +505,15 @@ Both profiles target Wordpipe's Parakeet/Nemotron streaming runtime ABI:
 
 - 16 kHz mono audio features.
 - Batch size 1.
-- Encoder input shape `processed_signal=[1, 128, 65]`.
-- Encoder output shape `encoded=[1, 1024, 7]`.
+- Streaming chunk duration: {latency_ms} ms.
+- Encoder input shape `processed_signal=[1, 128, {input_frames}]`.
+- Encoder output shape `encoded=[1, 1024, {output_frames}]`.
 - Streaming cache shape assumptions: `num_layers=24`, `hidden_dim=1024`,
   `cache_len={cache_len}`, and `conv_context=8`.
 - The graph exposes per-layer projected attention cache inputs
   `cache_key_layer_N` and `cache_value_layer_N` with shape `[1, {cache_len}, 1024]`.
 - The graph emits `projected_current_key_layer_N` and
-  `projected_current_value_layer_N` with shape `[1, 7, 1024]`.
+  `projected_current_value_layer_N` with shape `[1, {output_frames}, 1024]`.
 - The caller, not the graph, rolls the projected K/V cache between streaming
   chunks.
 - Fixed-shape specialization resolves symbolic dimensions and replaces static

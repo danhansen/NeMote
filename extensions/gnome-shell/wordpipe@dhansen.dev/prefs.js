@@ -19,6 +19,7 @@ const SERVICE_XML = `
     <method name="Stop"/>
     <method name="Toggle"/>
     <method name="Shutdown"/>
+    <method name="RegisterShellClient"/>
     <method name="GetState"><arg name="state" type="a{sv}" direction="out"/></method>
     <method name="GetConfig"><arg name="config" type="a{sv}" direction="out"/></method>
     <method name="ListBackends"><arg name="backends" type="aa{sv}" direction="out"/></method>
@@ -397,8 +398,7 @@ class WordpipePage extends Adw.PreferencesPage {
             model: this._profileModel,
             sensitive: this._selectableProfiles.length > 0,
         });
-        this._profileRow.selected = this._selectedIndex(
-            this._selectableProfiles, this._selectedPresetId());
+        this._profileRow.selected = this._selectedProfileIndex(this._selectedPresetId());
         this._profileRow.connect('notify::selected', row => {
             if (this._syncingSettings)
                 return;
@@ -413,6 +413,20 @@ class WordpipePage extends Adw.PreferencesPage {
             this._callRemote('SetModelProfile', preset.id);
         });
         this._modelGroup.add(this._profileRow);
+
+        this._latencyRow = new Adw.ComboRow({
+            title: _('Streaming Latency'),
+            subtitle: _('1120 ms provides more audio context; each mode needs its own model download.'),
+            model: Gtk.StringList.new(['560 ms', '1120 ms']),
+            selected: this._settings.get_uint('streaming-latency-ms') === 1120 ? 1 : 0,
+        });
+        this._latencyRow.connect('notify::selected', row => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_uint('streaming-latency-ms', row.selected === 1 ? 1120 : 560);
+            this._pushRuntimeOptions();
+        });
+        this._modelGroup.add(this._latencyRow);
 
         this._languageModel = new Gtk.StringList();
         this._languageRow = new Adw.ComboRow({
@@ -698,7 +712,10 @@ class WordpipePage extends Adw.PreferencesPage {
         this._signalIds.push(this._proxy.connectSignal('StateChanged',
             (_proxy, _sender, [state]) => this._handleState(deepUnpackMap(state))));
         this._signalIds.push(this._proxy.connectSignal('ConfigChanged',
-            (_proxy, _sender, [config]) => this._syncFromConfig(deepUnpackMap(config))));
+            (_proxy, _sender, [config]) => {
+                this._syncFromConfig(deepUnpackMap(config));
+                this._refreshModelProfiles();
+            }));
         this._signalIds.push(this._proxy.connectSignal('InstallProgress',
             (_proxy, _sender, [profile, progress]) => {
                 this._handleInstallProgress(profile, deepUnpackMap(progress));
@@ -809,6 +826,8 @@ class WordpipePage extends Adw.PreferencesPage {
                 this._settings.set_string('model-profile', values.model_profile);
             if (typeof values.model_family === 'string')
                 this._settings.set_string('model-family', values.model_family);
+            if (typeof values.streaming_latency_ms === 'number')
+                this._settings.set_uint('streaming-latency-ms', values.streaming_latency_ms);
             if (typeof values.input_device === 'string')
                 this._settings.set_string('input-device', values.input_device);
             if (typeof values.language === 'string')
@@ -852,8 +871,7 @@ class WordpipePage extends Adw.PreferencesPage {
         this._withSyncing(() => {
             this._updateLanguageOptions(family, language);
             this._backendRow.selected = this._selectedIndex(this._backends, backend);
-            this._profileRow.selected = this._selectedIndex(
-                this._selectableProfiles, preset);
+            this._profileRow.selected = this._selectedProfileIndex(preset);
             this._languageRow.selected = this._selectedIndex(this._languages, language);
         });
     }
@@ -877,6 +895,7 @@ class WordpipePage extends Adw.PreferencesPage {
         this._modelInstallerPathRow.text = this._settings.get_string('model-installer-path');
         this._threadsRow.value = this._settings.get_uint('num-threads');
         this._sampleRateRow.value = this._settings.get_uint('sample-rate');
+        this._latencyRow.selected = this._settings.get_uint('streaming-latency-ms') === 1120 ? 1 : 0;
         this._shortcutModeRow.selected = this._selectedIndex(
             SHORTCUT_MODES,
             this._settings.get_string('shortcut-mode'));
@@ -940,8 +959,7 @@ class WordpipePage extends Adw.PreferencesPage {
             this._selectedPreset = selectedPreset;
             if (this._profileRow) {
                 this._withSyncing(() => {
-                    this._profileRow.selected = this._selectedIndex(
-                        this._selectableProfiles, selectedPreset);
+                    this._profileRow.selected = this._selectedProfileIndex(selectedPreset);
                 });
             }
         }
@@ -949,6 +967,8 @@ class WordpipePage extends Adw.PreferencesPage {
         const previousInstallingProfile = this._installingProfile;
         this._installing = Boolean(values.installing);
         this._installingProfile = values.installing_profile ?? '';
+        this._latencyRow.sensitive = !values.loading_model && !values.listening &&
+            !values.stopping && !values.installing;
         const selectedModelInstalled = values.selected_model_installed !== false;
         if (values.loading_model)
             this._statusRow.subtitle = _('Loading model');
@@ -1027,10 +1047,15 @@ class WordpipePage extends Adw.PreferencesPage {
     }
 
     _rebuildProfileOptions() {
-        this._selectableProfiles = installedModelProfiles(this._profiles);
-        clearStringList(this._profileModel);
-        this._selectableProfiles.forEach(profile =>
-            this._profileModel.append(profile.title));
+        this._withSyncing(() => {
+            this._selectableProfiles = installedModelProfiles(this._profiles);
+            clearStringList(this._profileModel);
+            this._selectableProfiles.forEach(profile =>
+                this._profileModel.append(profile.title));
+            const index = this._selectableProfiles.findIndex(
+                profile => profile.id === this._selectedPresetId());
+            this._profileRow.selected = index < 0 ? Gtk.INVALID_LIST_POSITION : index;
+        });
         if (!this._profileRow)
             return;
         this._profileRow.sensitive = this._selectableProfiles.length > 0;
@@ -1041,6 +1066,11 @@ class WordpipePage extends Adw.PreferencesPage {
 
     _selectedIndex(items, selectedId) {
         return Math.max(0, items.findIndex(item => item.id === selectedId));
+    }
+
+    _selectedProfileIndex(selectedId) {
+        const index = this._selectableProfiles.findIndex(profile => profile.id === selectedId);
+        return index < 0 ? Gtk.INVALID_LIST_POSITION : index;
     }
 
     _selectedPresetId() {
@@ -1089,6 +1119,7 @@ class WordpipePage extends Adw.PreferencesPage {
 
     _pushRuntimeOptions() {
         this._callRemote('SetRuntimeOptions', {
+            streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
             model_root: new GLib.Variant('s', this._settings.get_string('model-root')),
             language: new GLib.Variant('s', this._settings.get_string('language')),
             worker_path: new GLib.Variant('s', this._settings.get_string('worker-path')),
@@ -1112,7 +1143,7 @@ class WordpipePage extends Adw.PreferencesPage {
             if (error) {
                 this._statusRow.subtitle = formatError(error);
                 logError(error, `Wordpipe ${method} failed`);
-                if (method === 'SetModelProfile')
+                if (method === 'SetModelProfile' || method === 'SetRuntimeOptions')
                     this._refreshConfig();
                 return;
             }

@@ -16,7 +16,7 @@ use serde_json::{json, Value};
 
 const NEMOTRON_CHUNK_SAMPLES: usize = 8960;
 
-#[derive(Debug, Parser)]
+#[derive(Debug, Parser, Clone)]
 struct Args {
     #[arg(long)]
     model_dir: Option<PathBuf>,
@@ -34,8 +34,11 @@ struct Args {
     queue_seconds: f32,
     #[arg(long, default_value_t = 1.0)]
     stats_interval_seconds: f32,
-    #[arg(long, default_value_t = NEMOTRON_CHUNK_SAMPLES)]
+    #[arg(skip = NEMOTRON_CHUNK_SAMPLES)]
     chunk_samples: usize,
+    /// Optional consistency check; defaults to the model's chunk size.
+    #[arg(long = "chunk-samples")]
+    chunk_samples_override: Option<usize>,
     #[arg(long, default_value_t = 3)]
     flush_chunks: usize,
     #[arg(long)]
@@ -124,7 +127,7 @@ struct RunningSession {
 }
 
 fn main() -> Result<()> {
-    let args = Arc::new(Args::parse());
+    let mut args = Arc::new(Args::parse());
     validate_args(&args)?;
     let emitter = Arc::new(JsonEmitter::new());
 
@@ -140,6 +143,7 @@ fn main() -> Result<()> {
         .emit(json!({"event": "loading_model", "data": {"model_dir": required_model_dir(&args)?}}));
     let load_started = Instant::now();
     let mut model = Some(load_model(&args)?);
+    Arc::make_mut(&mut args).chunk_samples = model.as_ref().unwrap().chunk_samples();
     emitter.emit(json!({
         "event": "model_loaded",
         "data": {"load_seconds": round3(load_started.elapsed().as_secs_f64())}
@@ -256,7 +260,7 @@ fn validate_args(args: &Args) -> Result<()> {
     if args.sample_rate == 0 {
         return Err(anyhow!("--sample-rate must be at least 1"));
     }
-    if args.chunk_samples == 0 {
+    if args.chunk_samples == 0 || args.chunk_samples_override == Some(0) {
         return Err(anyhow!("--chunk-samples must be at least 1"));
     }
     if !args.queue_seconds.is_finite() || args.queue_seconds <= 0.0 {
@@ -320,6 +324,7 @@ fn run_session(
         Arc::clone(&dropped_chunks),
     )?;
     stream.play().context("failed to start input stream")?;
+    let mut stream = Some(stream);
 
     emitter.emit(json!({
         "event": "listening",
@@ -340,44 +345,56 @@ fn run_session(
     let mut peak_rms = 0.0f32;
 
     loop {
-        select! {
-            recv(stop_rx) -> _ => break,
+        let stopping = select! {
+            recv(stop_rx) -> _ => {
+                drop(stream.take());
+                drain_captured_audio(&audio_rx, &mut pending, &audio_pool_tx,
+                    &mut accepted_samples, &mut last_rms, &mut peak_rms);
+                true
+            },
             recv(audio_rx) -> msg => {
-                let samples = match msg {
-                    Ok(samples) => samples,
-                    Err(_) => break,
-                };
-                accepted_samples += samples.len();
-                let (rms, peak) = audio_level(&samples);
-                last_rms = rms;
-                peak_rms = peak_rms.max(peak);
-                pending.extend_from_slice(&samples);
-                recycle_audio_buffer(samples, &audio_pool_tx);
-
-                while pending.len() >= args.chunk_samples {
-                    chunk_buf.copy_from_slice(&pending[..args.chunk_samples]);
-                    pending.drain(..args.chunk_samples);
-                    processed_samples += chunk_buf.len();
-                    let decoded = decode_chunk(
-                        model,
-                        &chunk_buf,
-                        &mut decode_seconds,
-                        &mut decode_calls,
-                        args.trace_token_decisions,
-                    )?;
-                    emit_token_trace(&emitter, &decoded);
-                    let decoded = decoded.text;
-                    if !decoded.is_empty() {
-                        transcript.push_str(&decoded);
-                        emitter.emit(json!({
-                            "event": "partial",
-                            "text": transcript,
-                            "data": metrics(started, accepted_samples, processed_samples, args.sample_rate, decode_seconds, decode_calls, dropped_chunks.load(Ordering::Relaxed), last_rms, peak_rms),
-                        }));
+                match msg {
+                    Ok(samples) => {
+                        accepted_samples += samples.len();
+                        let (rms, peak) = audio_level(&samples);
+                        last_rms = rms;
+                        peak_rms = peak_rms.max(peak);
+                        pending.extend_from_slice(&samples);
+                        recycle_audio_buffer(samples, &audio_pool_tx);
+                        false
+                    },
+                    Err(_) => {
+                        drop(stream.take());
+                        true
                     }
                 }
+            },
+            default(Duration::from_millis(20)) => false,
+        };
+        while pending.len() >= args.chunk_samples {
+            chunk_buf.copy_from_slice(&pending[..args.chunk_samples]);
+            pending.drain(..args.chunk_samples);
+            processed_samples += chunk_buf.len();
+            let decoded = decode_chunk(
+                model,
+                &chunk_buf,
+                &mut decode_seconds,
+                &mut decode_calls,
+                args.trace_token_decisions,
+            )?;
+            emit_token_trace(&emitter, &decoded);
+            let decoded = decoded.text;
+            if !decoded.is_empty() {
+                transcript.push_str(&decoded);
+                emitter.emit(json!({
+                    "event": "partial",
+                    "text": transcript,
+                    "data": metrics(started, accepted_samples, processed_samples, args.sample_rate, decode_seconds, decode_calls, dropped_chunks.load(Ordering::Relaxed), last_rms, peak_rms),
+                }));
             }
-            default(Duration::from_millis(20)) => {}
+        }
+        if stopping {
+            break;
         }
 
         if last_stats.elapsed() >= Duration::from_secs_f32(args.stats_interval_seconds.max(0.1)) {
@@ -446,7 +463,7 @@ fn run_session(
     Ok(())
 }
 
-fn run_wav_file(args: Arc<Args>, emitter: Arc<JsonEmitter>) -> Result<()> {
+fn run_wav_file(mut args: Arc<Args>, emitter: Arc<JsonEmitter>) -> Result<()> {
     let wav_path = args
         .wav
         .as_ref()
@@ -457,6 +474,7 @@ fn run_wav_file(args: Arc<Args>, emitter: Arc<JsonEmitter>) -> Result<()> {
         .emit(json!({"event": "loading_model", "data": {"model_dir": required_model_dir(&args)?}}));
     let load_started = Instant::now();
     let mut model = load_model(&args)?;
+    Arc::make_mut(&mut args).chunk_samples = model.chunk_samples();
     emitter.emit(json!({
         "event": "model_loaded",
         "data": {"load_seconds": round3(load_started.elapsed().as_secs_f64())}
@@ -573,6 +591,16 @@ fn load_model(args: &Args) -> Result<Nemotron> {
         .with_context(|| {
         format!("failed to load Nemotron model from {}", model_dir.display())
     })?;
+    if args
+        .chunk_samples_override
+        .is_some_and(|samples| model.chunk_samples() != samples)
+    {
+        return Err(anyhow!(
+            "model requires {} samples per chunk, but worker configured for {}",
+            model.chunk_samples(),
+            args.chunk_samples_override.unwrap()
+        ));
+    }
     apply_language(&mut model, &args.language)?;
     Ok(model)
 }
@@ -813,6 +841,24 @@ fn recycle_audio_buffer(mut samples: Vec<f32>, audio_pool_tx: &Sender<Vec<f32>>)
     let _ = audio_pool_tx.try_send(samples);
 }
 
+fn drain_captured_audio(
+    audio_rx: &Receiver<Vec<f32>>,
+    pending: &mut Vec<f32>,
+    pool_tx: &Sender<Vec<f32>>,
+    accepted_samples: &mut usize,
+    last_rms: &mut f32,
+    peak_rms: &mut f32,
+) {
+    while let Ok(samples) = audio_rx.try_recv() {
+        *accepted_samples += samples.len();
+        let (rms, peak) = audio_level(&samples);
+        *last_rms = rms;
+        *peak_rms = peak_rms.max(peak);
+        pending.extend_from_slice(&samples);
+        recycle_audio_buffer(samples, pool_tx);
+    }
+}
+
 fn audio_level(samples: &[f32]) -> (f32, f32) {
     if samples.is_empty() {
         return (0.0, 0.0);
@@ -877,6 +923,7 @@ mod tests {
             queue_seconds: 10.0,
             stats_interval_seconds: 1.0,
             chunk_samples: NEMOTRON_CHUNK_SAMPLES,
+            chunk_samples_override: None,
             flush_chunks: 3,
             wav: None,
             graph_optimization: CliGraphOptimization::All,
@@ -891,6 +938,35 @@ mod tests {
     #[test]
     fn validate_args_accepts_defaults() {
         validate_args(&default_args()).unwrap();
+    }
+
+    #[test]
+    fn stopping_preserves_all_queued_audio_in_capture_order() {
+        let (tx, rx) = bounded(4);
+        let (pool_tx, pool_rx) = bounded(4);
+        tx.send(vec![0.25; 5]).unwrap();
+        tx.send(vec![0.5; 7]).unwrap();
+        drop(tx);
+        let mut pending = vec![0.75; 3];
+        let mut accepted = 3;
+        let mut rms = 0.75;
+        let mut peak = 0.75;
+        drain_captured_audio(
+            &rx,
+            &mut pending,
+            &pool_tx,
+            &mut accepted,
+            &mut rms,
+            &mut peak,
+        );
+        assert_eq!(accepted, 15);
+        assert_eq!(
+            pending,
+            [vec![0.75; 3], vec![0.25; 5], vec![0.5; 7]].concat()
+        );
+        assert_eq!(rms, 0.5);
+        assert_eq!(peak, 0.75);
+        assert_eq!(pool_rx.len(), 2);
     }
 
     #[test]

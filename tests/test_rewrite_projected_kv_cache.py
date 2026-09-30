@@ -26,8 +26,10 @@ def _value(name: str, dims: list[int | str]) -> onnx.ValueInfoProto:
     return helper.make_tensor_value_info(name, TensorProto.FLOAT, dims)
 
 
-def _fp32_projection_model() -> onnx.ModelProto:
-    weight = np.eye(4, dtype=np.float32)
+def _fp32_projection_model(dynamic: bool = False) -> onnx.ModelProto:
+    weight = np.arange(16, dtype=np.float32).reshape(4, 4) / 16
+    frames = "current_frames" if dynamic else 1
+    total = "total_frames" if dynamic else 3
     nodes = [
         helper.make_node(
             "Concat",
@@ -62,20 +64,50 @@ def _fp32_projection_model() -> onnx.ModelProto:
         [
             _value("cache_last_channel", [1, 1, 2, 4]),
             _value("raw_key_cache", [1, 2, 4]),
-            _value("current_key", [1, 1, 4]),
+            _value("current_key", [1, frames, 4]),
             _value("raw_value_cache", [1, 2, 4]),
-            _value("current_value", [1, 1, 4]),
+            _value("current_value", [1, frames, 4]),
         ],
-        [_value("key_out", [1, 3, 4]), _value("value_out", [1, 3, 4])],
+        [_value("key_out", [1, total, 4]), _value("value_out", [1, total, 4])],
         [
             numpy_helper.from_array(weight, "key_weight"),
             numpy_helper.from_array(weight, "value_weight"),
         ],
     )
-    return helper.make_model(graph, opset_imports=[helper.make_operatorsetid("", 17)])
+    model = helper.make_model(graph, opset_imports=[helper.make_operatorsetid("", 17)])
+    model.ir_version = 9
+    return model
 
 
 class ProjectedCacheRewriteTests(unittest.TestCase):
+    def test_one_rewritten_graph_accepts_both_chunk_sizes(self) -> None:
+        import onnxruntime as ort
+
+        rewriter = _load_rewriter()
+        rng = np.random.default_rng(123)
+        weight = np.arange(16, dtype=np.float32).reshape(4, 4) / 16
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "source.onnx"
+            output = Path(tmp) / "output.onnx"
+            onnx.save(_fp32_projection_model(dynamic=True), source)
+            rewriter.rewrite_model(source, output, "fp32")
+            baseline = ort.InferenceSession(str(source), providers=["CPUExecutionProvider"])
+            projected = ort.InferenceSession(str(output), providers=["CPUExecutionProvider"])
+            for frames in (7, 14):
+                with self.subTest(frames=frames):
+                    raw = rng.standard_normal((1, 2, 4)).astype(np.float32)
+                    current = rng.standard_normal((1, frames, 4)).astype(np.float32)
+                    common = {"cache_last_channel": np.zeros((1, 1, 2, 4), dtype=np.float32),
+                              "raw_key_cache": raw, "raw_value_cache": raw,
+                              "current_key": current, "current_value": current}
+                    expected = baseline.run(["key_out", "value_out"], common)
+                    actual = projected.run(["key_out", "value_out"], {
+                        **common, "cache_key_layer_0": raw @ weight,
+                        "cache_value_layer_0": raw @ weight,
+                    })
+                    for a, b in zip(actual, expected):
+                        np.testing.assert_allclose(a, b, rtol=1e-6, atol=1e-6)
+
     def test_rewrite_supports_native_fp32_matmul_projection(self) -> None:
         rewriter = _load_rewriter()
         with tempfile.TemporaryDirectory() as tmp:

@@ -35,11 +35,13 @@ PREBUILT_PROFILE_FILES = (
     "tokenizer.model",
     "encoder.onnx",
     "encoder.onnx.data",
+    "encoder.shared-weights.data",
     "decoder_joint.onnx",
     "decoder_joint.onnx.data",
     "config.json",
     "preprocessor_config.json",
     "tokenizer_config.json",
+    "wordpipe-streaming-bundle.json",
 )
 REQUIRED_PREBUILT_PROFILE_FILES = ("tokenizer.model", "encoder.onnx", "decoder_joint.onnx")
 PROFILE_COMPLETION_MARKER = ".wordpipe-profile.json"
@@ -211,6 +213,23 @@ def profile_spec(name: str) -> ModelProfileSpec:
     return MODEL_PROFILES[name]  # type: ignore[index]
 
 
+def streaming_model_root(model_root: Path, latency_ms: int = 560) -> Path:
+    if latency_ms not in (560, 1120):
+        raise ValueError("streaming latency must be 560 or 1120 ms")
+    return model_root if latency_ms == 560 else model_root / "1120ms"
+
+
+def profile_streaming_latency(runtime_dir: Path) -> int:
+    config_path = runtime_dir / "config.json"
+    if not config_path.exists():
+        return 560
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    right = config.get("right_context", 6)
+    if right not in (6, 13):
+        raise ValueError(f"unsupported right_context: {right!r}")
+    return (right + 1) * 80
+
+
 def profile_runtime_dir(
     model_root: Path,
     profile: str,
@@ -309,11 +328,23 @@ def _profile_config_valid_if_present(
         return False
 
     fixed = config.get("fixed_streaming_shapes")
+    shared_files = config.get("shared_weight_files", [])
+    if not isinstance(shared_files, list) or any(
+        not isinstance(name, str) or not _safe_relative_path(name)
+        or not (runtime_dir / name).is_file() for name in shared_files
+    ):
+        return False
     if not isinstance(fixed, dict):
         return False
+    right_context = config.get("right_context", 6)
+    if right_context not in (6, 13):
+        return False
+    if "1120ms" in runtime_dir.parts and right_context != 13:
+        return False
+    output_frames = right_context + 1
     expected_fixed = {
-        "input_frames": 65,
-        "output_frames": 7,
+        "input_frames": output_frames * 8 + 9,
+        "output_frames": output_frames,
         "num_layers": 24,
         "cache_len": 70 if family == "english" else 56,
         "hidden_dim": 1024,
@@ -358,8 +389,13 @@ def install_built_profile(
     profile: str,
     family: ModelFamily = "multilingual",
     force: bool = False,
+    streaming_latency_ms: int | None = None,
 ) -> Path:
     prepared_source = _prepare_built_profile_source(source)
+    if streaming_latency_ms is not None and profile_streaming_latency(prepared_source.path) != streaming_latency_ms:
+        if prepared_source.cleanup_dir is not None:
+            shutil.rmtree(prepared_source.cleanup_dir, ignore_errors=True)
+        raise RuntimeError("source model streaming latency does not match the requested mode")
     destination = profile_runtime_dir(model_root, profile, family)
     if destination.exists():
         if not force:
@@ -369,7 +405,7 @@ def install_built_profile(
     if temporary.exists():
         shutil.rmtree(temporary)
     try:
-        shutil.copytree(prepared_source.path, temporary)
+        shutil.copytree(prepared_source.path, temporary, copy_function=_link_or_copy)
         _write_profile_completion_marker(temporary, profile=profile, family=family)
         if destination.exists():
             shutil.rmtree(destination)
@@ -701,13 +737,80 @@ def _install_prepared_profile(
     if temporary.exists():
         shutil.rmtree(temporary)
     try:
-        shutil.copytree(source, temporary)
+        shutil.copytree(source, temporary, copy_function=_link_or_copy)
         _write_profile_completion_marker(temporary, profile=profile, family=family)
         if destination.exists():
             shutil.rmtree(destination)
         temporary.replace(destination)
     finally:
         shutil.rmtree(temporary, ignore_errors=True)
+
+
+def _link_or_copy(source: str | Path, destination: str | Path) -> str:
+    if not str(source).endswith(".data"):
+        shutil.copy2(source, destination)
+        return str(destination)
+    try:
+        os.link(source, destination)
+    except OSError:
+        shutil.copy2(source, destination)
+    return str(destination)
+
+
+def download_streaming_profile(
+    *, profile: str, model_root: Path, family: ModelFamily, latency_ms: int,
+    repo_id: str | None = None, force: bool = False,
+    progress: ProgressCallback | None = None,
+) -> Path:
+    """Fetch a small encoder/config and reuse checksum-verified shared weights."""
+    if latency_ms != 1120:
+        raise ValueError("additional streaming mode must be 1120 ms")
+    from huggingface_hub import hf_hub_download, hf_hub_url
+    spec = profile_spec(profile)
+    repo = repo_id or spec.prebuilt_repo_for_family(family)
+    shared_cache = prebuilt_profile_cache_dir(model_root, repo, profile)
+    shared_cache.mkdir(parents=True, exist_ok=True)
+    manifest_path = hf_hub_download(
+        repo_id=repo, filename="wordpipe-streaming-bundle.json", local_dir=shared_cache,
+        force_download=force,
+    )
+    manifest = json.loads(Path(manifest_path).read_text())
+    if manifest.get("format") != 1 or str(latency_ms) not in manifest.get("modes", {}):
+        raise RuntimeError(f"{repo} does not publish the requested streaming mode")
+    mode = manifest["modes"][str(latency_ms)]
+    runtime = shared_cache / f"{latency_ms}ms"
+    runtime.mkdir(exist_ok=True)
+    names = [mode["encoder"], mode["config"], *manifest["shared_files"]]
+    installed_base = spec.output_dir(model_root, family)
+    for index, name in enumerate(dict.fromkeys(names)):
+        if not isinstance(name, str) or not _safe_relative_path(name):
+            raise RuntimeError("unsafe streaming bundle file name")
+        expected = manifest["files"][name]
+        cached = shared_cache / name
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        candidates = [cached, installed_base / name]
+        usable = next((path for path in candidates if path.is_file()
+                       and path.stat().st_size == expected["size"]
+                       and _sha256_file(path) == expected["sha256"]), None)
+        if usable is None:
+            usable = _download_prebuilt_file(
+                repo_id=repo, item=_PrebuiltFile(name, True, expected["size"]),
+                output_dir=shared_cache, force=force, hf_hub_download=hf_hub_download,
+                url=hf_hub_url(repo, name), progress=progress, profile=profile,
+                file_index=index + 1, file_count=len(names), completed_base=0,
+                total_bytes=0,
+            )
+            if _sha256_file(usable) != expected["sha256"]:
+                raise RuntimeError(f"streaming bundle checksum mismatch: {name}")
+        target_name = "encoder.onnx" if name == mode["encoder"] else (
+            "config.json" if name == mode["config"] else name)
+        destination = runtime / target_name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.exists():
+            destination.unlink()
+        _link_or_copy(usable, destination)
+    _write_profile_completion_marker(runtime, profile=profile, family=family)
+    return runtime
 
 
 def _prepare_built_profile_source(source: Path) -> _PreparedProfileSource:
@@ -853,6 +956,7 @@ def build_profile_command(
     family: ModelFamily = "multilingual",
     python: Path,
     force: bool = False,
+    streaming_latency_ms: int = 560,
 ) -> list[str]:
     spec = profile_spec(profile)
     output_dir = spec.output_dir(model_root, family)
@@ -868,6 +972,7 @@ def build_profile_command(
         spec.build_profile,
         "--model-family",
         family,
+        *(["--streaming-latency-ms", str(streaming_latency_ms)] if streaming_latency_ms != 560 else []),
         *(["--emit-ort-format"] if spec.emit_ort_format else []),
         *(["--force"] if force else []),
     ]
@@ -914,6 +1019,7 @@ def build_model_profile(
     dry_run: bool = False,
     keep_build_dir: bool = False,
     progress: ProgressCallback | None = None,
+    streaming_latency_ms: int = 560,
 ) -> Path:
     command = build_profile_command(
         source=source,
@@ -922,6 +1028,7 @@ def build_model_profile(
         family=family,
         python=python,
         force=force,
+        streaming_latency_ms=streaming_latency_ms,
     )
     rendered_command = " ".join(command)
     print(rendered_command, file=sys.stderr)

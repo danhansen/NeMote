@@ -63,6 +63,11 @@ Before uploading, review the generated model card for:
 The full build-and-publish path for both performance profiles is automated by
 the family release wrapper:
 
+To include both streaming modes, add `--streaming-latency-ms 1120` to the
+family command below. It builds the 560 ms and 1120 ms encoders and packages
+each performance profile in its existing Hub repository, with shared weights.
+No separate per-latency repository is created.
+
 ```sh
 PYTHONPATH=src python3 scripts/publish_wordpipe_model_family.py \
   --model-family english \
@@ -76,6 +81,27 @@ correct family-specific cache contract, validates and packages each repository,
 then uploads both. Use `--model-family multilingual` for the multilingual pair,
 `--dry-run` to inspect the commands without changing anything, or `--skip-build`
 to repackage and upload already-built artifacts.
+
+For manual packaging, pass the existing 560 ms output as before and add
+`--1120ms-dir /path/to/the/1120ms/onnx-output`. The publisher emits
+`wordpipe-streaming-bundle.json`, `encoder.1120ms.onnx`, and
+`config.1120ms.json`. Both encoders reference the same learned tensor data.
+Shape-dependent positional constants may differ and are stored separately.
+Large tensors that should be shared but differ are rejected. The downloader
+checks SHA-256 before reusing installed weights and retains the existing
+560 ms directory layout.
+
+| Mode | Right context | Mel input frames | Encoder output frames |
+| --- | ---: | ---: | ---: |
+| 560 ms | 6 | 65 | 7 |
+| 1120 ms | 13 | 121 | 14 |
+
+Session-time dimension overrides let ORT fold symbolic shape work and cache a
+mode-specific optimized graph. They do not change a baked-in attention mask.
+Therefore the current bundle keeps two small encoder graph structures until a
+single fully dynamic NeMo export has demonstrated equivalent tokens and speed
+at both contexts. Each real export still needs numerical parity and WER/RTF
+validation before upload; the packaging and shape probes are not ASR benchmarks.
 
 Publish one profile per Hugging Face model repo. From canonical installed
 profile names under a model root:

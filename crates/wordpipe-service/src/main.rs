@@ -9,6 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait};
+use futures_lite::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use wordpipe_protocol::{
@@ -38,6 +39,7 @@ struct ServiceConfig {
     backend: String,
     model_profile: String,
     model_family: String,
+    streaming_latency_ms: u32,
     input_device: String,
     language: String,
     shortcut: String,
@@ -57,6 +59,7 @@ struct PersistedConfig {
     backend: Option<String>,
     model_profile: Option<String>,
     model_family: Option<String>,
+    streaming_latency_ms: Option<u32>,
     input_device: Option<String>,
     language: Option<String>,
     shortcut: Option<String>,
@@ -77,6 +80,7 @@ impl From<&ServiceConfig> for PersistedConfig {
             backend: Some(config.backend.clone()),
             model_profile: Some(config.model_profile.clone()),
             model_family: Some(config.model_family.clone()),
+            streaming_latency_ms: Some(config.streaming_latency_ms),
             input_device: Some(config.input_device.clone()),
             language: Some(config.language.clone()),
             shortcut: Some(config.shortcut.clone()),
@@ -99,6 +103,7 @@ impl Default for ServiceConfig {
             backend: DEFAULT_BACKEND.to_string(),
             model_profile: DEFAULT_MODEL_PROFILE.to_string(),
             model_family: DEFAULT_MODEL_FAMILY.to_string(),
+            streaming_latency_ms: 560,
             input_device: String::new(),
             language: DEFAULT_LANGUAGE.to_string(),
             shortcut: DEFAULT_SHORTCUT.to_string(),
@@ -116,6 +121,10 @@ impl Default for ServiceConfig {
 }
 
 struct ServiceData {
+    shutting_down: bool,
+    shell_client: Option<String>,
+    installer_pid: Option<u32>,
+    worker_generation: u64,
     config: ServiceConfig,
     listening: bool,
     stopping: bool,
@@ -136,6 +145,10 @@ struct ServiceData {
 impl Default for ServiceData {
     fn default() -> Self {
         Self {
+            shutting_down: false,
+            shell_client: None,
+            installer_pid: None,
+            worker_generation: 0,
             config: ServiceConfig::default(),
             listening: false,
             stopping: false,
@@ -178,6 +191,7 @@ struct WordpipeService {
     data: Arc<Mutex<ServiceData>>,
     emitter: Arc<Mutex<Option<SignalEmitter<'static>>>>,
     config_path: PathBuf,
+    shutdown_event: Arc<event_listener::Event>,
 }
 
 impl WordpipeService {
@@ -189,12 +203,24 @@ impl WordpipeService {
             })),
             emitter: Arc::default(),
             config_path,
+            shutdown_event: Arc::default(),
         }
     }
 }
 
 #[interface(interface = "dev.wordpipe.Service1")]
 impl WordpipeService {
+    fn register_shell_client(
+        &self,
+        #[zbus(header)] header: zbus::message::Header<'_>,
+    ) -> zbus::fdo::Result<()> {
+        let sender = header
+            .sender()
+            .ok_or_else(|| zbus::fdo::Error::Failed("missing Shell client sender".to_string()))?;
+        self.lock_data()?.shell_client = Some(sender.to_string());
+        Ok(())
+    }
+
     async fn start(
         &self,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
@@ -315,7 +341,7 @@ impl WordpipeService {
         let model_root = self
             .data
             .lock()
-            .map(|data| data.config.model_root.clone())
+            .map(|data| streaming_model_root(&data.config))
             .unwrap_or_default();
         MODEL_PRESETS
             .iter()
@@ -492,16 +518,33 @@ impl WordpipeService {
         options: VariantMap,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
     ) -> zbus::fdo::Result<()> {
-        let (config_data, config, state, language_update) = {
+        let (config_data, config, state, language_update, restart_worker) = {
             let mut data = self.lock_data()?;
+            let mut next_config = data.config.clone();
             let mut restart_worker = false;
             let mut language_update = None;
             let mut model_root_changed = false;
+            if let Some(value) = get_u32(&options, "streaming_latency_ms") {
+                if !matches!(value, 560 | 1120) {
+                    return Err(zbus::fdo::Error::InvalidArgs(
+                        "streaming_latency_ms must be 560 or 1120".to_string(),
+                    ));
+                }
+                if next_config.streaming_latency_ms != value
+                    && (data.listening || data.stopping || data.installing || data.loading_model)
+                {
+                    return Err(zbus::fdo::Error::Failed(
+                        "stop dictation and wait for model loading/installation before changing streaming latency".to_string(),
+                    ));
+                }
+                restart_worker |= next_config.streaming_latency_ms != value;
+                next_config.streaming_latency_ms = value;
+            }
             if let Some(value) = get_string(&options, "model_root") {
                 let value = normalize_model_root(value);
-                model_root_changed = data.config.model_root != value;
+                model_root_changed = next_config.model_root != value;
                 restart_worker |= model_root_changed;
-                data.config.model_root = value;
+                next_config.model_root = value;
             }
             if let Some(value) = get_string(&options, "language") {
                 let value = normalize_language(value);
@@ -510,13 +553,13 @@ impl WordpipeService {
                         "unknown language: {value}"
                     )));
                 }
-                if !language_available_for_model_family(&data.config.model_family, &value) {
+                if !language_available_for_model_family(&next_config.model_family, &value) {
                     return Err(zbus::fdo::Error::InvalidArgs(format!(
                         "language {value} is not available for the {} model family",
-                        data.config.model_family
+                        next_config.model_family
                     )));
                 }
-                if data.config.language != value {
+                if next_config.language != value {
                     if !data.listening && !data.stopping {
                         language_update = data
                             .worker
@@ -524,16 +567,16 @@ impl WordpipeService {
                             .map(|worker| (Arc::clone(&worker.stdin), value.clone()));
                     }
                 }
-                data.config.language = value;
+                next_config.language = value;
             }
             if let Some(value) = get_string(&options, "worker_path") {
                 let value = normalize_worker_path(value);
-                restart_worker |= data.config.worker_path != value;
-                data.config.worker_path = value;
+                restart_worker |= next_config.worker_path != value;
+                next_config.worker_path = value;
             }
             if let Some(value) = get_string(&options, "model_installer_path") {
                 let value = normalize_model_installer_path(value);
-                data.config.model_installer_path = value;
+                next_config.model_installer_path = value;
             }
             if let Some(value) = get_u32(&options, "sample_rate") {
                 if value == 0 {
@@ -541,8 +584,8 @@ impl WordpipeService {
                         "sample_rate must be positive".to_string(),
                     ));
                 }
-                restart_worker |= data.config.sample_rate != value;
-                data.config.sample_rate = value;
+                restart_worker |= next_config.sample_rate != value;
+                next_config.sample_rate = value;
             }
             if let Some(value) = get_u32(&options, "num_threads") {
                 if value == 0 {
@@ -550,22 +593,23 @@ impl WordpipeService {
                         "num_threads must be positive".to_string(),
                     ));
                 }
-                restart_worker |= data.config.num_threads != value;
-                data.config.num_threads = value;
+                restart_worker |= next_config.num_threads != value;
+                next_config.num_threads = value;
             }
             if model_root_changed {
-                let previous_profile = data.config.model_profile.clone();
-                select_installed_model_profile(&mut data.config);
-                restart_worker |= data.config.model_profile != previous_profile;
+                let previous_profile = next_config.model_profile.clone();
+                select_installed_model_profile(&mut next_config);
+                restart_worker |= next_config.model_profile != previous_profile;
             }
             if restart_worker {
                 language_update = None;
                 shutdown_worker(&mut data);
             }
+            data.config = next_config;
             let config_data = data.config.clone();
             let config = config_map(&data.config);
             let state = state_map(&data);
-            (config_data, config, state, language_update)
+            (config_data, config, state, language_update, restart_worker)
         };
         self.persist_config(&config_data)?;
         if let Some((stdin, language)) = language_update {
@@ -573,6 +617,15 @@ impl WordpipeService {
         }
         Self::config_changed(&emitter, config).await?;
         Self::state_changed(&emitter, state).await?;
+        if restart_worker && {
+            let data = self.lock_data()?;
+            profile_installed(
+                &selected_runtime_dir(&data.config),
+                &data.config.model_profile,
+            )
+        } {
+            self.ensure_worker(emitter.to_owned()).await?;
+        }
         Ok(())
     }
 
@@ -591,7 +644,7 @@ impl WordpipeService {
         insert_str(&mut progress, "phase", "starting");
         insert_str(&mut progress, "message", "starting model installer");
         insert_f64(&mut progress, "fraction", 0.0);
-        let (installer_path, model_root, state) = {
+        let (installer_path, model_root, latency_ms, state) = {
             let mut data = self.lock_data()?;
             if data.installing {
                 return Err(zbus::fdo::Error::Failed(
@@ -604,6 +657,7 @@ impl WordpipeService {
             (
                 data.config.model_installer_path.clone(),
                 data.config.model_root.clone(),
+                data.config.streaming_latency_ms,
                 state_map(&data),
             )
         };
@@ -624,6 +678,7 @@ impl WordpipeService {
                     profile,
                     family,
                     preset_id,
+                    latency_ms,
                     emitter,
                 );
             })
@@ -636,17 +691,23 @@ impl WordpipeService {
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
     ) -> zbus::fdo::Result<()> {
         let state = {
-            let mut data = self.lock_data()?;
+            let mut data = self
+                .data
+                .lock()
+                .map_err(|_| fdo_failed(anyhow!("service state lock poisoned")))?;
+            data.shutting_down = true;
             data.listening = false;
             data.stopping = false;
             shutdown_worker(&mut data);
+            if let Some(pid) = data.installer_pid.take() {
+                terminate_installer_group(pid);
+            }
+            data.installing = false;
+            data.installing_profile.clear();
             state_map(&data)
         };
         Self::state_changed(&emitter, state).await?;
-        std::thread::spawn(|| {
-            std::thread::sleep(std::time::Duration::from_millis(50));
-            std::process::exit(0);
-        });
+        self.shutdown_event.notify(usize::MAX);
         Ok(())
     }
 
@@ -702,9 +763,16 @@ impl WordpipeService {
 
 impl WordpipeService {
     fn lock_data(&self) -> zbus::fdo::Result<std::sync::MutexGuard<'_, ServiceData>> {
-        self.data
+        let data = self
+            .data
             .lock()
-            .map_err(|_| zbus::fdo::Error::Failed("service state lock poisoned".to_string()))
+            .map_err(|_| zbus::fdo::Error::Failed("service state lock poisoned".to_string()))?;
+        if data.shutting_down {
+            return Err(zbus::fdo::Error::Failed(
+                "service is shutting down".to_string(),
+            ));
+        }
+        Ok(data)
     }
 
     fn persist_config(&self, config: &ServiceConfig) -> zbus::fdo::Result<()> {
@@ -737,8 +805,11 @@ impl WordpipeService {
             return Ok(());
         }
 
-        let (worker, stdout) = {
+        let (stdout, generation) = {
             let mut data = self.lock_data()?;
+            if data.worker.is_some() {
+                return Ok(());
+            }
             let config = data.config.clone();
             let runtime_dir = selected_runtime_dir(&config);
             if !profile_installed(&runtime_dir, &config.model_profile) {
@@ -751,7 +822,12 @@ impl WordpipeService {
             data.model_loaded = false;
             data.last_error.clear();
             match spawn_worker(&config, &runtime_dir) {
-                Ok(worker) => worker,
+                Ok((worker, stdout)) => {
+                    data.worker_generation = data.worker_generation.wrapping_add(1);
+                    let generation = data.worker_generation;
+                    data.worker = Some(worker);
+                    (stdout, generation)
+                }
                 Err(err) => {
                     data.loading_model = false;
                     data.model_loaded = false;
@@ -761,15 +837,10 @@ impl WordpipeService {
             }
         };
 
-        {
-            let mut data = self.lock_data()?;
-            data.worker = Some(worker);
-        }
-
         let service = self.clone();
         std::thread::Builder::new()
             .name("wordpipe-asr-events".to_string())
-            .spawn(move || service.read_worker_events(stdout, emitter))
+            .spawn(move || service.read_worker_events(stdout, emitter, generation))
             .map_err(|err| zbus::fdo::Error::Failed(err.to_string()))?;
         Ok(())
     }
@@ -778,6 +849,7 @@ impl WordpipeService {
         &self,
         stdout: std::process::ChildStdout,
         emitter: SignalEmitter<'static>,
+        generation: u64,
     ) {
         let reader = std::io::BufReader::new(stdout);
         for line in reader.lines() {
@@ -788,8 +860,11 @@ impl WordpipeService {
                 continue;
             }
             match serde_json::from_str::<JsonValue>(&line) {
-                Ok(value) => self.handle_worker_event(value, &emitter),
+                Ok(value) => self.handle_worker_event(value, &emitter, generation),
                 Err(err) => {
+                    if self.lock_worker_data(generation).is_none() {
+                        return;
+                    }
                     let _ = zbus::block_on(Self::error(
                         &emitter,
                         &format!("invalid ASR worker event: {err}"),
@@ -798,9 +873,8 @@ impl WordpipeService {
             }
         }
         let (state, exit) = {
-            let mut data = match self.data.lock() {
-                Ok(data) => data,
-                Err(_) => return,
+            let Some(mut data) = self.lock_worker_data(generation) else {
+                return;
             };
             let exit = apply_worker_exit(&mut data);
             (state_map(&data), exit)
@@ -814,7 +888,17 @@ impl WordpipeService {
         let _ = zbus::block_on(Self::state_changed(&emitter, state));
     }
 
-    fn handle_worker_event(&self, value: JsonValue, emitter: &SignalEmitter<'static>) {
+    fn lock_worker_data(&self, generation: u64) -> Option<std::sync::MutexGuard<'_, ServiceData>> {
+        let data = self.data.lock().ok()?;
+        (data.worker_generation == generation).then_some(data)
+    }
+
+    fn handle_worker_event(
+        &self,
+        value: JsonValue,
+        emitter: &SignalEmitter<'static>,
+        generation: u64,
+    ) {
         let event = value
             .get("event")
             .and_then(JsonValue::as_str)
@@ -822,9 +906,8 @@ impl WordpipeService {
         match event {
             "loading_model" => {
                 let state = {
-                    let mut data = match self.data.lock() {
-                        Ok(data) => data,
-                        Err(_) => return,
+                    let Some(mut data) = self.lock_worker_data(generation) else {
+                        return;
                     };
                     data.loading_model = true;
                     data.model_loaded = false;
@@ -834,9 +917,8 @@ impl WordpipeService {
             }
             "model_loaded" => {
                 let (state, metrics) = {
-                    let mut data = match self.data.lock() {
-                        Ok(data) => data,
-                        Err(_) => return,
+                    let Some(mut data) = self.lock_worker_data(generation) else {
+                        return;
                     };
                     data.loading_model = false;
                     data.model_loaded = true;
@@ -852,9 +934,8 @@ impl WordpipeService {
             }
             "ready" => {
                 let state = {
-                    let mut data = match self.data.lock() {
-                        Ok(data) => data,
-                        Err(_) => return,
+                    let Some(mut data) = self.lock_worker_data(generation) else {
+                        return;
                     };
                     data.loading_model = false;
                     data.model_loaded = true;
@@ -864,9 +945,8 @@ impl WordpipeService {
             }
             "listening" => {
                 let state = {
-                    let mut data = match self.data.lock() {
-                        Ok(data) => data,
-                        Err(_) => return,
+                    let Some(mut data) = self.lock_worker_data(generation) else {
+                        return;
                     };
                     data.listening = true;
                     data.stopping = false;
@@ -874,23 +954,24 @@ impl WordpipeService {
                 };
                 let _ = zbus::block_on(Self::state_changed(emitter, state));
             }
-            "partial" => self.forward_partial(value, emitter),
-            "commit" => self.forward_commit(value, emitter),
+            "partial" => self.forward_partial(value, emitter, generation),
+            "commit" => self.forward_commit(value, emitter, generation),
             "stats" => {
                 let metrics = value
                     .get("data")
                     .map(json_to_variant_map)
                     .unwrap_or_default();
-                if let Ok(mut data) = self.data.lock() {
+                if let Some(mut data) = self.lock_worker_data(generation) {
                     data.last_metrics = metrics.clone();
+                } else {
+                    return;
                 }
                 let _ = zbus::block_on(Self::metrics(emitter, metrics));
             }
             "stopped" => {
                 let (state, session_id) = {
-                    let mut data = match self.data.lock() {
-                        Ok(data) => data,
-                        Err(_) => return,
+                    let Some(mut data) = self.lock_worker_data(generation) else {
+                        return;
                     };
                     data.listening = false;
                     data.stopping = false;
@@ -906,9 +987,8 @@ impl WordpipeService {
                     .unwrap_or("ASR worker error")
                     .to_string();
                 let state = {
-                    let mut data = match self.data.lock() {
-                        Ok(data) => data,
-                        Err(_) => return,
+                    let Some(mut data) = self.lock_worker_data(generation) else {
+                        return;
                     };
                     data.last_error = message.clone();
                     state_map(&data)
@@ -920,7 +1000,7 @@ impl WordpipeService {
         }
     }
 
-    fn forward_partial(&self, value: JsonValue, emitter: &SignalEmitter<'static>) {
+    fn forward_partial(&self, value: JsonValue, emitter: &SignalEmitter<'static>, generation: u64) {
         let text = value
             .get("text")
             .and_then(JsonValue::as_str)
@@ -931,9 +1011,8 @@ impl WordpipeService {
             .map(json_to_variant_map)
             .unwrap_or_default();
         let (session_id, seq, delta, text) = {
-            let mut data = match self.data.lock() {
-                Ok(data) => data,
-                Err(_) => return,
+            let Some(mut data) = self.lock_worker_data(generation) else {
+                return;
             };
             let text = if data.config.spoken_punctuation {
                 normalize_spoken_punctuation_partial(&text)
@@ -956,7 +1035,7 @@ impl WordpipeService {
         let _ = zbus::block_on(Self::metrics(emitter, metrics));
     }
 
-    fn forward_commit(&self, value: JsonValue, emitter: &SignalEmitter<'static>) {
+    fn forward_commit(&self, value: JsonValue, emitter: &SignalEmitter<'static>, generation: u64) {
         let text = value
             .get("text")
             .and_then(JsonValue::as_str)
@@ -967,9 +1046,8 @@ impl WordpipeService {
             .map(json_to_variant_map)
             .unwrap_or_default();
         let (session_id, seq, text) = {
-            let mut data = match self.data.lock() {
-                Ok(data) => data,
-                Err(_) => return,
+            let Some(mut data) = self.lock_worker_data(generation) else {
+                return;
             };
             let text = if data.config.spoken_punctuation {
                 normalize_spoken_punctuation(&text)
@@ -994,9 +1072,13 @@ impl WordpipeService {
         profile: String,
         family: String,
         preset_id: String,
+        latency_ms: u32,
         emitter: SignalEmitter<'static>,
     ) {
-        let command = model_installer_command(&installer_path, &model_root, &profile, &family);
+        let mut command = model_installer_command(&installer_path, &model_root, &profile, &family);
+        command
+            .arg("--streaming-latency-ms")
+            .arg(latency_ms.to_string());
 
         let result = run_progress_command(command, &preset_id, &emitter, Arc::clone(&self.data));
         let state = {
@@ -1004,6 +1086,9 @@ impl WordpipeService {
                 Ok(data) => data,
                 Err(_) => return,
             };
+            if data.shutting_down {
+                return;
+            }
             data.installing = false;
             data.installing_profile.clear();
             match result {
@@ -1082,6 +1167,7 @@ async fn run(args: Args) -> Result<()> {
         .with_context(|| format!("failed to load service config {}", config_path.display()))?;
     let service = WordpipeService::new(config_path, config);
     let service_handle = service.clone();
+    let shutdown_listener = service.shutdown_event.listen();
     let _connection = connection::Builder::session()?
         .serve_at(OBJECT_PATH, service)?
         .name(BUS_NAME)?
@@ -1094,7 +1180,42 @@ async fn run(args: Args) -> Result<()> {
         .lock()
         .expect("service emitter lock should not be poisoned") = Some(emitter);
     eprintln!("wordpipe-service: listening on {BUS_NAME} {OBJECT_PATH}");
-    std::future::pending::<()>().await;
+    let bus = zbus::fdo::DBusProxy::new(&_connection).await?;
+    let mut owners = bus.receive_name_owner_changed().await?;
+    futures_lite::future::race(
+        async {
+            shutdown_listener.await;
+        },
+        async {
+            while let Some(change) = owners.next().await {
+                let Ok(args) = change.args() else {
+                    continue;
+                };
+                if args.new_owner().is_some() {
+                    continue;
+                }
+                let is_shell =
+                    service_handle.data.lock().ok().is_some_and(|data| {
+                        data.shell_client.as_deref() == Some(args.name().as_str())
+                    });
+                if is_shell {
+                    let emitter = SignalEmitter::new(&_connection, OBJECT_PATH).unwrap();
+                    let _ = service_handle.shutdown(emitter).await;
+                    break;
+                }
+            }
+        },
+    )
+    .await;
+    drop(owners);
+    drop(bus);
+    service_handle.emitter.lock().unwrap().take();
+    _connection
+        .object_server()
+        .remove::<WordpipeService, _>(OBJECT_PATH)
+        .await?;
+    drop(service_handle);
+    _connection.graceful_shutdown().await;
     Ok(())
 }
 
@@ -1139,6 +1260,11 @@ fn config_map(config: &ServiceConfig) -> VariantMap {
     insert_str(&mut map, "backend", &config.backend);
     insert_str(&mut map, "model_profile", &config.model_profile);
     insert_str(&mut map, "model_family", &config.model_family);
+    insert_u32(
+        &mut map,
+        "streaming_latency_ms",
+        config.streaming_latency_ms,
+    );
     if let Some(preset) = model_preset_id(&config.model_profile, &config.model_family) {
         insert_str(&mut map, "model_preset", preset);
     }
@@ -1254,6 +1380,12 @@ fn apply_persisted_config(
             return Err(anyhow!("sample_rate must be positive"));
         }
         config.sample_rate = value;
+    }
+    if let Some(value) = persisted.streaming_latency_ms {
+        if !matches!(value, 560 | 1120) {
+            return Err(anyhow!("streaming_latency_ms must be 560 or 1120"));
+        }
+        config.streaming_latency_ms = value;
     }
     if let Some(value) = persisted.num_threads {
         if value == 0 {
@@ -1437,7 +1569,11 @@ fn model_runtime_dir_valid(runtime_dir: &Path) -> bool {
 fn model_profile_metadata_valid_if_present(runtime_dir: &Path, profile: &str) -> bool {
     let config_path = runtime_dir.join("config.json");
     if !config_path.exists() {
-        return true;
+        return runtime_dir
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            != Some("1120ms");
     }
     let payload = match fs::read(&config_path)
         .ok()
@@ -1449,14 +1585,46 @@ fn model_profile_metadata_valid_if_present(runtime_dir: &Path, profile: &str) ->
     let Some(fixed) = payload.get("fixed_streaming_shapes") else {
         return false;
     };
+    if let Some(shared) = payload.get("shared_weight_files") {
+        let Some(files) = shared.as_array() else {
+            return false;
+        };
+        if files.iter().any(|item| {
+            item.as_str()
+                .is_none_or(|name| !safe_relative_path(name) || !runtime_dir.join(name).is_file())
+        }) {
+            return false;
+        }
+    }
     let cache_len = match payload.get("model_family").and_then(JsonValue::as_str) {
         Some("english") => 70,
         Some("multilingual") | None => 56,
         Some(_) => return false,
     };
+    let right_context = payload
+        .get("right_context")
+        .and_then(JsonValue::as_u64)
+        .unwrap_or(6);
+    let expected_right = if runtime_dir
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        == Some("1120ms")
+    {
+        13
+    } else {
+        6
+    };
+    if right_context != expected_right {
+        return false;
+    }
+    if !matches!(right_context, 6 | 13) {
+        return false;
+    }
+    let output_frames = right_context + 1;
     let expected = [
-        ("input_frames", 65_u64),
-        ("output_frames", 7),
+        ("input_frames", output_frames * 8 + 9),
+        ("output_frames", output_frames),
         ("num_layers", 24),
         ("cache_len", cache_len),
         ("hidden_dim", 1024),
@@ -1553,7 +1721,11 @@ fn profile_installed(runtime_dir: &str, profile: &str) -> bool {
     if model_runtime_dir_valid(path) {
         model_profile_metadata_valid_if_present(path, profile)
     } else {
-        legacy_model_runtime_dir_valid(path)
+        path.parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            != Some("1120ms")
+            && legacy_model_runtime_dir_valid(path)
     }
 }
 
@@ -1577,7 +1749,19 @@ fn selected_runtime_dir(config: &ServiceConfig) -> String {
     } else {
         profile.output_name
     };
-    profile_runtime_dir(&config.model_root, output_name, profile.ort_format)
+    profile_runtime_dir(
+        &streaming_model_root(config),
+        output_name,
+        profile.ort_format,
+    )
+}
+
+fn streaming_model_root(config: &ServiceConfig) -> String {
+    if config.streaming_latency_ms == 1120 {
+        format!("{}/1120ms", config.model_root)
+    } else {
+        config.model_root.clone()
+    }
 }
 
 fn model_preset_installed(config: &ServiceConfig, preset: &ModelPresetSpec) -> bool {
@@ -1592,7 +1776,11 @@ fn model_preset_installed(config: &ServiceConfig, preset: &ModelPresetSpec) -> b
     } else {
         profile.output_name
     };
-    let runtime_dir = profile_runtime_dir(&config.model_root, output_name, profile.ort_format);
+    let runtime_dir = profile_runtime_dir(
+        &streaming_model_root(config),
+        output_name,
+        profile.ort_format,
+    );
     profile_installed(&runtime_dir, profile.id)
 }
 
@@ -1606,7 +1794,11 @@ fn select_installed_model_profile(config: &mut ServiceConfig) {
         } else {
             profile.output_name
         };
-        let runtime_dir = profile_runtime_dir(&config.model_root, output_name, profile.ort_format);
+        let runtime_dir = profile_runtime_dir(
+            &streaming_model_root(config),
+            output_name,
+            profile.ort_format,
+        );
         if profile_installed(&runtime_dir, profile.id) {
             config.model_profile = profile.id.to_string();
             return;
@@ -1841,6 +2033,10 @@ fn spawn_worker(
         .arg(config.sample_rate.to_string())
         .arg("--language")
         .arg(&config.language)
+        .arg("--chunk-samples")
+        .arg((config.streaming_latency_ms * 16).to_string())
+        .arg("--ort-optimized-model-cache-dir")
+        .arg(Path::new(&config.model_root).join("runtime-cache"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit());
@@ -1907,6 +2103,7 @@ fn send_worker_message(stdin: &Arc<Mutex<ChildStdin>>, message: &JsonValue) -> R
 }
 
 fn shutdown_worker(data: &mut ServiceData) {
+    data.worker_generation = data.worker_generation.wrapping_add(1);
     if let Some(mut worker) = data.worker.take() {
         let _ = send_worker_command(&worker.stdin, "shutdown");
         let _ = worker.child.kill();
@@ -2016,9 +2213,25 @@ fn run_progress_command(
     data: Arc<Mutex<ServiceData>>,
 ) -> Result<()> {
     eprintln!("wordpipe-service: starting model installer for {profile}: {command:?}");
-    let mut child = command
-        .spawn()
-        .with_context(|| format!("failed to start model installer {:?}", command))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    let mut child = {
+        let mut state = data
+            .lock()
+            .map_err(|_| anyhow!("service state lock poisoned"))?;
+        if state.shutting_down {
+            return Err(anyhow!("service is shutting down"));
+        }
+        let child = command
+            .spawn()
+            .with_context(|| format!("failed to start model installer {:?}", command))?;
+        state.installer_pid = Some(child.id());
+        child
+    };
+    let installer_pid = child.id();
     let stdout = child
         .stdout
         .take()
@@ -2037,19 +2250,37 @@ fn run_progress_command(
 
     let stderr_profile = profile.to_string();
     let stderr_emitter = emitter.clone();
+    let stderr_data = Arc::clone(&data);
     let stderr_thread = std::thread::spawn(move || {
-        stream_progress_lines(stderr, &stderr_profile, &stderr_emitter, data)
+        stream_progress_lines(stderr, &stderr_profile, &stderr_emitter, stderr_data)
     });
 
     let status = child.wait()?;
     let _ = stdout_thread.join();
     let _ = stderr_thread.join();
+    if let Ok(mut state) = data.lock() {
+        if state.installer_pid == Some(installer_pid) {
+            state.installer_pid = None;
+        }
+    }
     if status.success() {
         eprintln!("wordpipe-service: model installer for {profile} completed successfully");
         Ok(())
     } else {
         eprintln!("wordpipe-service: model installer for {profile} exited with {status}");
         Err(anyhow!("model installer exited with {status}"))
+    }
+}
+
+fn terminate_installer_group(pid: u32) {
+    #[cfg(unix)]
+    {
+        // The installer is launched in a new process group; this targets
+        // only its download/build descendants, never the Shell's group.
+        let _ = Command::new("kill")
+            .args(["-KILL", "--"])
+            .arg(format!("-{pid}"))
+            .status();
     }
 }
 
@@ -2072,6 +2303,9 @@ fn stream_progress_lines<R>(
         );
         let progress = progress_from_line(profile, line.trim());
         if let Ok(mut data) = data.lock() {
+            if data.shutting_down {
+                return;
+            }
             data.last_install_progress = progress.clone();
         }
         let _ = zbus::block_on(WordpipeService::install_progress(
@@ -2219,9 +2453,64 @@ mod tests {
                 "show_overlay",
                 "spoken_punctuation",
                 "stream_insert_delay_ms",
+                "streaming_latency_ms",
                 "worker_path",
             ]
         );
+    }
+
+    #[test]
+    fn latency_configuration_preserves_old_paths_and_survives_restart() {
+        let config = apply_persisted_config(
+            ServiceConfig::default(),
+            PersistedConfig {
+                model_root: Some("/models".to_string()),
+                model_profile: Some("fast".to_string()),
+                model_family: Some("english".to_string()),
+                streaming_latency_ms: Some(1120),
+                ..PersistedConfig::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            selected_runtime_dir(&config),
+            "/models/1120ms/nemotron-wordpipe-en-fast-fp32-projected"
+        );
+        let persisted = PersistedConfig::from(&config);
+        assert_eq!(persisted.streaming_latency_ms, Some(1120));
+        let restored = apply_persisted_config(ServiceConfig::default(), persisted).unwrap();
+        assert_eq!(restored.streaming_latency_ms, 1120);
+        let baseline = ServiceConfig {
+            streaming_latency_ms: 560,
+            ..restored
+        };
+        assert_eq!(
+            selected_runtime_dir(&baseline),
+            "/models/nemotron-wordpipe-en-fast-fp32-projected"
+        );
+        assert!(apply_persisted_config(
+            ServiceConfig::default(),
+            PersistedConfig {
+                streaming_latency_ms: Some(1000),
+                ..PersistedConfig::default()
+            }
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn stale_worker_generation_cannot_mutate_replacement_state() {
+        let service = WordpipeService::new(PathBuf::from("unused.json"), ServiceConfig::default());
+        {
+            let mut data = service.data.lock().unwrap();
+            data.worker_generation = 2;
+            data.model_loaded = true;
+            data.partial_text = "replacement".to_string();
+        }
+        assert!(service.lock_worker_data(1).is_none());
+        let current = service.lock_worker_data(2).unwrap();
+        assert!(current.model_loaded);
+        assert_eq!(current.partial_text, "replacement");
     }
 
     #[test]

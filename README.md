@@ -1,5 +1,9 @@
 # Wordpipe
 
+Release: **v0.1.18**. Existing 560 ms model profiles remain compatible. The
+1120 ms runtime and shared-weight publishing support are implemented, but
+1120 ms models are not yet published or validated for production use.
+
 Wordpipe is a Wayland-only GNOME dictation app built around true streaming
 speech recognition. The primary implementation is a GNOME Shell frontend backed
 by a Rust D-Bus service and a Rust `parakeet-rs` ASR worker.
@@ -532,6 +536,26 @@ PYTHONPATH=src python3 -m wordpipe model-install \
   --python .venv-nemo-export/bin/python
 ```
 
+The GNOME service supports independent 560 ms and 1120 ms streaming modes.
+Settings exposes this as **Streaming Latency**, separate from model preset and
+language coverage. A mode change while idle rebuilds the worker and its inference
+sessions; model loading, installation, and active dictation must finish first.
+The existing 560 ms model paths stay unchanged. Additional 1120 ms runtimes
+live under `model_root/1120ms/`.
+
+Build an additional mode with `model-install --streaming-latency-ms 1120
+--build-from-nemo`, or download it with `model-install --streaming-latency-ms
+1120` after a two-mode bundle has been published. The bundle shares learned
+weights and tokenizer/decoder files; the installer verifies and reuses existing
+weight files instead of downloading a second complete model.
+
+The worker reads chunk size from model metadata and applies session dimension
+overrides. Optimized ONNX graphs are cached under `model_root/runtime-cache/`
+with mode, model, runtime version, CPU features, and execution options in the
+cache identity. Direct ORT-format sessions retain and release their backing
+bytes with the session. See [model publishing](docs/model-publishing.md) for
+the shared-weight bundle workflow.
+
 After a successful source build, Wordpipe removes the family-specific build
 intermediates by default; pass `--keep-build-dir` when you need to inspect or
 reuse those files.
@@ -703,8 +727,8 @@ num_threads = 2
 queue_seconds = 10.0
 ```
 
-The workers feed Nemotron in 560 ms chunks, matching the model's streaming
-stride. File tests feed three synthetic silence chunks by default so streaming
+The Rust worker derives its chunk size from the model's streaming metadata
+(560 ms by default, or 1120 ms for the corresponding export). File tests feed three synthetic silence chunks by default so streaming
 models can emit trailing tokens before the final commit.
 
 Metrics report both `audio_seconds` for real input and `processed_audio_seconds`

@@ -312,6 +312,7 @@ pub const INTROSPECTION_XML: &str = r#"
     <method name="Stop"/>
     <method name="Toggle"/>
     <method name="Shutdown"/>
+    <method name="RegisterShellClient"/>
     <method name="GetState">
       <arg name="state" type="a{sv}" direction="out"/>
     </method>

@@ -39,6 +39,11 @@
       <summary>Model language family</summary>
       <description>Whether the selected profile uses the multilingual or dedicated English model.</description>
     </key>
+    <key name="streaming-latency-ms" type="u">
+      <default>560</default>
+      <summary>Streaming latency</summary>
+      <description>Nemotron streaming chunk duration: 560 or 1120 milliseconds.</description>
+    </key>
     <key name="input-device" type="s">
       <default>''</default>
       <summary>Input device selector</summary>

@@ -1,6 +1,8 @@
 [Unit]
 Description=Wordpipe Rust dictation service
 Documentation=https://github.com/danhansen/wordpipe
+PartOf=graphical-session.target
+After=graphical-session.target
 
 [Service]
 Type=dbus
@@ -8,6 +10,7 @@ BusName=dev.wordpipe.Service
 ExecStart=@WORDPIPE_LIBEXEC@/bin/wordpipe-service
 Restart=on-failure
 RestartSec=2
+KillMode=control-group
 
 [Install]
 WantedBy=default.target

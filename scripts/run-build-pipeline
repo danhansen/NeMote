@@ -7,6 +7,11 @@ cd "$ROOT"
 run_tests() {
   cargo fmt --all -- --check
   cargo test --locked --workspace
+  python3 scripts/probe_ort_shape_specialization.py --fixture-dir build/test-fixtures/ort
+  local task_ort_dylib
+  task_ort_dylib=$(python3 -c 'import pathlib, onnxruntime; print(next((pathlib.Path(onnxruntime.__file__).parent / "capi").glob("libonnxruntime.so.*")))')
+  WORDPIPE_ORT_TEST_FIXTURES="$ROOT/build/test-fixtures/ort" ORT_DYLIB_PATH="$task_ort_dylib" \
+    cargo test --locked -p parakeet-rs --lib
   PYTHONPATH=src python3 -m unittest discover -s tests
   python3 scripts/check_gnome_dbus_xml.py
   sh -n scripts/install-wordpipe-release
@@ -15,7 +20,7 @@ run_tests() {
     < extensions/gnome-shell/wordpipe@dhansen.dev/extension.js
   node --input-type=module --check \
     < extensions/gnome-shell/wordpipe@dhansen.dev/prefs.js
-  node --test tests/test_shortcut_state.mjs tests/test_model_state.mjs
+  node --test tests/test_shortcut_state.mjs tests/test_model_state.mjs tests/test_service_lifecycle.mjs
   glib-compile-schemas --strict --dry-run \
     extensions/gnome-shell/wordpipe@dhansen.dev/schemas
 }

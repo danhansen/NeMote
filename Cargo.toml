@@ -7,4 +7,4 @@ members = [
 resolver = "2"
 
 [patch.crates-io]
-parakeet-rs = { git = "https://github.com/danhansen/parakeet-rs", rev = "8519e2754733affff76e749b5a78d0e642248241" }
+parakeet-rs = { git = "https://github.com/danhansen/parakeet-rs", rev = "afbc6ba32c35a076e2057a8e1655da18c1f82811" }

@@ -40,6 +40,16 @@ def _args(**overrides):  # type: ignore[no-untyped-def]
 
 
 class NemotronWordpipePipelineTests(unittest.TestCase):
+    def test_1120ms_derives_shapes_and_rejects_560ms_shapes(self) -> None:
+        builder = _load_builder()
+        args = _args(streaming_latency_ms=1120, right_context=None,
+                     input_frames=None, output_frames=None)
+        builder.validate_args(args)
+        self.assertEqual((args.right_context, args.input_frames, args.output_frames),
+                         (13, 121, 14))
+        with self.assertRaisesRegex(SystemExit, "must be 13"):
+            builder.validate_args(_args(streaming_latency_ms=1120))
+
     def test_validate_args_rejects_non_positive_shape_values(self) -> None:
         builder = _load_builder()
 

@@ -303,6 +303,7 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         DEFAULT_ENGLISH_NEMO_SOURCE_REPO,
         build_model_profile,
         download_prebuilt_profile,
+        download_streaming_profile,
         default_nemo_source_path,
         download_nemo_source,
         ensure_profile_completion_marker,
@@ -313,6 +314,8 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         profile_spec,
         source_may_be_built_profile_archive,
         source_is_built_profile,
+        streaming_model_root,
+        profile_streaming_latency,
     )
 
     file_config = _load_cli_config(args)
@@ -320,6 +323,9 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
     model_root = Path(args.model_root).expanduser() if args.model_root else file_config.model_root
     if model_root is None:
         raise SystemExit("model_root is required")
+    latency_ms = getattr(args, "streaming_latency_ms", 560)
+    base_model_root = model_root
+    model_root = streaming_model_root(model_root, latency_ms)
 
     def report(message: str) -> None:
         print(message, file=sys.stderr, flush=True)
@@ -335,6 +341,8 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         and source_candidate is None
         and model_runtime_dir_valid(runtime_dir)
     ):
+        if profile_streaming_latency(runtime_dir) != latency_ms:
+            raise SystemExit("installed model streaming latency does not match the requested mode")
         runtime_dir = ensure_profile_completion_marker(model_root, profile, family)
         report(f"Using installed model profile: {runtime_dir}")
         print(runtime_dir)
@@ -342,12 +350,15 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
     if source_candidate is not None and source_candidate.exists() and (
         source_is_built_profile(source_candidate) or source_may_be_built_profile_archive(source_candidate)
     ):
+        if source_candidate.is_dir() and profile_streaming_latency(source_candidate) != latency_ms:
+            raise SystemExit("source model streaming latency does not match the requested mode")
         runtime_dir = install_built_profile(
             source=source_candidate,
             model_root=model_root,
             profile=profile,
             family=family,
             force=args.force,
+            streaming_latency_ms=latency_ms,
         )
         print(runtime_dir)
         return 0
@@ -361,6 +372,12 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         elif args.dry_run:
             selected_repo = prebuilt_repo or profile_spec(profile).prebuilt_repo_for_family(family)
             source_path = model_root / "downloads" / selected_repo.replace("/", "--") / profile
+        elif latency_ms != 560:
+            source_path = download_streaming_profile(
+                profile=profile, model_root=base_model_root, family=family,
+                latency_ms=latency_ms, repo_id=prebuilt_repo, force=args.force_source,
+                progress=report,
+            )
         else:
             source_path = download_prebuilt_profile(
                 profile=profile,
@@ -373,6 +390,8 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         if args.dry_run:
             print(source_path)
             return 0
+        if profile_streaming_latency(source_path) != latency_ms:
+            raise SystemExit("downloaded model streaming latency does not match the requested mode")
         runtime_dir = install_prebuilt_profile(
             source=source_path,
             model_root=model_root,
@@ -418,6 +437,7 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         dry_run=args.dry_run,
         keep_build_dir=args.keep_build_dir,
         progress=report,
+        **({"streaming_latency_ms": latency_ms} if latency_ms != 560 else {}),
     )
     print(runtime_dir)
     return 0
@@ -1118,6 +1138,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Install a selectable Wordpipe profile from prebuilt Hugging Face ONNX files.",
     )
     model_install.add_argument("--config", help="Path to config.toml.")
+    model_install.add_argument(
+        "--streaming-latency-ms", type=int, choices=(560, 1120), default=560,
+        help="Streaming lookahead mode. 1120 ms models are stored separately from existing 560 ms models.",
+    )
     model_install.add_argument(
         "--profile",
         choices=("fast", "compact"),

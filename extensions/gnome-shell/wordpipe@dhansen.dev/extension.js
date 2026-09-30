@@ -12,6 +12,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {requiredModifiersHeld} from './shortcutState.js';
+import {ServiceLifecycle} from './serviceLifecycle.js';
 
 const BUS_NAME = 'dev.wordpipe.Service';
 const OBJECT_PATH = '/dev/wordpipe/Service';
@@ -23,6 +24,7 @@ const SERVICE_XML = `
     <method name="Stop"/>
     <method name="Toggle"/>
     <method name="Shutdown"/>
+    <method name="RegisterShellClient"/>
     <method name="GetState"><arg name="state" type="a{sv}" direction="out"/></method>
     <method name="GetConfig"><arg name="config" type="a{sv}" direction="out"/></method>
     <method name="ListBackends"><arg name="backends" type="aa{sv}" direction="out"/></method>
@@ -448,6 +450,24 @@ class TextInjector {
 
 export default class WordpipeExtension extends Extension {
     enable() {
+        this._enabled = true;
+        this._lifecycle = Symbol('enabled');
+        this._proxyReady = false;
+        this._nameOwnerSignalId = 0;
+        this._proxyCancellable = new Gio.Cancellable();
+        this._serviceLifecycle ??= new ServiceLifecycle({
+            start: () => this._startService(),
+            stop: owner => this._stopService(owner),
+            ready: owner => {
+                if (this._enabled && this._proxyReady && this._proxy?.g_name_owner === owner)
+                    this._refreshConnectedService();
+            },
+            error: error => {
+                if (this._enabled)
+                    this._setAvailable(false);
+                logError(error, 'Wordpipe service lifecycle failed');
+            },
+        });
         this._settings = this.getSettings();
         this._state = {};
         this._profiles = [];
@@ -468,12 +488,18 @@ export default class WordpipeExtension extends Extension {
         this._syncShortcutBinding();
         this._connectSettings();
         this._connectProxy();
+        this._serviceLifecycle.enable();
         this._stageCapturedEventId = global.stage.connect(
             'captured-event',
             (_actor, event) => this._handleCapturedEvent(event));
     }
 
     disable() {
+        this._enabled = false;
+        this._lifecycle = Symbol('disabled');
+        this._proxyCancellable?.cancel();
+        this._proxyCancellable = null;
+        this._serviceLifecycle?.disable();
         this._settings?.disconnectObject(this);
         this._unbindShortcut();
         if (this._stageCapturedEventId) {
@@ -482,6 +508,9 @@ export default class WordpipeExtension extends Extension {
         }
 
         if (this._proxy) {
+            if (this._nameOwnerSignalId)
+                this._proxy.disconnect(this._nameOwnerSignalId);
+            this._nameOwnerSignalId = 0;
             for (const id of this._signalIds)
                 this._proxy.disconnectSignal(id);
             this._signalIds = [];
@@ -610,38 +639,171 @@ export default class WordpipeExtension extends Extension {
     }
 
     _connectProxy() {
+        const lifecycle = this._lifecycle;
         this._proxy = new WordpipeProxy(
             Gio.DBus.session,
             BUS_NAME,
             OBJECT_PATH,
             (proxy, error) => {
+                if (!this._enabled || lifecycle !== this._lifecycle)
+                    return;
                 if (error) {
                     this._setAvailable(false);
                     logError(error, 'Wordpipe could not connect to service');
                     return;
                 }
-                this._setAvailable(true);
+                this._proxyReady = true;
                 this._subscribeSignals();
-                this._refreshState();
-                this._refreshProfiles();
-                this._refreshConfigFromService();
+                this._nameOwnerSignalId = proxy.connect('notify::g-name-owner', () => {
+                    if (!this._enabled || lifecycle !== this._lifecycle)
+                        return;
+                    const owner = proxy.g_name_owner;
+                    this._serviceLifecycle.observeOwner(owner);
+                    this._setAvailable(Boolean(owner));
+                    if (owner && this._serviceLifecycle.owner === owner)
+                        this._refreshConnectedService();
+                });
+                this._serviceLifecycle.observeOwner(proxy.g_name_owner);
+                if (proxy.g_name_owner && this._serviceLifecycle.owner === proxy.g_name_owner)
+                    this._refreshConnectedService();
+            }, this._proxyCancellable, Gio.DBusProxyFlags.DO_NOT_AUTO_START);
+    }
+
+    _refreshConnectedService() {
+        this._setAvailable(true);
+        this._refreshState();
+        this._refreshProfiles();
+        this._refreshConfigFromService();
+    }
+
+    _busCall(destination, path, iface, method, parameters, flags = Gio.DBusCallFlags.NONE) {
+        return new Promise((resolve, reject) => {
+            Gio.DBus.session.call(destination, path, iface, method, parameters, null,
+                flags, 10000, null, (connection, result) => {
+                    try {
+                        resolve(connection.call_finish(result));
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+        });
+    }
+
+    async _startService() {
+        for (let attempt = 0; attempt < 2; attempt++) {
+            await this._busCall('org.freedesktop.DBus', '/org/freedesktop/DBus',
+                'org.freedesktop.DBus', 'StartServiceByName',
+                new GLib.Variant('(su)', [BUS_NAME, 0]));
+            let owner;
+            try {
+                const result = await this._busCall('org.freedesktop.DBus', '/org/freedesktop/DBus',
+                    'org.freedesktop.DBus', 'GetNameOwner', new GLib.Variant('(s)', [BUS_NAME]));
+                [owner] = result.deep_unpack();
+            } catch (error) {
+                if (attempt === 0 && /NameHasNoOwner|ServiceUnknown/.test(error.message))
+                    continue;
+                throw error;
+            }
+            try {
+                await this._busCall(owner, OBJECT_PATH, 'dev.wordpipe.Service1',
+                    'RegisterShellClient', null, Gio.DBusCallFlags.NO_AUTO_START);
+            } catch (error) {
+                if (/UnknownMethod|Unknown method/.test(error.message))
+                    return owner; // Explicit Shutdown remains compatible with old services.
+                if (attempt === 0 && /UnknownObject|NameHasNoOwner|ServiceUnknown|shutting down/.test(error.message)) {
+                    const pending = this._watchServiceExit(owner);
+                    try {
+                        await pending.promise;
+                    } finally {
+                        pending.cleanup();
+                    }
+                    continue;
+                }
+                throw error;
+            }
+            return owner;
+        }
+        throw new Error('Wordpipe service failed to activate');
+    }
+
+    _watchServiceExit(owner) {
+        let watchId = 0;
+        let timeoutId = 0;
+        let finish;
+        const promise = new Promise((resolve, reject) => {
+            finish = resolve;
+            watchId = Gio.bus_watch_name_on_connection(Gio.DBus.session, BUS_NAME,
+                Gio.BusNameWatcherFlags.NONE,
+                (_connection, _name, currentOwner) => {
+                    if (currentOwner !== owner)
+                        resolve();
+                },
+                () => resolve());
+            timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10000, () => {
+                timeoutId = 0;
+                reject(new Error('Wordpipe service did not exit after shutdown'));
+                return GLib.SOURCE_REMOVE;
             });
+        });
+        promise.catch(() => {});
+        return {
+            promise,
+            finish,
+            cleanup: () => {
+                if (watchId)
+                    Gio.bus_unwatch_name(watchId);
+                if (timeoutId)
+                    GLib.Source.remove(timeoutId);
+            },
+        };
+    }
+
+    async _stopService(owner) {
+        // Unique-name addressing and NO_AUTO_START prevent teardown from
+        // activating a daemon after the extension has been disabled.
+        const pending = this._watchServiceExit(owner);
+        try {
+            try {
+                await this._busCall(owner, OBJECT_PATH, 'dev.wordpipe.Service1',
+                    'Shutdown', null, Gio.DBusCallFlags.NO_AUTO_START);
+            } catch (error) {
+                if (/NameHasNoOwner|ServiceUnknown/.test(error.message))
+                    pending.finish();
+                else if (!/UnknownObject|UnknownMethod|shutting down/.test(error.message))
+                    throw error;
+            }
+            await pending.promise;
+        } finally {
+            pending.cleanup();
+        }
+    }
+
+    _connectServiceSignal(name, callback) {
+        const proxy = this._proxy;
+        const lifecycle = this._lifecycle;
+        return proxy.connectSignal(name, (senderProxy, sender, args) => {
+            if (!this._enabled || lifecycle !== this._lifecycle ||
+                proxy !== this._proxy || sender !== proxy.g_name_owner)
+                return;
+            callback(senderProxy, sender, args);
+        });
     }
 
     _subscribeSignals() {
-        this._signalIds.push(this._proxy.connectSignal('StateChanged',
+        this._signalIds.push(this._connectServiceSignal('StateChanged',
             (_proxy, _sender, [state]) => this._handleState(deepUnpackMap(state))));
-        this._signalIds.push(this._proxy.connectSignal('ConfigChanged',
+        this._signalIds.push(this._connectServiceSignal('ConfigChanged',
             (_proxy, _sender, [config]) => {
                 this._syncSettingsFromConfig(deepUnpackMap(config));
                 this._syncProfileMenu();
+                this._refreshProfiles();
                 this._refreshState();
             }));
-        this._signalIds.push(this._proxy.connectSignal('SessionStarted',
+        this._signalIds.push(this._connectServiceSignal('SessionStarted',
             (_proxy, _sender, [sessionId]) => {
                 this._injector.reset(sessionId);
             }));
-        this._signalIds.push(this._proxy.connectSignal('TextDelta',
+        this._signalIds.push(this._connectServiceSignal('TextDelta',
             (_proxy, _sender, [sessionId, seq, text]) => {
                 if (this._settings.get_boolean('insert-partials')) {
                     this._injector.insertDelta(
@@ -651,11 +813,11 @@ export default class WordpipeExtension extends Extension {
                         this._settings.get_uint('stream-insert-delay-ms'));
                 }
             }));
-        this._signalIds.push(this._proxy.connectSignal('Commit',
+        this._signalIds.push(this._connectServiceSignal('Commit',
             (_proxy, _sender, [sessionId, seq, text]) => {
                 this._injector.insertCommit(sessionId, seq, text);
             }));
-        this._signalIds.push(this._proxy.connectSignal('InstallProgress',
+        this._signalIds.push(this._connectServiceSignal('InstallProgress',
             (_proxy, _sender, [profile, progress]) => {
                 const values = deepUnpackMap(progress);
                 if (typeof values.profile !== 'string')
@@ -673,7 +835,7 @@ export default class WordpipeExtension extends Extension {
                 if (values.phase === 'complete' || values.phase === 'error')
                     this._refreshProfiles();
             }));
-        this._signalIds.push(this._proxy.connectSignal('Metrics',
+        this._signalIds.push(this._connectServiceSignal('Metrics',
             (_proxy, _sender, [metrics]) => {
                 const values = deepUnpackMap(metrics);
                 const summary = formatMetrics(values);
@@ -681,7 +843,7 @@ export default class WordpipeExtension extends Extension {
                     this._indicator?.setMetrics(summary);
                 this._indicator?.setVoiceLevel(numberValue(values.last_rms) ?? 0.0);
             }));
-        this._signalIds.push(this._proxy.connectSignal('Error',
+        this._signalIds.push(this._connectServiceSignal('Error',
             (_proxy, _sender, [message]) => {
                 this._indicator?.setStatusMessage(message);
                 log(`Wordpipe service error: ${message}`);
@@ -732,6 +894,8 @@ export default class WordpipeExtension extends Extension {
                 this._settings.set_string('model-profile', config.model_profile);
             if (typeof config.model_family === 'string')
                 this._settings.set_string('model-family', config.model_family);
+            if (typeof config.streaming_latency_ms === 'number')
+                this._settings.set_uint('streaming-latency-ms', config.streaming_latency_ms);
             if (typeof config.input_device === 'string')
                 this._settings.set_string('input-device', config.input_device);
             if (typeof config.language === 'string')
@@ -794,6 +958,7 @@ export default class WordpipeExtension extends Extension {
         case 'model-installer-path':
         case 'num-threads':
         case 'sample-rate':
+        case 'streaming-latency-ms':
             this._pushRuntimeOptions();
             break;
         default:
@@ -820,6 +985,7 @@ export default class WordpipeExtension extends Extension {
         const modelInstallerPath = this._settings.get_string('model-installer-path');
 
         this._callRemote('SetRuntimeOptions', {
+            streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
             model_root: new GLib.Variant('s', modelRoot),
             language: new GLib.Variant('s', language),
             worker_path: new GLib.Variant('s', workerPath),
@@ -848,6 +1014,15 @@ export default class WordpipeExtension extends Extension {
     }
 
     _callRemote(method, ...args) {
+        if (!this._enabled)
+            return;
+        const proxy = this._proxy;
+        const lifecycle = this._lifecycle;
+        const owner = proxy?.g_name_owner;
+        if (!owner) {
+            this._serviceLifecycle?.ensureStarted();
+            return;
+        }
         const callback = typeof args.at(-1) === 'function' ? args.pop() : null;
         const remote = this._proxy?.[`${method}Remote`];
         if (!remote) {
@@ -855,6 +1030,9 @@ export default class WordpipeExtension extends Extension {
             return;
         }
         remote.call(this._proxy, ...args, (result, error) => {
+            if (!this._enabled || lifecycle !== this._lifecycle ||
+                proxy !== this._proxy || owner !== proxy.g_name_owner)
+                return;
             if (error) {
                 this._setAvailable(true);
                 const message = formatError(error);
