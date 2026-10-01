@@ -355,6 +355,8 @@ def main() -> None:
                 script("transform_nemotron_parakeet_export.py"),
                 str(export_dir),
                 "--no-quantize" if args.profile == "fp32-projected" else "--quantize",
+                *(["--pointwise-linear", "--pointwise-parity-output", str(args.work_dir / "pointwise-onnx-parity.json")]
+                  if args.dynamic_streaming and args.profile != "fp32-projected" else []),
                 "--projected-cache",
                 "--projected-cache-current-projection",
                 args.projected_cache_current_projection,

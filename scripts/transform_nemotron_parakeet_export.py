@@ -15,6 +15,7 @@ import onnx
 from onnxruntime.quantization import QuantType, quantize_dynamic
 
 from rewrite_nemotron_projected_kv_cache import rewrite_model as rewrite_projected_cache
+from rewrite_nemotron_pointwise_convs import rewrite_file as rewrite_pointwise_convs
 
 ORT_OPTIMIZATION_LEVELS = {"disable", "basic", "extended", "all"}
 
@@ -29,12 +30,18 @@ KEEP_FILES = {
     "encoder.quant.onnx",
     "encoder.onnx",
     "decoder_joint.onnx",
+    "encoder.pointwise-fp32.onnx",
+    "encoder.pointwise-fp32.data",
 }
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("model_dir", type=Path)
+    parser.add_argument("--pointwise-linear", action=argparse.BooleanOptionalAction, default=False,
+                        help="Lower Conformer unit-kernel pointwise convs to MatMul before quantization.")
+    parser.add_argument("--pointwise-parity-output", type=Path,
+                        help="Verify lowered FP32 encoder against dynamic native fixtures before quantization.")
     parser.add_argument(
         "--projected-cache",
         action=argparse.BooleanOptionalAction,
@@ -158,10 +165,23 @@ def main() -> None:
         raise SystemExit("Expected encoder.fp32.consolidated.onnx and decoder_joint.fp32.onnx")
 
     encoder_for_projected = encoder_fp32
+    encoder_for_quantization = encoder_fp32
+    pointwise_count = 0
+    if args.pointwise_linear:
+        encoder_for_quantization = model_dir / "encoder.pointwise-fp32.onnx"
+        pointwise_count = rewrite_pointwise_convs(encoder_fp32, encoder_for_quantization)
+        encoder_for_projected = encoder_for_quantization
+        if args.pointwise_parity_output:
+            from verify_dynamic_nemotron_export import verify
+            report = verify(encoder_for_quantization, model_dir / "dynamic-reference", atol=1e-3, rtol=1e-4)
+            args.pointwise_parity_output.parent.mkdir(parents=True, exist_ok=True)
+            args.pointwise_parity_output.write_text(json.dumps(report, indent=2) + "\n")
+    elif args.pointwise_parity_output:
+        raise SystemExit("--pointwise-parity-output requires --pointwise-linear")
     if args.quantize:
         encoder_quant = model_dir / "encoder.quant.onnx"
         decoder_quant = model_dir / "decoder_joint.onnx"
-        quantize_to_single_file(encoder_fp32, encoder_quant, per_channel=args.quantize_per_channel)
+        quantize_to_single_file(encoder_for_quantization, encoder_quant, per_channel=args.quantize_per_channel)
         if args.fp32_decoder:
             decoder_quant.write_bytes(decoder_fp32.read_bytes())
         else:
@@ -195,6 +215,7 @@ def main() -> None:
 
     config = load_config(model_dir)
     config["projected_cache"] = args.projected_cache
+    config["pointwise_linear_rewrite_count"] = pointwise_count
     config["projected_cache_current_projection"] = current_projection if args.projected_cache else None
     config["dynamic_quint8_quantization"] = args.quantize
     config["dynamic_quint8_per_channel"] = args.quantize_per_channel if args.quantize else False
@@ -209,6 +230,8 @@ def main() -> None:
             "encoder.quant.onnx",
             "decoder_joint.fp32.onnx",
             "export_config.json",
+            "encoder.pointwise-fp32.onnx",
+            "encoder.pointwise-fp32.data",
         ):
             (model_dir / name).unlink(missing_ok=True)
 

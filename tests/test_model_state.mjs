@@ -8,7 +8,17 @@ const helperUrl = new URL(
 const helperSource = readFileSync(helperUrl, 'utf8');
 const helperModule = await import(
     `data:text/javascript;base64,${Buffer.from(helperSource).toString('base64')}`);
-const {installedModelProfiles} = helperModule;
+const {installedModelProfiles, streamingChunkChoices} = helperModule;
+
+test('chunk selector exposes every metadata-supported size without a fixed list', () => {
+    assert.deepEqual(streamingChunkChoices([1120, 80, 560, 160]), [80, 160, 560, 1120]);
+    assert.deepEqual(streamingChunkChoices([240, 80, 320, 240]), [80, 240, 320]);
+});
+
+test('invalid chunk metadata preserves the compatibility fallback', () => {
+    for (const values of [undefined, [], [80, 0], [80, '160'], [1.5]])
+        assert.equal(streamingChunkChoices(values), null);
+});
 
 test('model selector exposes installed profiles only', () => {
     const profiles = [

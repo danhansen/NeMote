@@ -116,7 +116,7 @@ install -m 0755 "$ROOT/scripts/convert_nemotron_to_ort_format.py" \
 install -m 0755 "$ROOT/scripts/build_nemotron_wordpipe_model.py" \
   "$STAGE_ROOT/share/wordpipe/scripts/build_nemotron_wordpipe_model.py"
 for task_model_script in export_nemotron_parakeet_optimized.py transform_nemotron_parakeet_export.py \
-    rewrite_nemotron_projected_kv_cache.py build_nemotron_fixed_shape_model.py \
+    rewrite_nemotron_projected_kv_cache.py rewrite_nemotron_pointwise_convs.py build_nemotron_fixed_shape_model.py \
     build_nemotron_dynamic_shape_model.py nemotron_dynamic_encoder.py \
     verify_dynamic_nemotron_export.py validate_dynamic_nemotron_release.py; do
   install -m 0755 "$ROOT/scripts/$task_model_script" "$STAGE_ROOT/share/wordpipe/scripts/$task_model_script"

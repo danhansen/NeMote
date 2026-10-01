@@ -537,7 +537,10 @@ def main() -> None:
         if args.interleave:
             rows_by_label: dict[str, list[dict[str, Any]]] = {label: [] for label, _ in models}
             for run_index in range(1, args.runs + 1):
-                for label, model_dir in models:
+                # Counterbalance ordering to avoid consistently favoring the
+                # second model as clocks, temperature, and filesystem caches drift.
+                order = models if run_index % 2 else list(reversed(models))
+                for label, model_dir in order:
                     print(f"[bench] {label} run {run_index}/{args.runs}", flush=True)
                     row = run_once(args, label, model_dir, run_index)
                     rows_by_label[label].append(row)

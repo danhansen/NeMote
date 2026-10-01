@@ -45,7 +45,9 @@ class DynamicReleaseTests(unittest.TestCase):
             for i in range(5) for label in ("baseline", "generic")]}
         benchmark = {"status": "complete", "settings": {"interleave": True}, "summaries": [
             {"label": "baseline", "runs": 5, "median_decode_seconds": 1, "max_peak_rss_kib": 1000},
-            {"label": "generic", "runs": 5, "median_decode_seconds": 1.04, "max_peak_rss_kib": 900}]}
+            {"label": "generic", "runs": 5, "median_decode_seconds": 1.04, "max_peak_rss_kib": 900}],
+            "runs": [{"label": label, "run_index": i, "metrics": {"decode_seconds": seconds}}
+                     for i in range(5) for label, seconds in (("baseline", 1), ("generic", 1.04))]}
         for name, data in (("parity", parity), ("modes", modes), ("corpus", corpus), ("benchmark", benchmark)):
             (root / (name + ".json")).write_text(json.dumps(data))
         args = argparse.Namespace(source_dir=source, profile="compact", encoder_parity=root / "parity.json",
@@ -72,9 +74,46 @@ class DynamicReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             args, _, benchmark = self.fixture(Path(tmp))
             benchmark["summaries"][1]["median_decode_seconds"] = 1.06
+            for row in benchmark["runs"]:
+                if row["label"] == "generic":
+                    row["metrics"]["decode_seconds"] = 1.06
             args.benchmark_report.write_text(json.dumps(benchmark))
             with self.assertRaisesRegex(ValueError, "exceeds.*5%"):
                 module("validate_dynamic_nemotron_release").validate(args)
+
+    def test_independent_medians_cannot_hide_paired_regression(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args, _, benchmark = self.fixture(Path(tmp))
+            for row in benchmark["runs"]:
+                if row["label"] == "generic":
+                    row["metrics"]["decode_seconds"] = 1.07
+            args.benchmark_report.write_text(json.dumps(benchmark))
+            with self.assertRaisesRegex(ValueError, "exceeds.*5%"):
+                module("validate_dynamic_nemotron_release").validate(args)
+
+    def test_incomplete_pairs_and_nonfinite_timings_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args, _, benchmark = self.fixture(Path(tmp))
+            benchmark["runs"].pop()
+            args.benchmark_report.write_text(json.dumps(benchmark))
+            with self.assertRaisesRegex(ValueError, "complete paired"):
+                module("validate_dynamic_nemotron_release").validate(args)
+        with tempfile.TemporaryDirectory() as tmp:
+            args, _, benchmark = self.fixture(Path(tmp))
+            benchmark["runs"][0]["metrics"]["decode_seconds"] = float('nan')
+            args.benchmark_report.write_text(json.dumps(benchmark))
+            with self.assertRaisesRegex(ValueError, "positive"):
+                module("validate_dynamic_nemotron_release").validate(args)
+
+    def test_pointwise_rewrite_requires_its_own_numerical_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args, config, _ = self.fixture(Path(tmp))
+            config["pointwise_linear_rewrite_count"] = 48
+            (args.source_dir / "config.json").write_text(json.dumps(config))
+            with self.assertRaisesRegex(ValueError, "pointwise lowering requires"):
+                module("validate_dynamic_nemotron_release").validate(args)
+            args.pointwise_parity = args.encoder_parity
+            self.assertTrue(module("validate_dynamic_nemotron_release").validate(args)["passed"])
 
     def test_missing_runtime_mode_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

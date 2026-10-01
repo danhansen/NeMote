@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -40,6 +41,22 @@ def _args(**overrides):  # type: ignore[no-untyped-def]
 
 
 class NemotronWordpipePipelineTests(unittest.TestCase):
+    def test_only_dynamic_quantized_builds_lower_and_validate_pointwise_projections(self):
+        builder = _load_builder()
+        for dynamic, profile in ((True, "compact-fixed-shape"), (True, "fp32-projected"), (False, "compact-fixed-shape")):
+            argv = ["build", "source.nemo", "/tmp/wordpipe-dry-run-only/output",
+                    "--work-dir", "/tmp/wordpipe-dry-run-only/work", "--profile", profile,
+                    "--model-family", "english", "--dry-run", "--stop-after", "transform"]
+            if dynamic:
+                argv.append("--dynamic-streaming")
+            with patch.object(sys, "argv", argv), patch.object(builder, "run") as run:
+                builder.main()
+            transform = next(call.args[0] for call in run.call_args_list
+                             if any("transform_nemotron_parakeet_export.py" in part for part in call.args[0]))
+            expected = dynamic and profile != "fp32-projected"
+            self.assertEqual("--pointwise-linear" in transform, expected)
+            self.assertEqual("--pointwise-parity-output" in transform, expected)
+
     def test_dynamic_mode_accepts_small_chunks_and_zero_right_context(self) -> None:
         builder = _load_builder()
         for latency, shapes in ((80, (0, 17, 1)), (160, (1, 25, 2))):

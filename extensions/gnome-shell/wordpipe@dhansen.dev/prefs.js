@@ -7,7 +7,7 @@ import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-import {installedModelProfiles} from './modelState.js';
+import {installedModelProfiles, streamingChunkChoices} from './modelState.js';
 
 const BUS_NAME = 'dev.wordpipe.Service';
 const OBJECT_PATH = '/dev/wordpipe/Service';
@@ -49,7 +49,7 @@ const WordpipeProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
 
 const PROFILES = [
     ['compact', 'compact', 'Dynamic-int8 fixed-shape multilingual model.', 'compact', 'multilingual'],
-    ['compact-english', 'compact (English only, lower WER)', 'Dynamic-int8 fixed-shape dedicated English model.', 'compact', 'english'],
+    ['compact-english', 'compact (English only, lower WER)', 'Dynamic-int8 dedicated English model; selectable chunk size.', 'compact', 'english'],
     ['fast', 'fast', 'FP32 projected-cache multilingual model; largest footprint.', 'fast', 'multilingual'],
     ['fast-english', 'fast (English only, lower WER)', 'FP32 projected-cache dedicated English model; largest footprint.', 'fast', 'english'],
 ];
@@ -416,7 +416,7 @@ class WordpipePage extends Adw.PreferencesPage {
 
         this._latencyValues = [560, 1120]; // Compatibility fallback for older services.
         this._latencyRow = new Adw.ComboRow({
-            title: _('Streaming Latency'),
+            title: _('Streaming Chunk Size'),
             subtitle: _('Choose a chunk size supported by the installed model; generic exports share one download.'),
             model: Gtk.StringList.new(this._latencyValues.map(value => `${value} ms`)),
             selected: this._settings.get_uint('streaming-latency-ms') === 1120 ? 1 : 0,
@@ -824,10 +824,9 @@ class WordpipePage extends Adw.PreferencesPage {
             this._selectedPreset = selectedPreset;
         this._syncingSettings = true;
         try {
-            if (Array.isArray(values.supported_streaming_latencies_ms) &&
-                values.supported_streaming_latencies_ms.length &&
-                values.supported_streaming_latencies_ms.every(value => Number.isInteger(value) && value > 0)) {
-                this._latencyValues = [...values.supported_streaming_latencies_ms];
+            const chunks = streamingChunkChoices(values.supported_streaming_latencies_ms);
+            if (chunks) {
+                this._latencyValues = chunks;
                 this._latencyRow.model = Gtk.StringList.new(this._latencyValues.map(value => `${value} ms`));
             }
             if (typeof values.backend === 'string')

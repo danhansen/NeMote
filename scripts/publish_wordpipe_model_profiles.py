@@ -42,6 +42,7 @@ REPRODUCIBILITY_SCRIPTS = (
     "export_nemotron_parakeet_optimized.py",
     "transform_nemotron_parakeet_export.py",
     "rewrite_nemotron_projected_kv_cache.py",
+    "rewrite_nemotron_pointwise_convs.py",
     "build_nemotron_fixed_shape_model.py",
     "convert_nemotron_to_ort_format.py",
     "bundle_nemotron_streaming_modes.py",

@@ -37,12 +37,25 @@ per-mode graphs to a generic release.
 Maintainers export with `--dynamic-streaming`, validate native/ONNX parity,
 and benchmark real speech against the deployed profile. The release gate is
 `scripts/validate_dynamic_nemotron_release.py`: it requires five matched speech
-clips, all supported worker modes, five interleaved performance runs, unchanged
+clips, all supported worker modes, five complete paired interleaved performance runs, unchanged
 transcripts, and no decode or peak-memory regression beyond the user's ±5%
 noise band. First-use and warm startup are recorded separately. These are small
 regression tests, not broad WER claims. FP32 native parity uses 1e-4 absolute and
 relative tolerance; the projected-cache path permits 1e-3 absolute because
 splitting cached/current GEMMs changes floating-point accumulation.
+
+Dynamic QUInt8 builds lower only Conformer unit-kernel, unit-stride, ungrouped
+pointwise convolutions to equivalent matrix multiplies before quantization.
+This restores ORT's fused dynamic-quantized GEMM path; depthwise and temporal
+convolutions remain unchanged. The build validates this intermediate FP32
+graph against the native fixtures with an explicit 1e-3 absolute / 1e-4 relative
+budget and writes `pointwise-onnx-parity.json`; supply it to the release gate
+with `--pointwise-parity`. FP32 downloads do not need this rewrite.
+
+The performance statistic is the median of adjacent candidate/baseline decode
+ratios, not the ratio of two independent medians. Benchmark order alternates
+between passes to limit systematic ordering bias. Do not discard inconvenient
+samples or attribute variation to CPU clocks without measurements.
 
 The gate writes `validation.json` with SHA-256 hashes of every runtime artifact.
 The publisher refuses a generic source without this evidence or if any artifact

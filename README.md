@@ -1,8 +1,10 @@
 # Wordpipe
 
-Release: **v0.1.19**. English FP32 and QUInt8 profiles use one generic encoder
+Release target: **v0.1.20**. English FP32 and QUInt8 profiles use one generic encoder
 each, with checkpoint-supported 80/160/560/1120 ms chunk selection. Existing
 fixed-model installations remain compatible; users do not export models locally.
+QUInt8 pointwise projections use fused matrix multiplies to preserve the deployed
+execution path. See [the measured investigation](docs/dynamic-chunk-performance.md).
 
 Wordpipe is a Wayland-only GNOME dictation app built around true streaming
 speech recognition. The primary implementation is a GNOME Shell frontend backed

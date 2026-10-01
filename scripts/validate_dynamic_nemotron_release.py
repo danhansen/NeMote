@@ -9,8 +9,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
+import statistics
 
 
 def sha256(path: Path) -> str:
@@ -35,6 +37,17 @@ def validate(args):
     if {(row["chunk_frames"], row["valid_cache"]) for row in parity["records"]} != expected_cases:
         raise ValueError("native fixtures do not cover all supported modes/cache occupancies")
     projected = None
+    pointwise = None
+    if args.profile == "compact" and config.get("pointwise_linear_rewrite_count", 0):
+        if config["pointwise_linear_rewrite_count"] != config["num_encoder_layers"] * 2:
+            raise ValueError("incomplete pointwise projection rewrite")
+        if getattr(args, "pointwise_parity", None) is None:
+            raise ValueError("pointwise lowering requires numerical parity evidence")
+        pointwise = load(args.pointwise_parity)
+        if pointwise.get("passed") is not True or pointwise["atol"] > 1e-3 or pointwise["rtol"] > 1e-4:
+            raise ValueError("pointwise lowering numerical gate did not pass")
+        if {(row["chunk_frames"], row["valid_cache"]) for row in pointwise["records"]} != expected_cases:
+            raise ValueError("pointwise parity does not cover all supported modes/cache occupancies")
     if args.profile == "fast":
         if args.projected_parity is None:
             raise ValueError("FP32 requires final projected-cache parity evidence")
@@ -68,7 +81,21 @@ def validate(args):
     base, current = summaries["baseline"], summaries["generic"]
     if min(base["runs"], current["runs"]) < 5:
         raise ValueError("at least five interleaved performance runs are required")
-    regression = (current["median_decode_seconds"] / base["median_decode_seconds"] - 1) * 100
+    paired = {}
+    for row in benchmark.get("runs", []):
+        if row["label"] in ("baseline", "generic"):
+            key = row["run_index"]
+            pair = paired.setdefault(key, {})
+            if row["label"] in pair:
+                raise ValueError("duplicate performance run")
+            pair[row["label"]] = row["metrics"]["decode_seconds"]
+    if len(paired) < 5 or any(set(pair) != {"baseline", "generic"} for pair in paired.values()):
+        raise ValueError("at least five complete paired performance runs are required")
+    if any(not math.isfinite(value) or value <= 0 for pair in paired.values() for value in pair.values()):
+        raise ValueError("performance decode times must be positive")
+    # A ratio of independent medians can mask regressions under clock drift.
+    ratios = [pair["generic"] / pair["baseline"] for pair in paired.values()]
+    regression = (statistics.median(ratios) - 1) * 100
     if regression > 5:
         raise ValueError(f"decode regression {regression:.2f}% exceeds the user's 5% noise band")
     startup = load(args.startup_report)
@@ -82,10 +109,12 @@ def validate(args):
     return {"format": 1, "passed": True, "profile": args.profile,
             "supported_chunk_frames": frames, "performance_noise_percent": 5,
             "decode_regression_percent": regression,
+            "paired_decode_ratios": ratios,
             "files": {name: {"sha256": sha256(args.source_dir / name),
                               "bytes": (args.source_dir / name).stat().st_size} for name in names},
             "native_encoder_parity": parity,
             "projected_encoder_parity": projected,
+            "pointwise_encoder_parity": pointwise,
             "corpus_summary": corpus["summary"],
             "performance_summary": benchmark["summaries"],
             "startup_and_memory_summary": startup["summaries"],
@@ -102,6 +131,7 @@ def main():
     for name in ("encoder-parity", "corpus-report", "benchmark-report", "startup-report", "modes-report"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--projected-parity", type=Path)
+    parser.add_argument("--pointwise-parity", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     report = validate(args)
