@@ -937,6 +937,14 @@ export default class WordpipeExtension extends Extension {
                 this._settings.set_boolean('insert-partials', config.insert_partials);
             if (typeof config.itn === 'boolean')
                 this._settings.set_boolean('itn', config.itn);
+            for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering']]) {
+                if (typeof config[key] === 'boolean')
+                    this._settings.set_boolean(setting, config[key]);
+            }
+            for (const [key, setting] of [['boost_phrases', 'boost-phrases'], ['boost_tokenizer_path', 'boost-tokenizer-path'], ['vad_model_path', 'vad-model-path']]) {
+                if (typeof config[key] === 'string')
+                    this._settings.set_string(setting, config[key]);
+            }
             if (typeof config.stream_insert_delay_ms === 'number')
                 this._settings.set_uint('stream-insert-delay-ms', config.stream_insert_delay_ms);
             if (typeof config.show_overlay === 'boolean')
@@ -975,6 +983,11 @@ export default class WordpipeExtension extends Extension {
             break;
         case 'model-root':
         case 'itn':
+        case 'phrase-boosting':
+        case 'boost-phrases':
+        case 'boost-tokenizer-path':
+        case 'vad-filtering':
+        case 'vad-model-path':
         case 'language':
         case 'worker-path':
         case 'model-installer-path':
@@ -1009,6 +1022,11 @@ export default class WordpipeExtension extends Extension {
         this._callRemote('SetRuntimeOptions', {
             streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
             itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
+            phrase_boosting: new GLib.Variant('b', this._settings.get_boolean('phrase-boosting')),
+            boost_phrases: new GLib.Variant('s', this._settings.get_string('boost-phrases')),
+            boost_tokenizer_path: new GLib.Variant('s', this._settings.get_string('boost-tokenizer-path')),
+            vad_filtering: new GLib.Variant('b', this._settings.get_boolean('vad-filtering')),
+            vad_model_path: new GLib.Variant('s', this._settings.get_string('vad-model-path')),
             model_root: new GLib.Variant('s', modelRoot),
             language: new GLib.Variant('s', language),
             worker_path: new GLib.Variant('s', workerPath),

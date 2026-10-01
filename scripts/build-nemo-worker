@@ -44,6 +44,11 @@ if ! git -C "$SOURCE" apply --reverse --check "$task_patch" 2>/dev/null; then
   git -C "$SOURCE" apply "$task_patch"
 fi
 # Always configure: a cached .so must not silently ignore changed build options.
+task_tokenizer_patch="$ROOT/native/wordpipe-nemo-worker/upstream-boost-tokenizer.patch"
+if ! git -C "$SOURCE" apply --reverse --check "$task_tokenizer_patch" 2>/dev/null; then
+  git -C "$SOURCE" apply --check "$task_tokenizer_patch"
+  git -C "$SOURCE" apply "$task_tokenizer_patch"
+fi
 sentencepiece_cmake=(-DSENTENCEPIECE_STATIC_LIB=OFF -USENTENCEPIECE_INCLUDE_DIR)
 if [[ "$ITN" == ON ]]; then
   task_sentencepiece_prefix="$UPSTREAM_BUILD/deps/sentencepiece"

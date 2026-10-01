@@ -1,0 +1,46 @@
+diff --git a/src/asr/model.h b/src/asr/model.h
+--- a/src/asr/model.h
++++ b/src/asr/model.h
+@@ -94,3 +94,4 @@
+     const sentencepiece::SentencePieceProcessor* embedded_tokenizer() const { return spm_.get(); }
++    void load_boost_tokenizer(const std::string& path);
+
+    protected:
+diff --git a/src/asr/model.cpp b/src/asr/model.cpp
+--- a/src/asr/model.cpp
++++ b/src/asr/model.cpp
+@@ -1331,2 +1331,19 @@
+ void
++AsrModel::load_boost_tokenizer(const std::string& path) {
++    if (spm_) return;
++    auto sp = std::make_unique<sentencepiece::SentencePieceProcessor>();
++    const auto status = sp->Load(path);
++    if (!status.ok()) throw std::runtime_error("Cannot load boosting tokenizer: " + status.ToString());
++    const auto count = static_cast<size_t>(sp->GetPieceSize());
++    if (vocab_.size() < count || vocab_.size() > count + 1)
++        throw std::runtime_error("Boosting tokenizer does not match ASR vocabulary size");
++    for (size_t i = 0; i < count; ++i) {
++        if (sp->IdToPiece(static_cast<int>(i)) != vocab_[i])
++            throw std::runtime_error("Boosting tokenizer does not match ASR token IDs");
++    }
++    spm_ = std::move(sp);
++    GGMLF_LOG_INFO("[asr_model] matching sidecar tokenizer loaded for word boosting\n");
++}
++
++void
+ AsrModel::apply_model_mel_basis(MelSpectrogramExtractor& extractor) {
+diff --git a/src/asr/recognizer.cpp b/src/asr/recognizer.cpp
+--- a/src/asr/recognizer.cpp
++++ b/src/asr/recognizer.cpp
+@@ -105,3 +105,5 @@
+     model_ = AsrModel::load(*bm_, cfg_.model.path, cfg_.batching);
++    if (!cfg_.decoder.tokenizer_path.empty())
++        model_->load_boost_tokenizer(cfg_.decoder.tokenizer_path);
+     model_name_ = cfg_.model.name.empty() ? model_->model_name() : cfg_.model.name;
+     // Self-punctuating models must bypass the separate PnC model.
+@@ -598,3 +600,5 @@
+     AsrRequestOptions opts, const std::string& language_code, bool coordinate_ingress) {
++    if (!opts.speech_contexts.empty() && !model_->embedded_tokenizer())
++        throw std::invalid_argument("Phrase boosting requires a matching SentencePiece tokenizer.model sidecar for this GGUF");
+     opts.language_code = language_code;
+     auto runner = make_runner();

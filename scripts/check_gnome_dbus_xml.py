@@ -36,6 +36,11 @@ EXPECTED_SETTINGS_KEYS = {
     "spoken-punctuation": "b",
     "insert-partials": "b",
     "itn": "b",
+    "phrase-boosting": "b",
+    "boost-phrases": "s",
+    "boost-tokenizer-path": "s",
+    "vad-filtering": "b",
+    "vad-model-path": "s",
     "stream-insert-delay-ms": "u",
     "show-overlay": "b",
 }

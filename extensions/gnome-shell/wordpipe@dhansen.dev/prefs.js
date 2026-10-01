@@ -510,6 +510,76 @@ class WordpipePage extends Adw.PreferencesPage {
         this._itnRow = row;
         group.add(row);
 
+        this._phraseBoostingRow = new Adw.SwitchRow({
+            title: _('Vocabulary / Phrase Boosting'),
+            subtitle: _('NeMo only: favor the names and terms below. May also bias incorrect matches. Change while stopped.'),
+            active: this._settings.get_boolean('phrase-boosting'),
+        });
+        this._phraseBoostingRow.connect('notify::active', widget => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_boolean('phrase-boosting', widget.active);
+            this._pushRuntimeOptions();
+        });
+        group.add(this._phraseBoostingRow);
+        this._boostPhrasesRow = new Adw.ExpanderRow({
+            title: _('Boosted Names and Phrases'),
+            subtitle: _('One phrase per line. Save before enabling. Older GGUFs reuse an installed Parakeet tokenizer or require a matching tokenizer file below.'),
+        });
+        this._boostPhrasesBuffer = new Gtk.TextBuffer({text: this._settings.get_string('boost-phrases')});
+        const editor = new Gtk.TextView({
+            buffer: this._boostPhrasesBuffer,
+            wrap_mode: Gtk.WrapMode.WORD_CHAR,
+            top_margin: 8, bottom_margin: 8, left_margin: 12, right_margin: 12,
+        });
+        const scroll = new Gtk.ScrolledWindow({min_content_height: 120, child: editor});
+        this._boostPhrasesRow.add_row(new Adw.PreferencesRow({child: scroll}));
+        const savePhrases = new Gtk.Button({label: _('Save Phrases'), valign: Gtk.Align.CENTER});
+        savePhrases.connect('clicked', () => {
+            const buffer = this._boostPhrasesBuffer;
+            this._settings.set_string('boost-phrases', buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false));
+            this._pushRuntimeOptions();
+        });
+        this._boostPhrasesRow.add_suffix(savePhrases);
+        group.add(this._boostPhrasesRow);
+        this._boostTokenizerPathRow = new Adw.EntryRow({
+            title: _('Boosting Tokenizer File (Optional)'),
+            text: this._settings.get_string('boost-tokenizer-path'),
+            show_apply_button: true,
+        });
+        this._boostTokenizerPathRow.connect('apply', widget => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_string('boost-tokenizer-path', widget.text);
+            this._pushRuntimeOptions();
+        });
+        group.add(this._boostTokenizerPathRow);
+
+        this._vadModelPathRow = new Adw.EntryRow({
+            title: _('Silero VAD GGUF File'),
+            text: this._settings.get_string('vad-model-path'),
+            show_apply_button: true,
+        });
+        this._vadModelPathRow.connect('apply', widget => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_string('vad-model-path', widget.text);
+            this._pushRuntimeOptions();
+        });
+        group.add(this._vadModelPathRow);
+        this._vadFilteringRow = new Adw.SwitchRow({
+            title: _('VAD Filtering'),
+            subtitle: _('NeMo only: mask non-speech features using the Silero GGUF above. Does not enable endpointing. Change while stopped.'),
+            active: this._settings.get_boolean('vad-filtering'),
+        });
+        this._vadFilteringRow.connect('notify::active', widget => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_boolean('vad-filtering', widget.active);
+            this._pushRuntimeOptions();
+        });
+        group.add(this._vadFilteringRow);
+
         this._insertPartialsRow = new Adw.ComboRow({
             title: _('Text Insertion'),
             subtitle: _('Partials are replaceable previews. Committed-only inserts when dictation stops. Change while stopped.'),
@@ -880,6 +950,14 @@ class WordpipePage extends Adw.PreferencesPage {
                 this._settings.set_boolean('insert-partials', values.insert_partials);
             if (typeof values.itn === 'boolean')
                 this._settings.set_boolean('itn', values.itn);
+            for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering']]) {
+                if (typeof values[key] === 'boolean')
+                    this._settings.set_boolean(setting, values[key]);
+            }
+            for (const [key, setting] of [['boost_phrases', 'boost-phrases'], ['boost_tokenizer_path', 'boost-tokenizer-path'], ['vad_model_path', 'vad-model-path']]) {
+                if (typeof values[key] === 'string')
+                    this._settings.set_string(setting, values[key]);
+            }
             if (typeof values.stream_insert_delay_ms === 'number')
                 this._settings.set_uint('stream-insert-delay-ms', values.stream_insert_delay_ms);
             if (typeof values.show_overlay === 'boolean')
@@ -923,6 +1001,16 @@ class WordpipePage extends Adw.PreferencesPage {
         this._insertPartialsRow.selected = this._settings.get_boolean('insert-partials') ? 0 : 1;
         this._itnRow.active = this._settings.get_boolean('itn');
         this._itnRow.sensitive = this._settings.get_string('backend') === 'nemo-speech';
+        for (const row of [this._phraseBoostingRow, this._boostPhrasesRow, this._boostTokenizerPathRow, this._vadFilteringRow, this._vadModelPathRow])
+            row.sensitive = this._itnRow.sensitive;
+        this._vadModelPathRow.text = this._settings.get_string('vad-model-path');
+        this._boostTokenizerPathRow.text = this._settings.get_string('boost-tokenizer-path');
+        const phrases = this._settings.get_string('boost-phrases');
+        const buffer = this._boostPhrasesBuffer;
+        if (buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false) !== phrases)
+            buffer.set_text(phrases, -1);
+        this._phraseBoostingRow.active = this._settings.get_boolean('phrase-boosting');
+        this._vadFilteringRow.active = this._settings.get_boolean('vad-filtering');
         this._delayRow.value = this._settings.get_uint('stream-insert-delay-ms');
         this._modelRootRow.text = this._settings.get_string('model-root');
         this._workerPathRow.text = this._settings.get_string('worker-path');
@@ -1154,6 +1242,11 @@ class WordpipePage extends Adw.PreferencesPage {
     _pushRuntimeOptions() {
         this._callRemote('SetRuntimeOptions', {
             itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
+            phrase_boosting: new GLib.Variant('b', this._settings.get_boolean('phrase-boosting')),
+            boost_phrases: new GLib.Variant('s', this._settings.get_string('boost-phrases')),
+            boost_tokenizer_path: new GLib.Variant('s', this._settings.get_string('boost-tokenizer-path')),
+            vad_filtering: new GLib.Variant('b', this._settings.get_boolean('vad-filtering')),
+            vad_model_path: new GLib.Variant('s', this._settings.get_string('vad-model-path')),
             streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
             model_root: new GLib.Variant('s', this._settings.get_string('model-root')),
             language: new GLib.Variant('s', this._settings.get_string('language')),

@@ -18,6 +18,7 @@
 #include "recognizer.h"
 #include "transcript.h"
 #include "itn_format.h"
+#include <sstream>
 #include "session_thread.h"
 #include <ggml-backend.h>
 #include "nlohmann/json.hpp"
@@ -49,6 +50,9 @@ struct Args {
     double queue_seconds = 10, stats_interval = 1;
     bool list_devices = false;
     bool itn = false;
+    bool phrase_boosting = false, vad_filtering = false;
+    std::string boost_phrases, vad_model;
+    std::string boost_tokenizer;
     std::string itn_grammar_dir;
 };
 static Args parse_args(int argc, char** argv) {
@@ -58,17 +62,23 @@ static Args parse_args(int argc, char** argv) {
         std::string key = argv[i];
         if (key == "--list-input-devices") { args.list_devices = true; continue; }
         if (key == "--itn") { args.itn = true; continue; }
+        if (key == "--phrase-boosting") { args.phrase_boosting = true; continue; }
+        if (key == "--vad-filtering") { args.vad_filtering = true; continue; }
         if (key == "--help") {
             std::cout << "wordpipe-nemo-worker --model-dir DIR|GGUF [--wav WAV] "
                          "[--chunk-samples 1280|2560|8960|17920] [--num-threads N] "
                          "[--language en-US|auto] [--input-device NAME|INDEX] "
-                         "[--device auto|cpu] [--itn]\n";
+                         "[--device auto|cpu] [--itn] [--phrase-boosting --boost-phrases TEXT [--boost-tokenizer MODEL]] "
+                         "[--vad-filtering --vad-model GGUF]\n";
             std::exit(0);
         }
         if (i + 1 == argc) throw std::invalid_argument("missing value for " + key);
         std::string value = argv[++i];
         if (key == "--model-dir") args.model_dir = value;
         else if (key == "--language") args.language = value;
+        else if (key == "--boost-phrases") args.boost_phrases = value;
+        else if (key == "--boost-tokenizer") args.boost_tokenizer = value;
+        else if (key == "--vad-model") args.vad_model = value;
         else if (key == "--input-device") args.input_device = value;
         else if (key == "--wav") args.wav = value;
         else if (key == "--wav-repeat") args.wav_repeat = std::stoi(value);
@@ -81,6 +91,11 @@ static Args parse_args(int argc, char** argv) {
         else throw std::invalid_argument("unknown option: " + key);
     }
     if (!args.list_devices && args.model_dir.empty()) throw std::invalid_argument("--model-dir is required");
+    if (args.phrase_boosting && args.boost_phrases.find_first_not_of(" \t\r\n") == std::string::npos)
+        throw std::invalid_argument("Phrase boosting requires at least one phrase");
+    if (args.boost_phrases.size() > 16384) throw std::invalid_argument("Boost phrases exceed 16 KiB");
+    if (args.vad_filtering && !std::filesystem::is_regular_file(args.vad_model))
+        throw std::invalid_argument("VAD filtering requires an existing Silero VAD GGUF (--vad-model)");
     if (args.sample_rate != 16000) throw std::invalid_argument("--sample-rate must be 16000");
     if (args.device != "auto" && args.device != "cpu")
         throw std::invalid_argument("--device must be auto or cpu; GPU acceleration is not enabled in this worker");
@@ -241,6 +256,18 @@ public:
         }
         asr::AsrRequestOptions options;
         options.verbatim_transcripts = !args.itn;
+        if (args.phrase_boosting) {
+            asr::AsrRequestOptions::Boost context;
+            context.boost = 1.0f; // Upstream's nominal RNNT shallow-fusion weight.
+            std::istringstream lines(args.boost_phrases);
+            std::string phrase;
+            while (std::getline(lines, phrase)) {
+                const auto first = phrase.find_first_not_of(" \t\r");
+                if (first != std::string::npos)
+                    context.phrases.push_back(phrase.substr(first, phrase.find_last_not_of(" \t\r") - first + 1));
+            }
+            options.speech_contexts.push_back(std::move(context));
+        }
         options.enable_automatic_punctuation = true; // Preserve model-native formatting in finals too.
         stream_ = model.streaming_recognize(options, language, false);
     }
@@ -309,6 +336,16 @@ int main(int argc, char** argv) {
         asr::RecognizerConfig config;
         config.backend.gpu = -1; config.backend.threads = args.threads;
         config.model.path = path.string();
+        if (args.phrase_boosting) {
+            auto tokenizer = args.boost_tokenizer.empty() ? path.parent_path() / "tokenizer.model"
+                                                        : std::filesystem::path(args.boost_tokenizer);
+            if (std::filesystem::is_regular_file(tokenizer)) config.decoder.tokenizer_path = tokenizer.string();
+            else if (!args.boost_tokenizer.empty()) throw std::invalid_argument("Boosting tokenizer file does not exist");
+        }
+        if (args.vad_filtering) {
+            config.vad.model_path = args.vad_model;
+            config.vad.masker.mask_enable = true;
+        }
         if (args.itn) {
 #ifdef WORDPIPE_NEMO_ITN
             auto executable = std::filesystem::canonical("/proc/self/exe");
@@ -331,7 +368,8 @@ int main(int argc, char** argv) {
         if (model.sample_rate() != 16000) throw std::invalid_argument("this worker requires a 16 kHz model");
         { Session validate(model, args); }
         emit({{"event", "model_loaded"}, {"data", {{"load_seconds", seconds(start)}, {"num_threads", args.threads},
-             {"compute_backend", "cpu"}, {"cpu_features", cpu_features()}, {"itn", args.itn}}}});
+             {"compute_backend", "cpu"}, {"cpu_features", cpu_features()}, {"itn", args.itn},
+             {"phrase_boosting", args.phrase_boosting}, {"vad_filtering", args.vad_filtering}}}});
         if (!args.wav.empty()) {
             for (int repeat = 0; repeat < args.wav_repeat; ++repeat) {
             ma_decoder_config decode_config = ma_decoder_config_init(ma_format_f32, 1, 16000);

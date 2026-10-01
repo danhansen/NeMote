@@ -94,6 +94,26 @@
       <summary>Inverse text normalization</summary>
       <description>Use NeMo's bundled grammars to format spoken numbers, dates, amounts and units on finalized transcripts. NeMo backend only.</description>
     </key>
+    <key name="phrase-boosting" type="b">
+      <default>false</default>
+      <summary>Enable NeMo phrase boosting</summary>
+    </key>
+    <key name="boost-phrases" type="s">
+      <default>''</default>
+      <summary>Names and phrases to boost, one per line</summary>
+    </key>
+    <key name="vad-filtering" type="b">
+      <default>false</default>
+      <summary>Enable NeMo VAD feature masking</summary>
+    </key>
+    <key name="boost-tokenizer-path" type="s">
+      <default>''</default>
+      <summary>Optional matching SentencePiece tokenizer for older GGUFs</summary>
+    </key>
+    <key name="vad-model-path" type="s">
+      <default>''</default>
+      <summary>Path to a compatible Silero VAD GGUF</summary>
+    </key>
     <key name="stream-insert-delay-ms" type="u">
       <default>0</default>
       <summary>Stream insertion delay</summary>

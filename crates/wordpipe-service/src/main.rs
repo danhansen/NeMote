@@ -50,6 +50,11 @@ struct ServiceConfig {
     num_threads: u32,
     spoken_punctuation: bool,
     itn: bool,
+    phrase_boosting: bool,
+    boost_phrases: String,
+    boost_tokenizer_path: String,
+    vad_filtering: bool,
+    vad_model_path: String,
     insert_partials: bool,
     stream_insert_delay_ms: u32,
     show_overlay: bool,
@@ -71,6 +76,11 @@ struct PersistedConfig {
     num_threads: Option<u32>,
     spoken_punctuation: Option<bool>,
     itn: Option<bool>,
+    phrase_boosting: Option<bool>,
+    boost_phrases: Option<String>,
+    boost_tokenizer_path: Option<String>,
+    vad_filtering: Option<bool>,
+    vad_model_path: Option<String>,
     insert_partials: Option<bool>,
     stream_insert_delay_ms: Option<u32>,
     show_overlay: Option<bool>,
@@ -93,6 +103,11 @@ impl From<&ServiceConfig> for PersistedConfig {
             num_threads: Some(config.num_threads),
             spoken_punctuation: Some(config.spoken_punctuation),
             itn: Some(config.itn),
+            phrase_boosting: Some(config.phrase_boosting),
+            boost_phrases: Some(config.boost_phrases.clone()),
+            boost_tokenizer_path: Some(config.boost_tokenizer_path.clone()),
+            vad_filtering: Some(config.vad_filtering),
+            vad_model_path: Some(config.vad_model_path.clone()),
             insert_partials: Some(config.insert_partials),
             stream_insert_delay_ms: Some(config.stream_insert_delay_ms),
             show_overlay: Some(config.show_overlay),
@@ -117,6 +132,11 @@ impl Default for ServiceConfig {
             num_threads: DEFAULT_NUM_THREADS,
             spoken_punctuation: true,
             itn: false,
+            phrase_boosting: false,
+            boost_phrases: String::new(),
+            boost_tokenizer_path: String::new(),
+            vad_filtering: false,
+            vad_model_path: String::new(),
             insert_partials: true,
             stream_insert_delay_ms: 0,
             show_overlay: true,
@@ -580,6 +600,35 @@ impl WordpipeService {
             let mut restart_worker = false;
             let mut language_update = None;
             let mut model_root_changed = false;
+            if let Some(value) = get_bool(&options, "phrase_boosting") {
+                next_config.phrase_boosting = value;
+            }
+            if let Some(value) = get_string(&options, "boost_phrases") {
+                next_config.boost_phrases = value;
+            }
+            if let Some(value) = get_string(&options, "boost_tokenizer_path") {
+                next_config.boost_tokenizer_path = value.trim().into();
+            }
+            if let Some(value) = get_bool(&options, "vad_filtering") {
+                next_config.vad_filtering = value;
+            }
+            if let Some(value) = get_string(&options, "vad_model_path") {
+                next_config.vad_model_path = value.trim().to_string();
+            }
+            validate_speech_features(&next_config)
+                .map_err(|error| zbus::fdo::Error::InvalidArgs(error.to_string()))?;
+            let speech_features_changed = next_config.phrase_boosting
+                != data.config.phrase_boosting
+                || next_config.boost_phrases != data.config.boost_phrases
+                || next_config.boost_tokenizer_path != data.config.boost_tokenizer_path
+                || next_config.vad_filtering != data.config.vad_filtering
+                || next_config.vad_model_path != data.config.vad_model_path;
+            if speech_features_changed
+                && (data.listening || data.stopping || data.installing || data.loading_model)
+            {
+                return Err(zbus::fdo::Error::Failed("stop dictation and wait for model loading/installation before changing speech features".into()));
+            }
+            restart_worker |= speech_features_changed && next_config.backend == "nemo-speech";
             if let Some(value) = get_bool(&options, "itn") {
                 if value != next_config.itn
                     && (data.listening || data.stopping || data.installing || data.loading_model)
@@ -1367,6 +1416,15 @@ fn config_map(config: &ServiceConfig) -> VariantMap {
     insert_bool(&mut map, "spoken_punctuation", config.spoken_punctuation);
     insert_bool(&mut map, "insert_partials", config.insert_partials);
     insert_bool(&mut map, "itn", config.itn);
+    insert_bool(&mut map, "phrase_boosting", config.phrase_boosting);
+    insert_str(&mut map, "boost_phrases", &config.boost_phrases);
+    insert_str(
+        &mut map,
+        "boost_tokenizer_path",
+        &config.boost_tokenizer_path,
+    );
+    insert_bool(&mut map, "vad_filtering", config.vad_filtering);
+    insert_str(&mut map, "vad_model_path", &config.vad_model_path);
     insert_u32(
         &mut map,
         "stream_insert_delay_ms",
@@ -1485,6 +1543,21 @@ fn apply_persisted_config(
     }
     if let Some(value) = persisted.itn {
         config.itn = value;
+    }
+    if let Some(value) = persisted.phrase_boosting {
+        config.phrase_boosting = value;
+    }
+    if let Some(value) = persisted.boost_phrases {
+        config.boost_phrases = value;
+    }
+    if let Some(value) = persisted.boost_tokenizer_path {
+        config.boost_tokenizer_path = value;
+    }
+    if let Some(value) = persisted.vad_filtering {
+        config.vad_filtering = value;
+    }
+    if let Some(value) = persisted.vad_model_path {
+        config.vad_model_path = value;
     }
     if let Some(value) = persisted.insert_partials {
         config.insert_partials = value;
@@ -2354,6 +2427,63 @@ fn apply_worker_itn_option(command: &mut Command, config: &ServiceConfig) {
     if config.backend == "nemo-speech" && config.itn {
         command.arg("--itn");
     }
+    if config.backend == "nemo-speech" && config.phrase_boosting {
+        command
+            .arg("--phrase-boosting")
+            .arg("--boost-phrases")
+            .arg(&config.boost_phrases);
+        let tokenizer = if !config.boost_tokenizer_path.is_empty() {
+            Some(PathBuf::from(&config.boost_tokenizer_path))
+        } else {
+            // Reuse the matching family's installed Parakeet tokenizer when
+            // the older NVIDIA GGUF does not contain its SentencePiece proto.
+            MODEL_PROFILES
+                .iter()
+                .filter(|profile| !profile.output_name.starts_with("nemotron-nemo-"))
+                .find_map(|profile| {
+                    let name = if config.model_family == "english" {
+                        profile.english_output_name
+                    } else {
+                        profile.output_name
+                    };
+                    let path = Path::new(&profile_runtime_dir(
+                        &config.model_root,
+                        name,
+                        profile.ort_format,
+                    ))
+                    .join("tokenizer.model");
+                    path.is_file().then_some(path)
+                })
+        };
+        if let Some(tokenizer) = tokenizer {
+            command.arg("--boost-tokenizer").arg(tokenizer);
+        }
+    }
+    if config.backend == "nemo-speech" && config.vad_filtering {
+        command
+            .arg("--vad-filtering")
+            .arg("--vad-model")
+            .arg(&config.vad_model_path);
+    }
+}
+
+fn validate_speech_features(config: &ServiceConfig) -> Result<()> {
+    if config.boost_phrases.len() > 16384 {
+        anyhow::bail!("Boost phrases exceed 16 KiB");
+    }
+    if config.backend == "nemo-speech"
+        && config.phrase_boosting
+        && config.boost_phrases.trim().is_empty()
+    {
+        anyhow::bail!("Enter at least one name or phrase before enabling phrase boosting");
+    }
+    if config.backend == "nemo-speech"
+        && config.vad_filtering
+        && !Path::new(&config.vad_model_path).is_file()
+    {
+        anyhow::bail!("Select an existing Silero VAD GGUF before enabling VAD filtering");
+    }
+    Ok(())
 }
 
 fn send_worker_command(stdin: &Arc<Mutex<ChildStdin>>, command: &str) -> Result<()> {
@@ -2760,6 +2890,74 @@ mod tests {
         }
     }
 
+    #[test]
+    fn speech_features_persist_and_only_reach_native_worker() {
+        let configured = ServiceConfig {
+            phrase_boosting: true,
+            boost_phrases: "James Hansen\nNeMo".into(),
+            vad_filtering: true,
+            vad_model_path: "/models/silero.gguf".into(),
+            ..Default::default()
+        };
+        let restored =
+            apply_persisted_config(ServiceConfig::default(), PersistedConfig::from(&configured))
+                .unwrap();
+        assert!(restored.phrase_boosting && restored.vad_filtering);
+        assert_eq!(restored.boost_phrases, configured.boost_phrases);
+        assert_eq!(restored.vad_model_path, configured.vad_model_path);
+        for backend in ["parakeet", "nemo-speech"] {
+            let mut command = Command::new("worker");
+            apply_worker_itn_option(
+                &mut command,
+                &ServiceConfig {
+                    backend: backend.into(),
+                    ..restored.clone()
+                },
+            );
+            let args: Vec<_> = command
+                .get_args()
+                .map(|arg| arg.to_str().unwrap())
+                .collect();
+            if backend == "parakeet" {
+                assert!(args.is_empty());
+            } else {
+                assert_eq!(
+                    args,
+                    vec![
+                        "--phrase-boosting",
+                        "--boost-phrases",
+                        "James Hansen\nNeMo",
+                        "--vad-filtering",
+                        "--vad-model",
+                        "/models/silero.gguf"
+                    ]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn speech_features_require_phrases_and_an_existing_vad_file() {
+        assert!(validate_speech_features(&ServiceConfig::default()).is_ok());
+        let mut config = ServiceConfig {
+            backend: "nemo-speech".into(),
+            phrase_boosting: true,
+            ..Default::default()
+        };
+        assert!(validate_speech_features(&config).is_err());
+        config.boost_phrases = "NeMo".into();
+        assert!(validate_speech_features(&config).is_ok());
+        config.vad_filtering = true;
+        assert!(validate_speech_features(&config).is_err());
+        config.vad_model_path = std::env::current_exe()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        assert!(validate_speech_features(&config).is_ok());
+        config.boost_phrases = "x".repeat(16385);
+        assert!(validate_speech_features(&config).is_err());
+    }
+
     fn sorted_keys(map: &VariantMap) -> Vec<&str> {
         let mut keys = map.keys().map(String::as_str).collect::<Vec<_>>();
         keys.sort_unstable();
@@ -2839,6 +3037,8 @@ mod tests {
             sorted_keys(&config_map(&config)),
             vec![
                 "backend",
+                "boost_phrases",
+                "boost_tokenizer_path",
                 "input_device",
                 "insert_partials",
                 "itn",
@@ -2849,6 +3049,7 @@ mod tests {
                 "model_profile",
                 "model_root",
                 "num_threads",
+                "phrase_boosting",
                 "sample_rate",
                 "shortcut",
                 "show_overlay",
@@ -2856,6 +3057,8 @@ mod tests {
                 "stream_insert_delay_ms",
                 "streaming_latency_ms",
                 "supported_streaming_latencies_ms",
+                "vad_filtering",
+                "vad_model_path",
                 "worker_path",
             ]
         );
