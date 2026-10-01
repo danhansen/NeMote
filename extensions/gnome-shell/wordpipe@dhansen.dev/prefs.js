@@ -770,9 +770,11 @@ class WordpipePage extends Adw.PreferencesPage {
                 title: item.title ?? item.id,
                 description: item.description ?? '',
             }));
-            clearStringList(this._backendModel);
-            this._backends.forEach(backend => this._backendModel.append(backend.title));
-            this._syncComboSelections();
+            this._withSyncing(() => {
+                clearStringList(this._backendModel);
+                this._backends.forEach(backend => this._backendModel.append(backend.title));
+                this._syncComboSelections();
+            });
         });
     }
 
@@ -799,23 +801,25 @@ class WordpipePage extends Adw.PreferencesPage {
 
     _refreshInputDevices() {
         this._callRemote('ListInputDevices', devices => {
-            clearStringList(this._deviceModel);
-            this._deviceSelectors = [''];
-            this._deviceModel.append(_('System Default'));
-
-            for (const device of devices) {
-                const values = deepUnpackMap(device);
-                const selector = values.selector ?? values.name ?? '';
-                this._deviceSelectors.push(selector);
-                this._deviceModel.append(values.is_default
-                    ? _(`${values.name} (default)`)
-                    : values.name);
-            }
-
+            // GTK can emit notify::selected while the list is cleared or
+            // repopulated. Guard the whole rebuild, not only the final selection,
+            // or SetInputDevice -> ConfigChanged -> refresh loops indefinitely.
             const configured = this._settings.get_string('input-device');
-            const selected = Math.max(0, this._deviceSelectors.indexOf(configured));
             this._withSyncing(() => {
-                this._deviceRow.selected = selected;
+                clearStringList(this._deviceModel);
+                this._deviceSelectors = [''];
+                this._deviceModel.append(_('System Default'));
+
+                for (const device of devices) {
+                    const values = deepUnpackMap(device);
+                    const selector = values.selector ?? values.name ?? '';
+                    this._deviceSelectors.push(selector);
+                    this._deviceModel.append(values.is_default
+                        ? _(`${values.name} (default)`)
+                        : values.name);
+                }
+
+                this._deviceRow.selected = Math.max(0, this._deviceSelectors.indexOf(configured));
             });
         });
     }
