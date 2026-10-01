@@ -441,7 +441,11 @@ int main(int argc, char** argv) {
         config.streaming.rnnt_right_context = args.chunk_samples / 1280 - 1;
         config.endpointing.enable = args.endpoint_mode != "disabled";
         config.endpointing.preview_only = args.endpoint_mode == "preview";
-        config.batching.enabled = false; config.log_status = false;
+        config.batching.enabled = false;
+        // Dictation owns one active stream; disabling batching alone leaves
+        // upstream's 16-slot encoder, decoder and VAD state arenas allocated.
+        config.batching.state_arena_slots = 1;
+        config.log_status = false;
         auto start = Clock::now();
         asr::Recognizer model(config);
         if (model.sample_rate() != 16000) throw std::invalid_argument("this worker requires a 16 kHz model");
@@ -449,7 +453,7 @@ int main(int argc, char** argv) {
         emit({{"event", "model_loaded"}, {"data", {{"load_seconds", seconds(start)}, {"num_threads", args.threads},
              {"compute_backend", "cpu"}, {"cpu_features", cpu_features()}, {"itn", args.itn},
              {"phrase_boosting", args.phrase_boosting}, {"vad_filtering", args.vad_filtering},
-             {"endpoint_mode", args.endpoint_mode}}}});
+             {"endpoint_mode", args.endpoint_mode}, {"state_arena_slots", config.batching.state_arena_slots}}}});
         if (!args.wav.empty()) {
             for (int repeat = 0; repeat < args.wav_repeat; ++repeat) {
             ma_decoder_config decode_config = ma_decoder_config_init(ma_format_f32, 1, 16000);
