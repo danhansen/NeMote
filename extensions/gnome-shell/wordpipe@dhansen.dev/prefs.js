@@ -509,6 +509,23 @@ class WordpipePage extends Adw.PreferencesPage {
         });
         this._itnRow = row;
         group.add(row);
+        this._endpointModes = ['disabled', 'preview', 'commit'];
+        this._endpointModeRow = new Adw.ComboRow({
+            title: _('Pause Endpointing'),
+            subtitle: _('NeMo only. Uses about 800 ms of decoded token silence. ITN switch controls normalization. Preview mode needs partial insertion to show text before Stop.'),
+            model: Gtk.StringList.new([_('Disabled'), _('ITN Preview — Do Not Finalize'), _('ITN + Finalize / Commit')]),
+            selected: Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode'))),
+        });
+        this._endpointModeRow.connect('notify::selected', widget => {
+            if (this._syncingSettings)
+                return;
+            const mode = this._endpointModes[widget.selected];
+            if (!mode)
+                return;
+            this._settings.set_string('endpoint-mode', mode);
+            this._pushRuntimeOptions();
+        });
+        group.add(this._endpointModeRow);
 
         this._phraseBoostingRow = new Adw.SwitchRow({
             title: _('Vocabulary / Phrase Boosting'),
@@ -524,7 +541,7 @@ class WordpipePage extends Adw.PreferencesPage {
         group.add(this._phraseBoostingRow);
         this._boostPhrasesRow = new Adw.ExpanderRow({
             title: _('Boosted Names and Phrases'),
-            subtitle: _('One phrase per line. Save before enabling. Older GGUFs reuse an installed Parakeet tokenizer or require a matching tokenizer file below.'),
+            subtitle: _('One phrase per line. Save before enabling. A matching tokenizer is downloaded automatically when needed.'),
         });
         this._boostPhrasesBuffer = new Gtk.TextBuffer({text: this._settings.get_string('boost-phrases')});
         const editor = new Gtk.TextView({
@@ -543,7 +560,7 @@ class WordpipePage extends Adw.PreferencesPage {
         this._boostPhrasesRow.add_suffix(savePhrases);
         group.add(this._boostPhrasesRow);
         this._boostTokenizerPathRow = new Adw.EntryRow({
-            title: _('Boosting Tokenizer File (Optional)'),
+            title: _('Boosting Tokenizer Override (Optional)'),
             text: this._settings.get_string('boost-tokenizer-path'),
             show_apply_button: true,
         });
@@ -556,7 +573,7 @@ class WordpipePage extends Adw.PreferencesPage {
         group.add(this._boostTokenizerPathRow);
 
         this._vadModelPathRow = new Adw.EntryRow({
-            title: _('Silero VAD GGUF File'),
+            title: _('Silero VAD GGUF Override (Optional)'),
             text: this._settings.get_string('vad-model-path'),
             show_apply_button: true,
         });
@@ -569,7 +586,7 @@ class WordpipePage extends Adw.PreferencesPage {
         group.add(this._vadModelPathRow);
         this._vadFilteringRow = new Adw.SwitchRow({
             title: _('VAD Filtering'),
-            subtitle: _('NeMo only: mask non-speech features using the Silero GGUF above. Does not enable endpointing. Change while stopped.'),
+            subtitle: _('NeMo only: mask non-speech features. Silero is downloaded automatically. Does not enable endpointing. Change while stopped.'),
             active: this._settings.get_boolean('vad-filtering'),
         });
         this._vadFilteringRow.connect('notify::active', widget => {
@@ -582,7 +599,7 @@ class WordpipePage extends Adw.PreferencesPage {
 
         this._insertPartialsRow = new Adw.ComboRow({
             title: _('Text Insertion'),
-            subtitle: _('Partials are replaceable previews. Committed-only inserts when dictation stops. Change while stopped.'),
+            subtitle: _('Partials are replaceable previews. Committed-only inserts at finalized endpoints or Stop. Change while stopped.'),
             model: Gtk.StringList.new([_('Partial + Committed'), _('Committed Only')]),
             selected: this._settings.get_boolean('insert-partials') ? 0 : 1,
         });
@@ -950,6 +967,8 @@ class WordpipePage extends Adw.PreferencesPage {
                 this._settings.set_boolean('insert-partials', values.insert_partials);
             if (typeof values.itn === 'boolean')
                 this._settings.set_boolean('itn', values.itn);
+            if (typeof values.endpoint_mode === 'string')
+                this._settings.set_string('endpoint-mode', values.endpoint_mode);
             for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering']]) {
                 if (typeof values[key] === 'boolean')
                     this._settings.set_boolean(setting, values[key]);
@@ -1001,6 +1020,8 @@ class WordpipePage extends Adw.PreferencesPage {
         this._insertPartialsRow.selected = this._settings.get_boolean('insert-partials') ? 0 : 1;
         this._itnRow.active = this._settings.get_boolean('itn');
         this._itnRow.sensitive = this._settings.get_string('backend') === 'nemo-speech';
+        this._endpointModeRow.sensitive = this._itnRow.sensitive;
+        this._endpointModeRow.selected = Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode')));
         for (const row of [this._phraseBoostingRow, this._boostPhrasesRow, this._boostTokenizerPathRow, this._vadFilteringRow, this._vadModelPathRow])
             row.sensitive = this._itnRow.sensitive;
         this._vadModelPathRow.text = this._settings.get_string('vad-model-path');
@@ -1242,6 +1263,7 @@ class WordpipePage extends Adw.PreferencesPage {
     _pushRuntimeOptions() {
         this._callRemote('SetRuntimeOptions', {
             itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
+            endpoint_mode: new GLib.Variant('s', this._settings.get_string('endpoint-mode')),
             phrase_boosting: new GLib.Variant('b', this._settings.get_boolean('phrase-boosting')),
             boost_phrases: new GLib.Variant('s', this._settings.get_string('boost-phrases')),
             boost_tokenizer_path: new GLib.Variant('s', this._settings.get_string('boost-tokenizer-path')),

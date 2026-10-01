@@ -19,6 +19,10 @@
 #include "transcript.h"
 #include "itn_format.h"
 #include <sstream>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <cerrno>
+extern char** environ;
 #include "session_thread.h"
 #include <ggml-backend.h>
 #include "nlohmann/json.hpp"
@@ -53,6 +57,8 @@ struct Args {
     bool phrase_boosting = false, vad_filtering = false;
     std::string boost_phrases, vad_model;
     std::string boost_tokenizer;
+    std::string model_family, companion_installer;
+    std::string endpoint_mode = "disabled";
     std::string itn_grammar_dir;
 };
 static Args parse_args(int argc, char** argv) {
@@ -69,7 +75,8 @@ static Args parse_args(int argc, char** argv) {
                          "[--chunk-samples 1280|2560|8960|17920] [--num-threads N] "
                          "[--language en-US|auto] [--input-device NAME|INDEX] "
                          "[--device auto|cpu] [--itn] [--phrase-boosting --boost-phrases TEXT [--boost-tokenizer MODEL]] "
-                         "[--vad-filtering --vad-model GGUF]\n";
+                         "[--vad-filtering [--vad-model GGUF]] [--model-family english|multilingual] "
+                         "[--companion-installer PATH]\n";
             std::exit(0);
         }
         if (i + 1 == argc) throw std::invalid_argument("missing value for " + key);
@@ -78,6 +85,9 @@ static Args parse_args(int argc, char** argv) {
         else if (key == "--language") args.language = value;
         else if (key == "--boost-phrases") args.boost_phrases = value;
         else if (key == "--boost-tokenizer") args.boost_tokenizer = value;
+        else if (key == "--model-family") args.model_family = value;
+        else if (key == "--companion-installer") args.companion_installer = value;
+        else if (key == "--endpoint-mode") args.endpoint_mode = value;
         else if (key == "--vad-model") args.vad_model = value;
         else if (key == "--input-device") args.input_device = value;
         else if (key == "--wav") args.wav = value;
@@ -91,10 +101,12 @@ static Args parse_args(int argc, char** argv) {
         else throw std::invalid_argument("unknown option: " + key);
     }
     if (!args.list_devices && args.model_dir.empty()) throw std::invalid_argument("--model-dir is required");
+    if (args.endpoint_mode != "disabled" && args.endpoint_mode != "preview" && args.endpoint_mode != "commit")
+        throw std::invalid_argument("--endpoint-mode must be disabled, preview, or commit");
     if (args.phrase_boosting && args.boost_phrases.find_first_not_of(" \t\r\n") == std::string::npos)
         throw std::invalid_argument("Phrase boosting requires at least one phrase");
     if (args.boost_phrases.size() > 16384) throw std::invalid_argument("Boost phrases exceed 16 KiB");
-    if (args.vad_filtering && !std::filesystem::is_regular_file(args.vad_model))
+    if (args.vad_filtering && !args.vad_model.empty() && !std::filesystem::is_regular_file(args.vad_model))
         throw std::invalid_argument("VAD filtering requires an existing Silero VAD GGUF (--vad-model)");
     if (args.sample_rate != 16000) throw std::invalid_argument("--sample-rate must be 16000");
     if (args.device != "auto" && args.device != "cpu")
@@ -216,25 +228,42 @@ public:
 class Session {
     std::unique_ptr<asr::RecognitionStream> stream_;
     const Args& args_;
+    asr::Recognizer& model_;
     Clock::time_point started_ = Clock::now();
     Transcript transcript_;
     size_t accepted_ = 0, calls_ = 0, dropped_ = 0;
     double decode_seconds_ = 0, rms_ = 0, peak_ = 0;
     bool english_model_ = false;
+    std::string preview_raw_, preview_formatted_;
+    size_t preview_endpoints_ = 0, utterance_commits_ = 0;
     void update(const asr::Result& result) {
         std::string text = result.alternatives.empty() ? "" : result.alternatives.front().transcript;
+        auto language = args_.language;
+        if (language == "auto" && !result.alternatives.empty()) {
+            const auto& codes = result.alternatives.front().language_codes;
+            language = codes.empty() ? (english_model_ ? "en" : "") : codes.front();
+        }
+        if (result.pause_endpoint) {
+            ++preview_endpoints_;
+            preview_raw_ = text;
+            preview_formatted_ = args_.itn ? model_.postproc().apply(text, stream_->options(), nullptr, language) : text;
+            if (args_.itn && language.substr(0, language.find('-')) == "en")
+                preview_formatted_ = format_english_itn(preview_formatted_);
+        }
+        if (result.is_final) {
+            preview_raw_.clear(); preview_formatted_.clear();
+        } else if (!preview_raw_.empty() && text == preview_raw_) {
+            text = preview_formatted_;
+        } else {
+            preview_raw_.clear(); preview_formatted_.clear();
+        }
         if (args_.itn && result.is_final && !result.alternatives.empty()) {
-            auto language = args_.language;
-            if (language == "auto") {
-                const auto& codes = result.alternatives.front().language_codes;
-                language = codes.empty() ? (english_model_ ? "en" : "") : codes.front();
-            }
             if (language.substr(0, language.find('-')) == "en") text = format_english_itn(text);
         }
         transcript_.update(text, result.is_final, result.late_punctuation);
     }
 public:
-    Session(asr::Recognizer& model, const Args& args) : args_(args) {
+    Session(asr::Recognizer& model, const Args& args) : args_(args), model_(model) {
         if (args.itn && args.language != "auto") {
             auto base = args.language.substr(0, args.language.find('-'));
             if (!std::filesystem::is_regular_file(std::filesystem::path(args.itn_grammar_dir) / base / "verbalize.far"))
@@ -270,6 +299,7 @@ public:
         }
         options.enable_automatic_punctuation = true; // Preserve model-native formatting in finals too.
         stream_ = model.streaming_recognize(options, language, false);
+        if (args.endpoint_mode == "preview") stream_->set_interim_words(true); // Detected language, not word offsets.
     }
     Json metrics() const {
         auto audio = double(accepted_) / 16000;
@@ -278,7 +308,8 @@ public:
             {"decode_seconds", decode_seconds_}, {"decode_calls", calls_},
             {"real_time_factor", audio > 0 ? decode_seconds_ / audio : 0},
             {"real_audio_real_time_factor", audio > 0 ? decode_seconds_ / audio : 0},
-            {"dropped_audio_chunks", dropped_}, {"last_rms", rms_}, {"peak_rms", peak_}};
+            {"dropped_audio_chunks", dropped_}, {"last_rms", rms_}, {"peak_rms", peak_},
+            {"preview_endpoints", preview_endpoints_}, {"utterance_commits", utterance_commits_}};
     }
     void stats() { emit({{"event", "stats"}, {"text", transcript_.text()}, {"data", metrics()}}); }
     void push(const float* audio, size_t n, size_t dropped = 0) {
@@ -290,8 +321,17 @@ public:
         auto start = Clock::now();
         stream_->push(audio, n, 16000);
         auto previous = transcript_.text();
-        while (auto result = stream_->next()) update(*result);
+        std::vector<std::string> commits;
+        while (auto result = stream_->next()) {
+            update(*result);
+            if (result->is_final && args_.endpoint_mode == "commit" && !transcript_.text().empty()) {
+                ++utterance_commits_;
+                commits.push_back(transcript_.text());
+            }
+        }
         decode_seconds_ += seconds(start); ++calls_;
+        for (const auto& text : commits)
+            emit({{"event", "commit"}, {"text", text}, {"data", metrics()}});
         if (transcript_.text() != previous && !transcript_.text().empty())
             emit({{"event", "partial"}, {"text", transcript_.text()}, {"data", metrics()}});
     }
@@ -325,6 +365,42 @@ static void run_capture(asr::Recognizer& model, const Args& args, std::atomic<bo
     }
 }
 
+static void prepare_companions(Args& args, const std::filesystem::path& model) {
+    const auto directory = model.parent_path();
+    bool boosting = args.phrase_boosting && args.boost_tokenizer.empty() &&
+                    !std::filesystem::is_regular_file(directory / "tokenizer.model");
+    if (args.vad_filtering && args.vad_model.empty())
+        args.vad_model = (directory / "silero-v6.2.0.gguf").string();
+    const bool vad = args.vad_filtering && !std::filesystem::is_regular_file(args.vad_model);
+    if (!boosting && !vad) return;
+    if (args.model_family != "english" && args.model_family != "multilingual")
+        throw std::invalid_argument("Automatic companion downloads require --model-family english|multilingual");
+    auto installer = args.companion_installer.empty()
+        ? std::filesystem::canonical("/proc/self/exe").parent_path() / "wordpipe-companion-install"
+        : std::filesystem::path(args.companion_installer);
+    if (!std::filesystem::is_regular_file(installer))
+        throw std::runtime_error("Companion download helper is missing: " + installer.string());
+    std::vector<std::string> command{installer.string(), "--runtime-dir", directory.string(),
+                                     "--model-family", args.model_family};
+    if (boosting) command.push_back("--boosting");
+    if (vad) command.push_back("--vad");
+    std::vector<char*> argv;
+    for (auto& item : command) argv.push_back(item.data());
+    argv.push_back(nullptr);
+    pid_t pid;
+    const int error = posix_spawn(&pid, command.front().c_str(), nullptr, nullptr, argv.data(), environ);
+    if (error) throw std::runtime_error("Could not launch companion installer: " + std::string(std::strerror(error)));
+    int status = 0;
+    pid_t result;
+    do { result = waitpid(pid, &status, 0); } while (result == -1 && errno == EINTR);
+    if (result == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0)
+        throw std::runtime_error("NeMo companion download failed; see service logs for details");
+    if (boosting && !std::filesystem::is_regular_file(directory / "tokenizer.model"))
+        throw std::runtime_error("Companion installer did not produce a tokenizer");
+    if (vad && !std::filesystem::is_regular_file(args.vad_model))
+        throw std::runtime_error("Companion installer did not produce the VAD model");
+}
+
 int main(int argc, char** argv) {
     try {
         Args args = parse_args(argc, argv);
@@ -332,6 +408,8 @@ int main(int argc, char** argv) {
         auto path = std::filesystem::path(args.model_dir);
         if (std::filesystem::is_directory(path)) path /= "model.gguf";
         if (!std::filesystem::is_regular_file(path)) throw std::invalid_argument("GGUF model is not installed at " + path.string());
+        emit({{"event", "loading_model"}, {"data", {{"model_dir", args.model_dir}}}});
+        prepare_companions(args, path);
         initialize_backends();
         asr::RecognizerConfig config;
         config.backend.gpu = -1; config.backend.threads = args.threads;
@@ -361,15 +439,17 @@ int main(int argc, char** argv) {
 #endif
         }
         config.streaming.rnnt_right_context = args.chunk_samples / 1280 - 1;
+        config.endpointing.enable = args.endpoint_mode != "disabled";
+        config.endpointing.preview_only = args.endpoint_mode == "preview";
         config.batching.enabled = false; config.log_status = false;
-        emit({{"event", "loading_model"}, {"data", {{"model_dir", args.model_dir}}}});
         auto start = Clock::now();
         asr::Recognizer model(config);
         if (model.sample_rate() != 16000) throw std::invalid_argument("this worker requires a 16 kHz model");
         { Session validate(model, args); }
         emit({{"event", "model_loaded"}, {"data", {{"load_seconds", seconds(start)}, {"num_threads", args.threads},
              {"compute_backend", "cpu"}, {"cpu_features", cpu_features()}, {"itn", args.itn},
-             {"phrase_boosting", args.phrase_boosting}, {"vad_filtering", args.vad_filtering}}}});
+             {"phrase_boosting", args.phrase_boosting}, {"vad_filtering", args.vad_filtering},
+             {"endpoint_mode", args.endpoint_mode}}}});
         if (!args.wav.empty()) {
             for (int repeat = 0; repeat < args.wav_repeat; ++repeat) {
             ma_decoder_config decode_config = ma_decoder_config_init(ma_format_f32, 1, 16000);

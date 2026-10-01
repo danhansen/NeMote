@@ -36,6 +36,7 @@ EXPECTED_SETTINGS_KEYS = {
     "spoken-punctuation": "b",
     "insert-partials": "b",
     "itn": "b",
+    "endpoint-mode": "s",
     "phrase-boosting": "b",
     "boost-phrases": "s",
     "boost-tokenizer-path": "s",

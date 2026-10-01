@@ -94,6 +94,16 @@
       <summary>Inverse text normalization</summary>
       <description>Use NeMo's bundled grammars to format spoken numbers, dates, amounts and units on finalized transcripts. NeMo backend only.</description>
     </key>
+    <key name="endpoint-mode" type="s">
+      <default>'disabled'</default>
+      <choices>
+        <choice value="disabled"/>
+        <choice value="preview"/>
+        <choice value="commit"/>
+      </choices>
+      <summary>NeMo pause endpoint behavior</summary>
+      <description>Disabled: finalize on Stop only. Preview: normalize a provisional snapshot at pauses without finalizing recognition. Commit: normalize and commit each utterance at pauses. The ITN switch controls normalization.</description>
+    </key>
     <key name="phrase-boosting" type="b">
       <default>false</default>
       <summary>Enable NeMo phrase boosting</summary>

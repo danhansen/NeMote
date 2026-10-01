@@ -358,6 +358,7 @@ class TextInjector {
         this._pendingDeltaIds = new Set();
         this._active = false;
         this._hasPreedit = false;
+        this._committedText = '';
     }
 
     reset(sessionId) {
@@ -365,6 +366,7 @@ class TextInjector {
         this._lastSession = Number(sessionId);
         this._lastSeq = 0;
         this._active = true;
+        this._committedText = '';
         this._focusWindow = global.display.focus_window;
         const method = this._getInputMethod();
         this._tracksFocus = method && '_currentFocus' in method;
@@ -402,6 +404,12 @@ class TextInjector {
         if (Number(sessionId) !== this._lastSession || Number(seq) <= this._lastSeq || !this._targetMatches())
             return;
         this._lastSeq = Number(seq);
+        if (!text.startsWith(this._committedText)) {
+            log('Wordpipe partial changed already committed text; cancelling insertion');
+            this.cancel();
+            return;
+        }
+        text = text.slice(this._committedText.length);
         this._clearPendingDeltas();
         const render = () => {
             if (!this._targetMatches())
@@ -436,9 +444,17 @@ class TextInjector {
         this._lastSeq = numericSeq;
         this._clearPreedit();
         const inputMethod = this._getInputMethod();
-        if (text)
-            inputMethod.commit(text);
-        this._active = false;
+        if (!text.startsWith(this._committedText)) {
+            log('Wordpipe final changed already committed text; cancelling insertion');
+            this.cancel();
+            return;
+        }
+        const suffix = text.slice(this._committedText.length);
+        if (suffix)
+            inputMethod.commit(suffix);
+        this._committedText = text;
+        // Endpoint commits keep the session open. SessionStopped cancels
+        // insertion; later partials show only the uncommitted suffix.
     }
 
     _getInputMethod() {
@@ -937,6 +953,8 @@ export default class WordpipeExtension extends Extension {
                 this._settings.set_boolean('insert-partials', config.insert_partials);
             if (typeof config.itn === 'boolean')
                 this._settings.set_boolean('itn', config.itn);
+            if (typeof config.endpoint_mode === 'string')
+                this._settings.set_string('endpoint-mode', config.endpoint_mode);
             for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering']]) {
                 if (typeof config[key] === 'boolean')
                     this._settings.set_boolean(setting, config[key]);
@@ -983,6 +1001,7 @@ export default class WordpipeExtension extends Extension {
             break;
         case 'model-root':
         case 'itn':
+        case 'endpoint-mode':
         case 'phrase-boosting':
         case 'boost-phrases':
         case 'boost-tokenizer-path':
@@ -1022,6 +1041,7 @@ export default class WordpipeExtension extends Extension {
         this._callRemote('SetRuntimeOptions', {
             streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
             itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
+            endpoint_mode: new GLib.Variant('s', this._settings.get_string('endpoint-mode')),
             phrase_boosting: new GLib.Variant('b', this._settings.get_boolean('phrase-boosting')),
             boost_phrases: new GLib.Variant('s', this._settings.get_string('boost-phrases')),
             boost_tokenizer_path: new GLib.Variant('s', this._settings.get_string('boost-tokenizer-path')),

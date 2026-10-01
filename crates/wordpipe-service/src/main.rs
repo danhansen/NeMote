@@ -55,6 +55,7 @@ struct ServiceConfig {
     boost_tokenizer_path: String,
     vad_filtering: bool,
     vad_model_path: String,
+    endpoint_mode: String,
     insert_partials: bool,
     stream_insert_delay_ms: u32,
     show_overlay: bool,
@@ -81,6 +82,7 @@ struct PersistedConfig {
     boost_tokenizer_path: Option<String>,
     vad_filtering: Option<bool>,
     vad_model_path: Option<String>,
+    endpoint_mode: Option<String>,
     insert_partials: Option<bool>,
     stream_insert_delay_ms: Option<u32>,
     show_overlay: Option<bool>,
@@ -108,6 +110,7 @@ impl From<&ServiceConfig> for PersistedConfig {
             boost_tokenizer_path: Some(config.boost_tokenizer_path.clone()),
             vad_filtering: Some(config.vad_filtering),
             vad_model_path: Some(config.vad_model_path.clone()),
+            endpoint_mode: Some(config.endpoint_mode.clone()),
             insert_partials: Some(config.insert_partials),
             stream_insert_delay_ms: Some(config.stream_insert_delay_ms),
             show_overlay: Some(config.show_overlay),
@@ -137,6 +140,7 @@ impl Default for ServiceConfig {
             boost_tokenizer_path: String::new(),
             vad_filtering: false,
             vad_model_path: String::new(),
+            endpoint_mode: "disabled".into(),
             insert_partials: true,
             stream_insert_delay_ms: 0,
             show_overlay: true,
@@ -615,6 +619,9 @@ impl WordpipeService {
             if let Some(value) = get_string(&options, "vad_model_path") {
                 next_config.vad_model_path = value.trim().to_string();
             }
+            if let Some(value) = get_string(&options, "endpoint_mode") {
+                next_config.endpoint_mode = value;
+            }
             validate_speech_features(&next_config)
                 .map_err(|error| zbus::fdo::Error::InvalidArgs(error.to_string()))?;
             let speech_features_changed = next_config.phrase_boosting
@@ -623,6 +630,8 @@ impl WordpipeService {
                 || next_config.boost_tokenizer_path != data.config.boost_tokenizer_path
                 || next_config.vad_filtering != data.config.vad_filtering
                 || next_config.vad_model_path != data.config.vad_model_path;
+            let speech_features_changed =
+                speech_features_changed || next_config.endpoint_mode != data.config.endpoint_mode;
             if speech_features_changed
                 && (data.listening || data.stopping || data.installing || data.loading_model)
             {
@@ -1425,6 +1434,7 @@ fn config_map(config: &ServiceConfig) -> VariantMap {
     );
     insert_bool(&mut map, "vad_filtering", config.vad_filtering);
     insert_str(&mut map, "vad_model_path", &config.vad_model_path);
+    insert_str(&mut map, "endpoint_mode", &config.endpoint_mode);
     insert_u32(
         &mut map,
         "stream_insert_delay_ms",
@@ -1558,6 +1568,12 @@ fn apply_persisted_config(
     }
     if let Some(value) = persisted.vad_model_path {
         config.vad_model_path = value;
+    }
+    if let Some(value) = persisted.endpoint_mode {
+        if !matches!(value.as_str(), "disabled" | "preview" | "commit") {
+            anyhow::bail!("Unknown endpoint mode: {value}");
+        }
+        config.endpoint_mode = value;
     }
     if let Some(value) = persisted.insert_partials {
         config.insert_partials = value;
@@ -2378,6 +2394,14 @@ fn spawn_worker(
             .arg("--ort-optimized-model-cache-dir")
             .arg(Path::new(&config.model_root).join("runtime-cache"));
     }
+    if config.backend == "nemo-speech" {
+        command.arg("--model-family").arg(&config.model_family);
+        let helper =
+            Path::new(&config.model_installer_path).with_file_name("wordpipe-companion-install");
+        if helper.is_file() {
+            command.arg("--companion-installer").arg(helper);
+        }
+    }
     apply_worker_itn_option(&mut command, config);
     if !config.input_device.is_empty() {
         command.arg("--input-device").arg(&config.input_device);
@@ -2424,6 +2448,9 @@ fn apply_worker_thread_env(command: &mut Command, num_threads: u32) {
 }
 
 fn apply_worker_itn_option(command: &mut Command, config: &ServiceConfig) {
+    if config.backend == "nemo-speech" && config.endpoint_mode != "disabled" {
+        command.arg("--endpoint-mode").arg(&config.endpoint_mode);
+    }
     if config.backend == "nemo-speech" && config.itn {
         command.arg("--itn");
     }
@@ -2460,14 +2487,20 @@ fn apply_worker_itn_option(command: &mut Command, config: &ServiceConfig) {
         }
     }
     if config.backend == "nemo-speech" && config.vad_filtering {
-        command
-            .arg("--vad-filtering")
-            .arg("--vad-model")
-            .arg(&config.vad_model_path);
+        command.arg("--vad-filtering");
+        if !config.vad_model_path.is_empty() {
+            command.arg("--vad-model").arg(&config.vad_model_path);
+        }
     }
 }
 
 fn validate_speech_features(config: &ServiceConfig) -> Result<()> {
+    if !matches!(
+        config.endpoint_mode.as_str(),
+        "disabled" | "preview" | "commit"
+    ) {
+        anyhow::bail!("Endpoint mode must be disabled, preview, or commit");
+    }
     if config.boost_phrases.len() > 16384 {
         anyhow::bail!("Boost phrases exceed 16 KiB");
     }
@@ -2479,6 +2512,7 @@ fn validate_speech_features(config: &ServiceConfig) -> Result<()> {
     }
     if config.backend == "nemo-speech"
         && config.vad_filtering
+        && !config.vad_model_path.is_empty()
         && !Path::new(&config.vad_model_path).is_file()
     {
         anyhow::bail!("Select an existing Silero VAD GGUF before enabling VAD filtering");
@@ -2948,6 +2982,8 @@ mod tests {
         config.boost_phrases = "NeMo".into();
         assert!(validate_speech_features(&config).is_ok());
         config.vad_filtering = true;
+        assert!(validate_speech_features(&config).is_ok());
+        config.vad_model_path = "/nonexistent/wordpipe-vad.gguf".into();
         assert!(validate_speech_features(&config).is_err());
         config.vad_model_path = std::env::current_exe()
             .unwrap()
@@ -2956,6 +2992,44 @@ mod tests {
         assert!(validate_speech_features(&config).is_ok());
         config.boost_phrases = "x".repeat(16385);
         assert!(validate_speech_features(&config).is_err());
+    }
+
+    #[test]
+    fn endpoint_modes_persist_and_only_reach_nemo() {
+        for mode in ["disabled", "preview", "commit"] {
+            let config = ServiceConfig {
+                endpoint_mode: mode.into(),
+                ..Default::default()
+            };
+            let restored =
+                apply_persisted_config(ServiceConfig::default(), PersistedConfig::from(&config))
+                    .unwrap();
+            assert_eq!(restored.endpoint_mode, mode);
+            for backend in ["parakeet", "nemo-speech"] {
+                let mut command = Command::new("worker");
+                apply_worker_itn_option(
+                    &mut command,
+                    &ServiceConfig {
+                        backend: backend.into(),
+                        ..restored.clone()
+                    },
+                );
+                let args: Vec<_> = command
+                    .get_args()
+                    .map(|arg| arg.to_str().unwrap())
+                    .collect();
+                if backend == "nemo-speech" && mode != "disabled" {
+                    assert_eq!(args, vec!["--endpoint-mode", mode]);
+                } else {
+                    assert!(args.is_empty());
+                }
+            }
+        }
+        assert!(validate_speech_features(&ServiceConfig {
+            endpoint_mode: "unknown".into(),
+            ..Default::default()
+        })
+        .is_err());
     }
 
     fn sorted_keys(map: &VariantMap) -> Vec<&str> {
@@ -3039,6 +3113,7 @@ mod tests {
                 "backend",
                 "boost_phrases",
                 "boost_tokenizer_path",
+                "endpoint_mode",
                 "input_device",
                 "insert_partials",
                 "itn",

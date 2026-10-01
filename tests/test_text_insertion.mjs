@@ -18,6 +18,7 @@ function fixture({preedit = true} = {}) {
     };
     const display = {focus_window: {}};
     const context = vm.createContext({
+        log: () => {},
         global: {display},
         Clutter: {PreeditResetMode: {CLEAR: 0}, get_default_backend: () => ({get_input_method: () => method})},
         GLib: {PRIORITY_DEFAULT: 0, SOURCE_REMOVE: false,
@@ -53,6 +54,7 @@ test('final cancels queued partials; stale events cannot restart a session', () 
     const {injector, calls, flush, timers} = fixture();
     injector.insertPartial(1, 1, 'provisional', 100);
     injector.insertCommit(1, 2, 'final');
+    injector.cancel(); // SessionStopped, not an intermediate endpoint commit.
     flush();
     injector.insertPartial(1, 3, 'late');
     injector.insertPartial(99, 4, 'wrong session');
@@ -111,4 +113,34 @@ test('do not overwrite an existing IBus composition', () => {
     injector.insertPartial(1, 1, 'dictation');
     injector.insertCommit(1, 2, 'dictation');
     assert.deepEqual(calls, []);
+});
+
+test('endpoint commits insert each suffix once and preserve later previews', () => {
+    const {injector, calls} = fixture();
+    injector.insertPartial(1, 1, 'twenty five');
+    injector.insertCommit(1, 2, '25');
+    injector.insertPartial(1, 3, '25 next utterance');
+    injector.insertCommit(1, 4, '25 next utterance.');
+    injector.insertCommit(1, 5, '25 next utterance.');
+    assert.deepEqual(calls, [
+        ['preedit', 'twenty five', 11, 11, 0], ['preedit', null, 0, 0, 0], ['commit', '25'],
+        ['preedit', ' next utterance', 15, 15, 0], ['preedit', null, 0, 0, 0], ['commit', ' next utterance.'],
+    ]);
+});
+
+test('committed-only inserts successive finalized utterances without duplication', () => {
+    const {injector, calls} = fixture();
+    injector.insertCommit(1, 1, '$25');
+    injector.insertCommit(1, 2, '$25. Tomorrow.');
+    injector.insertCommit(1, 3, '$25. Tomorrow.');
+    assert.deepEqual(calls, [['commit', '$25'], ['commit', '. Tomorrow.']]);
+});
+
+test('pause ITN preview remains replaceable until a real final', () => {
+    const {injector, calls} = fixture();
+    injector.insertPartial(1, 1, 'twenty five');
+    injector.insertPartial(1, 2, '25');
+    injector.insertPartial(1, 3, 'twenty five dollars');
+    injector.insertCommit(1, 4, '$25');
+    assert.deepEqual(calls.filter(call => call[0] === 'commit'), [['commit', '$25']]);
 });
