@@ -112,6 +112,26 @@ NEMO_BUILD="${WORDPIPE_NEMO_BUILD:-$NEMO_SOURCE/build/wordpipe-cpu}"
 cmake --install "$NEMO_WORKER_BUILD" --prefix "$STAGE_ROOT"
 mkdir -p "$STAGE_ROOT/lib/nemo" "$STAGE_ROOT/share/wordpipe/licenses/nemo"
 cp -a "$NEMO_BUILD/bin/"*.so* "$STAGE_ROOT/lib/nemo/"
+if [[ "${WORDPIPE_NEMO_ITN:-ON}" == ON ]]; then
+  require_tool patchelf
+  cp -a "$NEMO_BUILD/deps/itn_configs" "$STAGE_ROOT/share/wordpipe/itn"
+  install -m 0644 "$NEMO_BUILD/deps/text-processing/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/text-processing-LICENSE"
+  cp -a "$NEMO_BUILD/deps/itn/lib/"*.so* "$STAGE_ROOT/lib/nemo/"
+  cp -a "$NEMO_BUILD/deps/itn/share/licenses/" "$STAGE_ROOT/share/wordpipe/licenses/nemo/itn"
+  cp -a "$NEMO_BUILD/deps/sentencepiece/share/licenses/" "$STAGE_ROOT/share/wordpipe/licenses/nemo/sentencepiece"
+  install -m 0644 /usr/share/doc/libprotobuf32/copyright "$STAGE_ROOT/share/wordpipe/licenses/nemo/protobuf-copyright"
+  install -m 0644 /usr/share/doc/libre2-9/copyright "$STAGE_ROOT/share/wordpipe/licenses/nemo/re2-copyright"
+  install -m 0644 /usr/share/doc/zlib1g/copyright "$STAGE_ROOT/share/wordpipe/licenses/nemo/zlib-copyright"
+  # Bundle the normalizer's system dependencies as well. Their SONAMEs are
+  # stable, and $ORIGIN keeps transitive dependencies inside the release.
+  while read -r task_library; do
+    [[ -f "$task_library" ]] || { echo "Missing ITN dependency: $task_library" >&2; exit 1; }
+    cp -L "$task_library" "$STAGE_ROOT/lib/nemo/$(basename "$task_library")"
+  done < <(ldd "$NEMO_BUILD/bin/libnemo_speech_asr.so" | awk '/libprotobuf|libre2|libz\.so/ {print $3}')
+  for task_library in "$STAGE_ROOT/lib/nemo/"*.so*; do
+    [[ -L "$task_library" ]] || patchelf --set-rpath '$ORIGIN' "$task_library"
+  done
+fi
 # The reproducible Debian build links the system SentencePiece shared library.
 # Bundle it as well: users must not need development packages to run the worker.
 task_sentencepiece=$(ldd "$NEMO_BUILD/bin/libnemo_speech_asr.so" | awk '/libsentencepiece\.so/ {print $3}')

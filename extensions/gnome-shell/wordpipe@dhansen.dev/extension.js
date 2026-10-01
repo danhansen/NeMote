@@ -354,82 +354,91 @@ class TextInjector {
     constructor() {
         this._lastSession = 0;
         this._lastSeq = 0;
-        this._insertedText = '';
         this._inputMethod = null;
         this._pendingDeltaIds = new Set();
+        this._active = false;
+        this._hasPreedit = false;
     }
 
     reset(sessionId) {
-        this._clearPendingDeltas();
+        this.cancel();
         this._lastSession = Number(sessionId);
         this._lastSeq = 0;
-        this._insertedText = '';
+        this._active = true;
+        this._focusWindow = global.display.focus_window;
+        const method = this._getInputMethod();
+        this._tracksFocus = method && '_currentFocus' in method;
+        this._focus = method?._currentFocus;
     }
 
-    insertDelta(sessionId, seq, text, delayMs = 0) {
+    cancel() {
+        this._clearPendingDeltas();
+        this._clearPreedit();
+        this._active = false;
+    }
+
+    _targetMatches() {
+        const method = this._getInputMethod();
+        if (!this._active || !method)
+            return false;
+        if (global.display.focus_window !== this._focusWindow ||
+            (this._tracksFocus && method._currentFocus !== this._focus) ||
+            (method._preeditVisible && method._preeditStr)) {
+            this.cancel();
+            return false;
+        }
+        return true;
+    }
+
+    _clearPreedit() {
+        const method = this._inputMethod;
+        if (this._hasPreedit && method &&
+            (!this._tracksFocus || method._currentFocus === this._focus))
+            method.set_preedit_text(null, 0, 0, Clutter.PreeditResetMode.CLEAR);
+        this._hasPreedit = false;
+    }
+
+    insertPartial(sessionId, seq, text, delayMs = 0) {
+        if (Number(sessionId) !== this._lastSession || Number(seq) <= this._lastSeq || !this._targetMatches())
+            return;
+        this._lastSeq = Number(seq);
+        this._clearPendingDeltas();
+        const render = () => {
+            if (!this._targetMatches())
+                return;
+            const method = this._getInputMethod();
+            // Unsupported clients get committed-only insertion, never hard
+            // commits of provisional text that ITN might subsequently rewrite.
+            if (!method.set_preedit_text || method.can_show_preedit === false)
+                return;
+            const cursor = Array.from(text).length;
+            method.set_preedit_text(text || null, cursor, cursor, Clutter.PreeditResetMode.CLEAR);
+            this._hasPreedit = Boolean(text);
+        };
         if (delayMs > 0) {
-            const sourceId = GLib.timeout_add(
-                GLib.PRIORITY_DEFAULT,
-                delayMs,
-                () => {
-                    this._pendingDeltaIds.delete(sourceId);
-                    this._insertDeltaNow(sessionId, seq, text);
-                    return GLib.SOURCE_REMOVE;
-                });
+            const sourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delayMs, () => {
+                this._pendingDeltaIds.delete(sourceId);
+                render();
+                return GLib.SOURCE_REMOVE;
+            });
             this._pendingDeltaIds.add(sourceId);
-            return;
+        } else {
+            render();
         }
-        this._insertDeltaNow(sessionId, seq, text);
-    }
-
-    _insertDeltaNow(sessionId, seq, text) {
-        const numericSession = Number(sessionId);
-        const numericSeq = Number(seq);
-        if (numericSession !== this._lastSession)
-            this.reset(numericSession);
-        if (numericSeq <= this._lastSeq || !text)
-            return;
-        this._lastSeq = numericSeq;
-
-        const inputMethod = this._getInputMethod();
-        if (!inputMethod) {
-            log(`Wordpipe text delta without input method: ${text}`);
-            return;
-        }
-        inputMethod.commit(text);
-        this._insertedText += text;
     }
 
     insertCommit(sessionId, seq, text) {
         const numericSession = Number(sessionId);
         const numericSeq = Number(seq);
-        if (numericSession !== this._lastSession)
-            this.reset(numericSession);
-        else
-            this._clearPendingDeltas();
-        if (numericSeq <= this._lastSeq || !text)
+        if (numericSession !== this._lastSession || numericSeq <= this._lastSeq || !this._targetMatches())
             return;
+        this._clearPendingDeltas();
         this._lastSeq = numericSeq;
-
-        let textToInsert = text;
-        if (this._insertedText) {
-            if (text === this._insertedText || this._insertedText.startsWith(text))
-                return;
-            if (text.startsWith(this._insertedText))
-                textToInsert = text.slice(this._insertedText.length);
-            else {
-                log(`Wordpipe commit differs from streamed text; keeping streamed text: ${text}`);
-                return;
-            }
-        }
-
+        this._clearPreedit();
         const inputMethod = this._getInputMethod();
-        if (!inputMethod) {
-            log(`Wordpipe commit without input method: ${textToInsert}`);
-            return;
-        }
-        inputMethod.commit(textToInsert);
-        this._insertedText += textToInsert;
+        if (text)
+            inputMethod.commit(text);
+        this._active = false;
     }
 
     _getInputMethod() {
@@ -480,6 +489,7 @@ export default class WordpipeExtension extends Extension {
         this._pushToTalkModifierMask = 0;
         this._stageCapturedEventId = 0;
         this._injector = new TextInjector();
+        this._insertionFocusId = global.display.connect('notify::focus-window', () => this._injector?.cancel());
 
         this._indicator = new Indicator(this);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
@@ -496,6 +506,10 @@ export default class WordpipeExtension extends Extension {
 
     disable() {
         this._enabled = false;
+        this._injector?.cancel();
+        if (this._insertionFocusId)
+            global.display.disconnect(this._insertionFocusId);
+        this._insertionFocusId = 0;
         this._lifecycle = Symbol('disabled');
         this._proxyCancellable?.cancel();
         this._proxyCancellable = null;
@@ -803,10 +817,10 @@ export default class WordpipeExtension extends Extension {
             (_proxy, _sender, [sessionId]) => {
                 this._injector.reset(sessionId);
             }));
-        this._signalIds.push(this._connectServiceSignal('TextDelta',
+        this._signalIds.push(this._connectServiceSignal('Partial',
             (_proxy, _sender, [sessionId, seq, text]) => {
                 if (this._settings.get_boolean('insert-partials')) {
-                    this._injector.insertDelta(
+                    this._injector.insertPartial(
                         sessionId,
                         seq,
                         text,
@@ -816,6 +830,11 @@ export default class WordpipeExtension extends Extension {
         this._signalIds.push(this._connectServiceSignal('Commit',
             (_proxy, _sender, [sessionId, seq, text]) => {
                 this._injector.insertCommit(sessionId, seq, text);
+            }));
+        this._signalIds.push(this._connectServiceSignal('SessionStopped',
+            (_proxy, _sender, [sessionId]) => {
+                if (Number(sessionId) === this._injector._lastSession)
+                    this._injector.cancel();
             }));
         this._signalIds.push(this._connectServiceSignal('InstallProgress',
             (_proxy, _sender, [profile, progress]) => {
@@ -916,6 +935,8 @@ export default class WordpipeExtension extends Extension {
                 this._settings.set_boolean('spoken-punctuation', config.spoken_punctuation);
             if (typeof config.insert_partials === 'boolean')
                 this._settings.set_boolean('insert-partials', config.insert_partials);
+            if (typeof config.itn === 'boolean')
+                this._settings.set_boolean('itn', config.itn);
             if (typeof config.stream_insert_delay_ms === 'number')
                 this._settings.set_uint('stream-insert-delay-ms', config.stream_insert_delay_ms);
             if (typeof config.show_overlay === 'boolean')
@@ -953,6 +974,7 @@ export default class WordpipeExtension extends Extension {
             this._pushInsertionOptions();
             break;
         case 'model-root':
+        case 'itn':
         case 'language':
         case 'worker-path':
         case 'model-installer-path':
@@ -986,6 +1008,7 @@ export default class WordpipeExtension extends Extension {
 
         this._callRemote('SetRuntimeOptions', {
             streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
+            itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
             model_root: new GLib.Variant('s', modelRoot),
             language: new GLib.Variant('s', language),
             worker_path: new GLib.Variant('s', workerPath),
@@ -1070,6 +1093,8 @@ export default class WordpipeExtension extends Extension {
     }
 
     _setAvailable(available) {
+        if (!available)
+            this._injector?.cancel();
         this._indicator?.setState(this._state, available);
     }
 }

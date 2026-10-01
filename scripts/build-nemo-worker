@@ -5,6 +5,8 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 REVISION=4c101bc7113f49101a3e11d2c994c519f41939f6
 GGML_REVISION=c03b4e2bcece5134827881af90242086daf75be5
 NATIVE=${WORDPIPE_NEMO_NATIVE:-OFF}
+ITN=${WORDPIPE_NEMO_ITN:-ON}
+case "$ITN" in ON|OFF) ;; *) echo "WORDPIPE_NEMO_ITN must be ON or OFF" >&2; exit 2 ;; esac
 # Ship portable CPU plugins selected at runtime, not client-side compilation.
 # An explicitly requested native build uses a single host-tuned CPU backend.
 if [[ "$NATIVE" == ON ]]; then default_cpu_variants=OFF; else default_cpu_variants=ON; fi
@@ -42,12 +44,29 @@ if ! git -C "$SOURCE" apply --reverse --check "$task_patch" 2>/dev/null; then
   git -C "$SOURCE" apply "$task_patch"
 fi
 # Always configure: a cached .so must not silently ignore changed build options.
+sentencepiece_cmake=(-DSENTENCEPIECE_STATIC_LIB=OFF -USENTENCEPIECE_INCLUDE_DIR)
+if [[ "$ITN" == ON ]]; then
+  task_sentencepiece_prefix="$UPSTREAM_BUILD/deps/sentencepiece"
+  if [[ ! -f "$task_sentencepiece_prefix/lib/libsentencepiece.a" ]]; then
+    env PREFIX="$task_sentencepiece_prefix" JOBS="${WORDPIPE_BUILD_JOBS:-2}" \
+      bash "$SOURCE/scripts/build_sentencepiece_static.sh" "$UPSTREAM_BUILD/deps/sentencepiece-build"
+  fi
+  sentencepiece_cmake=("-DSENTENCEPIECE_STATIC_LIB=$task_sentencepiece_prefix/lib/libsentencepiece.a" \
+    "-DSENTENCEPIECE_INCLUDE_DIR=$task_sentencepiece_prefix/include")
+  task_itn_prefix="$UPSTREAM_BUILD/deps/itn"
+  if [[ ! -f "$task_itn_prefix/lib/libsparrowhawk.so" ]]; then
+    env PREFIX="$task_itn_prefix" JOBS="${WORDPIPE_BUILD_JOBS:-2}" CC=gcc CXX=g++ \
+      bash "$SOURCE/scripts/build_itn_deps.sh" "$UPSTREAM_BUILD/deps/itn-build"
+  fi
+  python3 "$ROOT/scripts/install_nemo_itn_grammars.py" "$UPSTREAM_BUILD/deps/itn_configs"
+  python3 "$ROOT/scripts/export_nemo_cased_itn.py" "$UPSTREAM_BUILD/deps/text-processing" "$UPSTREAM_BUILD/deps/itn_configs/en"
+fi
 cmake -S "$SOURCE" -B "$UPSTREAM_BUILD" -DCMAKE_BUILD_TYPE=Release \
-  -DSENTENCEPIECE_STATIC_LIB=OFF -USENTENCEPIECE_INCLUDE_DIR \
+  "${sentencepiece_cmake[@]}" \
   -DNEMO_SPEECH_DEPENDENCY_PREFIX="$UPSTREAM_BUILD/deps" \
   -DNEMO_SPEECH_BUILD_ASR=ON -DNEMO_SPEECH_BUILD_CLI=OFF \
   -DNEMO_SPEECH_BUILD_TTS=OFF -DNEMO_SPEECH_BUILD_NMT=OFF \
-  -DNEMO_SPEECH_BUILD_DIAR=OFF -DNEMO_SPEECH_BUILD_S2S=OFF -DNEMO_SPEECH_WITH_NORM=OFF \
+  -DNEMO_SPEECH_BUILD_DIAR=OFF -DNEMO_SPEECH_BUILD_S2S=OFF -DNEMO_SPEECH_WITH_NORM="$ITN" \
   -DNEMO_SPEECH_WITH_FLASHLIGHT=OFF -DBUILD_TESTING=OFF \
   -DNEMO_SPEECH_BUILD_GRPC=OFF -DNEMO_SPEECH_BUILD_HTTP=OFF \
   -DNEMO_SPEECH_BUILD_TESTS=OFF -DNEMO_SPEECH_BUILD_TOOLS=OFF \
@@ -58,5 +77,6 @@ cmake --build "$UPSTREAM_BUILD" --target nemo_speech_asr -j "${WORDPIPE_BUILD_JO
 cmake -S "$ROOT/native/wordpipe-nemo-worker" -B "$WORKER_BUILD" \
   -DCMAKE_BUILD_TYPE=Release -DNEMO_SPEECH_SOURCE_DIR="$SOURCE" \
   -DNEMO_SPEECH_LIBRARY_DIR="$UPSTREAM_BUILD/bin" \
-  -DWORDPIPE_NEMO_DYNAMIC_BACKENDS="$CPU_VARIANTS"
+  -DWORDPIPE_NEMO_DYNAMIC_BACKENDS="$CPU_VARIANTS" \
+  -DWORDPIPE_NEMO_ITN="$ITN" -DWORDPIPE_NEMO_ITN_GRAMMAR_DIR="$UPSTREAM_BUILD/deps/itn_configs"
 cmake --build "$WORKER_BUILD" -j "${WORDPIPE_BUILD_JOBS:-2}"

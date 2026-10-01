@@ -23,6 +23,7 @@ class NemoWorkerProtocolTests(unittest.TestCase):
         loaded = self.event()
         self.assertEqual(loaded["event"], "model_loaded")
         self.assertEqual(loaded["data"]["compute_backend"], "cpu")
+        self.assertFalse(loaded["data"]["itn"])
         self.assertEqual(self.event()["event"], "ready")
 
     def tearDown(self):
@@ -94,3 +95,13 @@ class NemoWorkerProtocolTests(unittest.TestCase):
         loaded = next(e for e in events if e["event"] == "model_loaded")
         self.assertEqual(loaded["data"]["compute_backend"], "cpu")
         self.assertIsInstance(loaded["data"]["cpu_features"], dict)
+
+    @unittest.skipUnless(os.environ.get("WORDPIPE_NEMO_TEST_ITN"), "ITN SDK fixtures not configured")
+    def test_itn_can_be_enabled_without_changing_the_asr_model(self):
+        result = subprocess.run([
+            os.environ["WORDPIPE_NEMO_TEST_WORKER"], "--model-dir", os.environ["WORDPIPE_NEMO_TEST_MODEL"],
+            "--itn"], input='{"command":"shutdown"}\n', capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        loaded = next(json.loads(line) for line in result.stdout.splitlines()
+                      if json.loads(line)["event"] == "model_loaded")
+        self.assertTrue(loaded["data"]["itn"])

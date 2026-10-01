@@ -35,6 +35,7 @@ EXPECTED_SETTINGS_KEYS = {
     "sample-rate": "u",
     "spoken-punctuation": "b",
     "insert-partials": "b",
+    "itn": "b",
     "stream-insert-delay-ms": "u",
     "show-overlay": "b",
 }

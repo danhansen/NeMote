@@ -497,17 +497,32 @@ class WordpipePage extends Adw.PreferencesPage {
         group.add(row);
 
         row = new Adw.SwitchRow({
-            title: _('Stream Text Immediately'),
-            active: this._settings.get_boolean('insert-partials'),
+            title: _('Inverse Text Normalization'),
+            subtitle: _('NeMo only: format numbers, dates and units. Grammars: English, Arabic, Chinese, French, German, Hindi and Spanish. Change while stopped.'),
+            active: this._settings.get_boolean('itn'),
         });
         row.connect('notify::active', widget => {
             if (this._syncingSettings)
                 return;
-            this._settings.set_boolean('insert-partials', widget.active);
+            this._settings.set_boolean('itn', widget.active);
+            this._pushRuntimeOptions();
+        });
+        this._itnRow = row;
+        group.add(row);
+
+        this._insertPartialsRow = new Adw.ComboRow({
+            title: _('Text Insertion'),
+            subtitle: _('Partials are replaceable previews. Committed-only inserts when dictation stops. Change while stopped.'),
+            model: Gtk.StringList.new([_('Partial + Committed'), _('Committed Only')]),
+            selected: this._settings.get_boolean('insert-partials') ? 0 : 1,
+        });
+        this._insertPartialsRow.connect('notify::selected', widget => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_boolean('insert-partials', widget.selected === 0);
             this._pushInsertionOptions();
         });
-        this._insertPartialsRow = row;
-        group.add(row);
+        group.add(this._insertPartialsRow);
 
         this._delayRow = Adw.SpinRow.new_with_range(0, 1000, 25);
         this._delayRow.title = _('Insertion Delay');
@@ -863,6 +878,8 @@ class WordpipePage extends Adw.PreferencesPage {
                 this._settings.set_boolean('spoken-punctuation', values.spoken_punctuation);
             if (typeof values.insert_partials === 'boolean')
                 this._settings.set_boolean('insert-partials', values.insert_partials);
+            if (typeof values.itn === 'boolean')
+                this._settings.set_boolean('itn', values.itn);
             if (typeof values.stream_insert_delay_ms === 'number')
                 this._settings.set_uint('stream-insert-delay-ms', values.stream_insert_delay_ms);
             if (typeof values.show_overlay === 'boolean')
@@ -903,7 +920,9 @@ class WordpipePage extends Adw.PreferencesPage {
 
     _syncControlValues() {
         this._spokenPunctuationRow.active = this._settings.get_boolean('spoken-punctuation');
-        this._insertPartialsRow.active = this._settings.get_boolean('insert-partials');
+        this._insertPartialsRow.selected = this._settings.get_boolean('insert-partials') ? 0 : 1;
+        this._itnRow.active = this._settings.get_boolean('itn');
+        this._itnRow.sensitive = this._settings.get_string('backend') === 'nemo-speech';
         this._delayRow.value = this._settings.get_uint('stream-insert-delay-ms');
         this._modelRootRow.text = this._settings.get_string('model-root');
         this._workerPathRow.text = this._settings.get_string('worker-path');
@@ -1134,6 +1153,7 @@ class WordpipePage extends Adw.PreferencesPage {
 
     _pushRuntimeOptions() {
         this._callRemote('SetRuntimeOptions', {
+            itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
             streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
             model_root: new GLib.Variant('s', this._settings.get_string('model-root')),
             language: new GLib.Variant('s', this._settings.get_string('language')),
@@ -1158,7 +1178,7 @@ class WordpipePage extends Adw.PreferencesPage {
             if (error) {
                 this._statusRow.subtitle = formatError(error);
                 logError(error, `Wordpipe ${method} failed`);
-                if (method === 'SetModelProfile' || method === 'SetRuntimeOptions')
+                if (method === 'SetModelProfile' || method === 'SetRuntimeOptions' || method === 'SetInsertionOptions')
                     this._refreshConfig();
                 return;
             }

@@ -17,6 +17,7 @@
 
 #include "recognizer.h"
 #include "transcript.h"
+#include "itn_format.h"
 #include "session_thread.h"
 #include <ggml-backend.h>
 #include "nlohmann/json.hpp"
@@ -47,6 +48,8 @@ struct Args {
     int wav_repeat = 1;
     double queue_seconds = 10, stats_interval = 1;
     bool list_devices = false;
+    bool itn = false;
+    std::string itn_grammar_dir;
 };
 static Args parse_args(int argc, char** argv) {
     Args args;
@@ -54,11 +57,12 @@ static Args parse_args(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         std::string key = argv[i];
         if (key == "--list-input-devices") { args.list_devices = true; continue; }
+        if (key == "--itn") { args.itn = true; continue; }
         if (key == "--help") {
             std::cout << "wordpipe-nemo-worker --model-dir DIR|GGUF [--wav WAV] "
                          "[--chunk-samples 1280|2560|8960|17920] [--num-threads N] "
                          "[--language en-US|auto] [--input-device NAME|INDEX] "
-                         "[--device auto|cpu]\n";
+                         "[--device auto|cpu] [--itn]\n";
             std::exit(0);
         }
         if (i + 1 == argc) throw std::invalid_argument("missing value for " + key);
@@ -201,14 +205,31 @@ class Session {
     Transcript transcript_;
     size_t accepted_ = 0, calls_ = 0, dropped_ = 0;
     double decode_seconds_ = 0, rms_ = 0, peak_ = 0;
+    bool english_model_ = false;
     void update(const asr::Result& result) {
         std::string text = result.alternatives.empty() ? "" : result.alternatives.front().transcript;
+        if (args_.itn && result.is_final && !result.alternatives.empty()) {
+            auto language = args_.language;
+            if (language == "auto") {
+                const auto& codes = result.alternatives.front().language_codes;
+                language = codes.empty() ? (english_model_ ? "en" : "") : codes.front();
+            }
+            if (language.substr(0, language.find('-')) == "en") text = format_english_itn(text);
+        }
         transcript_.update(text, result.is_final, result.late_punctuation);
     }
 public:
     Session(asr::Recognizer& model, const Args& args) : args_(args) {
+        if (args.itn && args.language != "auto") {
+            auto base = args.language.substr(0, args.language.find('-'));
+            if (!std::filesystem::is_regular_file(std::filesystem::path(args.itn_grammar_dir) / base / "verbalize.far"))
+                throw std::invalid_argument("ITN grammars are unavailable for language " + args.language);
+        }
         auto language = args.language == "auto" ? "" : args.language;
         auto supported = model.supported_languages();
+        english_model_ = supported.empty() || std::all_of(supported.begin(), supported.end(), [](const auto& code) {
+            return code.substr(0, code.find('-')) == "en";
+        });
         if (!language.empty() && !supported.empty() &&
             std::find(supported.begin(), supported.end(), language) == supported.end()) {
             auto base = language.substr(0, language.find('-'));
@@ -219,6 +240,7 @@ public:
             language = *match;
         }
         asr::AsrRequestOptions options;
+        options.verbatim_transcripts = !args.itn;
         options.enable_automatic_punctuation = true; // Preserve model-native formatting in finals too.
         stream_ = model.streaming_recognize(options, language, false);
     }
@@ -287,6 +309,20 @@ int main(int argc, char** argv) {
         asr::RecognizerConfig config;
         config.backend.gpu = -1; config.backend.threads = args.threads;
         config.model.path = path.string();
+        if (args.itn) {
+#ifdef WORDPIPE_NEMO_ITN
+            auto executable = std::filesystem::canonical("/proc/self/exe");
+            auto grammars = executable.parent_path().parent_path() / "share/wordpipe/itn";
+            if (!std::filesystem::is_directory(grammars)) grammars = WORDPIPE_NEMO_ITN_GRAMMAR_DIR;
+            auto language = args.language.substr(0, args.language.find('-'));
+            if (language != "auto" && !std::filesystem::is_regular_file(grammars / language / "verbalize.far"))
+                throw std::invalid_argument("ITN grammars are unavailable for language " + args.language);
+            config.postproc.itn_model_dir = grammars.string();
+            args.itn_grammar_dir = grammars.string();
+#else
+            throw std::invalid_argument("This worker was built without ITN support");
+#endif
+        }
         config.streaming.rnnt_right_context = args.chunk_samples / 1280 - 1;
         config.batching.enabled = false; config.log_status = false;
         emit({{"event", "loading_model"}, {"data", {{"model_dir", args.model_dir}}}});
@@ -295,7 +331,7 @@ int main(int argc, char** argv) {
         if (model.sample_rate() != 16000) throw std::invalid_argument("this worker requires a 16 kHz model");
         { Session validate(model, args); }
         emit({{"event", "model_loaded"}, {"data", {{"load_seconds", seconds(start)}, {"num_threads", args.threads},
-             {"compute_backend", "cpu"}, {"cpu_features", cpu_features()}}}});
+             {"compute_backend", "cpu"}, {"cpu_features", cpu_features()}, {"itn", args.itn}}}});
         if (!args.wav.empty()) {
             for (int repeat = 0; repeat < args.wav_repeat; ++repeat) {
             ma_decoder_config decode_config = ma_decoder_config_init(ma_format_f32, 1, 16000);

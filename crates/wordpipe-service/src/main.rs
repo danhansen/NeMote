@@ -49,6 +49,7 @@ struct ServiceConfig {
     sample_rate: u32,
     num_threads: u32,
     spoken_punctuation: bool,
+    itn: bool,
     insert_partials: bool,
     stream_insert_delay_ms: u32,
     show_overlay: bool,
@@ -69,6 +70,7 @@ struct PersistedConfig {
     sample_rate: Option<u32>,
     num_threads: Option<u32>,
     spoken_punctuation: Option<bool>,
+    itn: Option<bool>,
     insert_partials: Option<bool>,
     stream_insert_delay_ms: Option<u32>,
     show_overlay: Option<bool>,
@@ -90,6 +92,7 @@ impl From<&ServiceConfig> for PersistedConfig {
             sample_rate: Some(config.sample_rate),
             num_threads: Some(config.num_threads),
             spoken_punctuation: Some(config.spoken_punctuation),
+            itn: Some(config.itn),
             insert_partials: Some(config.insert_partials),
             stream_insert_delay_ms: Some(config.stream_insert_delay_ms),
             show_overlay: Some(config.show_overlay),
@@ -113,6 +116,7 @@ impl Default for ServiceConfig {
             sample_rate: DEFAULT_SAMPLE_RATE,
             num_threads: DEFAULT_NUM_THREADS,
             spoken_punctuation: true,
+            itn: false,
             insert_partials: true,
             stream_insert_delay_ms: 0,
             show_overlay: true,
@@ -534,6 +538,14 @@ impl WordpipeService {
     ) -> zbus::fdo::Result<()> {
         let (config_data, config, state) = {
             let mut data = self.lock_data()?;
+            if get_bool(&options, "insert_partials")
+                .is_some_and(|value| value != data.config.insert_partials)
+                && (data.listening || data.stopping)
+            {
+                return Err(zbus::fdo::Error::Failed(
+                    "stop dictation before changing insertion mode".into(),
+                ));
+            }
             if let Some(value) = get_bool(&options, "spoken_punctuation") {
                 data.config.spoken_punctuation = value;
             }
@@ -568,6 +580,15 @@ impl WordpipeService {
             let mut restart_worker = false;
             let mut language_update = None;
             let mut model_root_changed = false;
+            if let Some(value) = get_bool(&options, "itn") {
+                if value != next_config.itn
+                    && (data.listening || data.stopping || data.installing || data.loading_model)
+                {
+                    return Err(zbus::fdo::Error::Failed("stop dictation and wait for model loading/installation before changing ITN".into()));
+                }
+                restart_worker |= value != next_config.itn && next_config.backend == "nemo-speech";
+                next_config.itn = value;
+            }
             if let Some(value) = get_u32(&options, "streaming_latency_ms") {
                 if value == 0 || value > 60000 || value % 80 != 0 {
                     return Err(zbus::fdo::Error::InvalidArgs(
@@ -1345,6 +1366,7 @@ fn config_map(config: &ServiceConfig) -> VariantMap {
     insert_u32(&mut map, "num_threads", config.num_threads);
     insert_bool(&mut map, "spoken_punctuation", config.spoken_punctuation);
     insert_bool(&mut map, "insert_partials", config.insert_partials);
+    insert_bool(&mut map, "itn", config.itn);
     insert_u32(
         &mut map,
         "stream_insert_delay_ms",
@@ -1460,6 +1482,9 @@ fn apply_persisted_config(
     }
     if let Some(value) = persisted.spoken_punctuation {
         config.spoken_punctuation = value;
+    }
+    if let Some(value) = persisted.itn {
+        config.itn = value;
     }
     if let Some(value) = persisted.insert_partials {
         config.insert_partials = value;
@@ -2280,6 +2305,7 @@ fn spawn_worker(
             .arg("--ort-optimized-model-cache-dir")
             .arg(Path::new(&config.model_root).join("runtime-cache"));
     }
+    apply_worker_itn_option(&mut command, config);
     if !config.input_device.is_empty() {
         command.arg("--input-device").arg(&config.input_device);
     }
@@ -2321,6 +2347,12 @@ fn apply_worker_thread_env(command: &mut Command, num_threads: u32) {
         if std::env::var_os(name).is_none() {
             command.env(name, &value);
         }
+    }
+}
+
+fn apply_worker_itn_option(command: &mut Command, config: &ServiceConfig) {
+    if config.backend == "nemo-speech" && config.itn {
+        command.arg("--itn");
     }
 }
 
@@ -2690,6 +2722,44 @@ mod tests {
         assert_eq!(config.worker_path, original_worker);
     }
 
+    #[test]
+    fn itn_and_insertion_mode_roundtrip_with_safe_defaults() {
+        let defaults = ServiceConfig::default();
+        assert!(!defaults.itn);
+        assert!(defaults.insert_partials);
+        let configured = ServiceConfig {
+            itn: true,
+            insert_partials: false,
+            ..defaults
+        };
+        let restored =
+            apply_persisted_config(ServiceConfig::default(), PersistedConfig::from(&configured))
+                .unwrap();
+        assert!(restored.itn);
+        assert!(!restored.insert_partials);
+    }
+
+    #[test]
+    fn itn_worker_flag_only_applies_to_enabled_native_backend() {
+        for backend in ["nemo-speech", "parakeet"] {
+            for itn in [true, false] {
+                let mut command = Command::new("worker");
+                apply_worker_itn_option(
+                    &mut command,
+                    &ServiceConfig {
+                        backend: backend.into(),
+                        itn,
+                        ..Default::default()
+                    },
+                );
+                assert_eq!(
+                    command.get_args().count(),
+                    usize::from(backend == "nemo-speech" && itn)
+                );
+            }
+        }
+    }
+
     fn sorted_keys(map: &VariantMap) -> Vec<&str> {
         let mut keys = map.keys().map(String::as_str).collect::<Vec<_>>();
         keys.sort_unstable();
@@ -2771,6 +2841,7 @@ mod tests {
                 "backend",
                 "input_device",
                 "insert_partials",
+                "itn",
                 "language",
                 "model_family",
                 "model_installer_path",

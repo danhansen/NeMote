@@ -87,7 +87,12 @@
     <key name="insert-partials" type="b">
       <default>true</default>
       <summary>Insert streaming partials</summary>
-      <description>Insert append-only streaming deltas as soon as they are emitted by the service.</description>
+      <description>Show replaceable preedit text while speaking, then commit the finalized transcript. When disabled, insert finalized text only.</description>
+    </key>
+    <key name="itn" type="b">
+      <default>false</default>
+      <summary>Inverse text normalization</summary>
+      <description>Use NeMo's bundled grammars to format spoken numbers, dates, amounts and units on finalized transcripts. NeMo backend only.</description>
     </key>
     <key name="stream-insert-delay-ms" type="u">
       <default>0</default>

@@ -41,6 +41,18 @@ class NemoCpuDispatchTests(unittest.TestCase):
             libraries.mkdir(parents=True)
             for library in source.glob("*.so*"):
                 shutil.copy2(library, libraries / library.name, follow_symlinks=True)
+            normalizer = source.parent / 'deps/itn/lib'
+            if normalizer.is_dir():
+                for library in normalizer.glob('*.so*'):
+                    shutil.copy2(library, libraries / library.name, follow_symlinks=True)
+                dependencies = subprocess.run(['ldd', str(source / 'libnemo_speech_asr.so')],
+                                              text=True, capture_output=True, check=True).stdout
+                for line in dependencies.splitlines():
+                    if 'libprotobuf' in line or 'libre2' in line or 'libz.so' in line:
+                        library = Path(line.split()[2])
+                        shutil.copy2(library, libraries / library.name)
+                for library in libraries.glob('*.so*'):
+                    subprocess.run(['patchelf', '--set-rpath', '$ORIGIN', str(library)], check=True)
             command = [str(prefix / "bin/wordpipe-nemo-worker"), "--model-dir",
                        os.environ["WORDPIPE_NEMO_TEST_MODEL"], "--device", "cpu"]
             wav = os.environ.get("WORDPIPE_NEMO_TEST_WAV")
@@ -61,7 +73,7 @@ class NemoCpuDispatchTests(unittest.TestCase):
                                for line in result.stderr.splitlines() if "calling init:" in line]
                 self.assertTrue(any(str(libraries / "libnemo_speech_asr.so") in line
                                     for line in initialized), result.stderr)
-                self.assertFalse(any(str(source.resolve()) in line for line in initialized))
+                self.assertFalse(any(str(source.parent.resolve()) in line for line in initialized))
                 self.assertTrue(any(str(libraries / "libggml-cpu-") in line
                                     for line in initialized), result.stderr)
                 text = next((event["text"] for event in events if event["event"] == "commit"), None)

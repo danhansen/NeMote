@@ -7,18 +7,27 @@ RUN rustup component add rustfmt
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        autoconf \
+        automake \
         ca-certificates \
         cmake \
         git \
         libasound2-dev \
         libglib2.0-bin \
         libsentencepiece-dev \
+        libprotobuf-dev \
+        libre2-dev \
+        libtool \
         nodejs \
+        ninja-build \
+        patchelf \
         pkg-config \
         python3 \
+        python3-dev \
         python3-gi \
         python3-pip \
         python3-venv \
+        protobuf-compiler \
         zip \
     && rm -rf /var/lib/apt/lists/*
 
