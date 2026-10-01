@@ -1,8 +1,8 @@
 # Wordpipe
 
-Release: **v0.1.18**. Existing 560 ms model profiles remain compatible. The
-1120 ms runtime and shared-weight publishing support are implemented, but
-1120 ms models are not yet published or validated for production use.
+Release: **v0.1.19**. English FP32 and QUInt8 profiles use one generic encoder
+each, with checkpoint-supported 80/160/560/1120 ms chunk selection. Existing
+fixed-model installations remain compatible; users do not export models locally.
 
 Wordpipe is a Wayland-only GNOME dictation app built around true streaming
 speech recognition. The primary implementation is a GNOME Shell frontend backed
@@ -523,8 +523,8 @@ PYTHONPATH=src python3 -m wordpipe model-install \
   --python .venv-nemo-export/bin/python
 ```
 
-Build the English checkpoint with the identical projected-cache, fixed-shape,
-quantization, and optional ORT-format stages. Its checkpoint-defined attention
+Maintainers can build the English checkpoint with a generic encoder, projected
+cache, and optional quantization. Its checkpoint-defined attention
 cache is 70 frames rather than the multilingual model's 56:
 
 ```sh
@@ -532,29 +532,36 @@ PYTHONPATH=src python3 -m wordpipe model-install \
   --profile compact \
   --model-family english \
   --build-from-nemo \
+  --dynamic-streaming \
   --source nvidia/nemotron-speech-streaming-en-0.6b \
   --python .venv-nemo-export/bin/python
 ```
 
-The GNOME service supports independent 560 ms and 1120 ms streaming modes.
+Since 0.1.19 the English downloads contain one generic encoder per precision
+profile, supporting every chunk size advertised by the checkpoint: currently
+80, 160, 560, and 1120 ms. Users download ready-to-use FP32 or QUInt8 models;
+they do not need NeMo, PyTorch, or a local export. Legacy multilingual/fixed
+models continue to use their existing 560/1120 ms paths.
+
+The GNOME service reads supported chunk sizes from installed model metadata.
 Settings exposes this as **Streaming Latency**, separate from model preset and
 language coverage. A mode change while idle rebuilds the worker and its inference
 sessions; model loading, installation, and active dictation must finish first.
-The existing 560 ms model paths stay unchanged. Additional 1120 ms runtimes
-live under `model_root/1120ms/`.
+The existing model directory names stay unchanged. A generic encoder is reused
+for all supported modes; no additional model download is needed when switching.
 
-Build an additional mode with `model-install --streaming-latency-ms 1120
---build-from-nemo`, or download it with `model-install --streaming-latency-ms
-1120` after a two-mode bundle has been published. The bundle shares learned
-weights and tokenizer/decoder files; the installer verifies and reuses existing
-weight files instead of downloading a second complete model.
+For example, `model-install --model-family english --streaming-latency-ms 160`
+installs a generic profile supporting that mode. Existing fixed installations
+can be upgraded with `--force`. Old shared-weight bundles remain supported for
+legacy models; their additional runtimes live under `model_root/1120ms/`.
 
 The worker reads chunk size from model metadata and applies session dimension
 overrides. Optimized ONNX graphs are cached under `model_root/runtime-cache/`
 with mode, model, runtime version, CPU features, and execution options in the
 cache identity. Direct ORT-format sessions retain and release their backing
 bytes with the session. See [model publishing](docs/model-publishing.md) for
-the shared-weight bundle workflow.
+the generic release and legacy shared-weight bundle workflows. First use may
+take longer while ORT optimizes the selected mode; this is not a checkpoint export.
 
 After a successful source build, Wordpipe removes the family-specific build
 intermediates by default; pass `--keep-build-dir` when you need to inspect or

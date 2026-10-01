@@ -17,17 +17,18 @@ from gi.repository import Gio, GLib
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--service", type=Path, required=True)
+    parser.add_argument("--dynamic-streaming", action="store_true")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="wordpipe-lifecycle-") as temporary:
         root = Path(temporary)
         model_root = root / "models"
-        for latency in (560, 1120):
+        for latency in ((560,) if args.dynamic_streaming else (560, 1120)):
             directory = (model_root if latency == 560 else model_root / "1120ms") / "nemotron-wordpipe-en-fast-fp32-projected"
             directory.mkdir(parents=True)
             for name in ("encoder.onnx", "decoder_joint.onnx", "tokenizer.model"):
                 (directory / name).write_bytes(b"lifecycle-only fixture")
             frames = latency // 80
-            (directory / "config.json").write_text(json.dumps({
+            payload = {
                 "model_family": "english", "right_context": frames - 1,
                 "projected_cache": True, "dynamic_quint8_quantization": False,
                 "fixed_streaming_shapes": {
@@ -35,7 +36,20 @@ def main() -> None:
                     "num_layers": 24, "cache_len": 70, "hidden_dim": 1024,
                     "conv_context": 8,
                 },
-            }))
+            }
+            if args.dynamic_streaming:
+                payload.pop("fixed_streaming_shapes")
+                payload.update({
+                    "num_encoder_layers": 24, "hidden_dim": 1024, "conv_context": 8,
+                    "cache_shapes": {"cache_last_channel": [24, 1, 70, 1024],
+                                     "cache_last_time": [24, 1, 1024, 8]},
+                    "dynamic_streaming": {
+                        "format": 1, "shape_derived_attention_context": True,
+                        "subsampling_factor": 8, "mel_frames_overhead": 9, "cache_len": 70,
+                        "default_chunk_frames": 7, "supported_chunk_frames": [1, 2, 7, 14],
+                    },
+                })
+            (directory / "config.json").write_text(json.dumps(payload))
         worker = root / "worker"
         shutil.copy2(Path(__file__).resolve().parents[1] / "tests/fixtures/mock_runtime_worker.py", worker)
         worker.chmod(0o755)
@@ -93,7 +107,16 @@ def main() -> None:
             except GLib.Error:
                 pass
             assert call("GetConfig")[0]["streaming_latency_ms"] == 560
-            for latency in (1120, 560, 1120, 560):
+            if args.dynamic_streaming:
+                assert call("GetConfig")[0]["supported_streaming_latencies_ms"] == [80, 160, 560, 1120]
+                try:
+                    call("SetRuntimeOptions", GLib.Variant("(a{sv})", ({
+                        "streaming_latency_ms": GLib.Variant("u", 240)},)))
+                    raise AssertionError("unsupported context was accepted")
+                except GLib.Error:
+                    pass
+            latencies = (80, 160, 1120, 560) if args.dynamic_streaming else (1120, 560, 1120, 560)
+            for latency in latencies:
                 call("SetRuntimeOptions", GLib.Variant("(a{sv})", ({
                     "streaming_latency_ms": GLib.Variant("u", latency)},)))
                 state = wait_state(lambda state: state["model_loaded"] and
@@ -110,7 +133,7 @@ def main() -> None:
                 assert call("GetConfig")[0]["streaming_latency_ms"] == latency
                 assert state["last_metrics"]["cache_dir"] == str(model_root / "runtime-cache")
                 previous_pid = current_pid
-            print("Verified 560→1120→560 replacement, stale EOF guards, persistence, and active-session guard")
+            print(f"Verified mode replacement {latencies}, stale EOF guards, persistence, and active-session guard")
             call("InstallModel", GLib.Variant("(s)", ("fast-english",)))
             installing = wait_state(lambda state: state["installing"] and
                 "child_pid" in state["last_install_progress"])

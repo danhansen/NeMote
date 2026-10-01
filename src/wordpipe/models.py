@@ -85,6 +85,8 @@ class ModelProfileSpec:
 
     def runtime_dir(self, model_root: Path, family: ModelFamily = "multilingual") -> Path:
         output = self.output_dir(model_root, family)
+        if _dynamic_config_at(output, family) is not None:
+            return output
         if self.emit_ort_format:
             return output.with_name(f"{output.name}-ort-format")
         return output
@@ -107,22 +109,22 @@ MODEL_PROFILES: dict[ModelProfile, ModelProfileSpec] = {
     "fast": ModelProfileSpec(
         name="fast",
         title="Fast",
-        description="FP32 projected-cache model; fastest validated profile, largest footprint.",
+        description="FP32 projected-cache model; larger memory and download footprint.",
         build_profile="fp32-projected",
         output_name="nemotron-wordpipe-fast-fp32-projected",
         prebuilt_repo="fractalyzer/wordpipe-nemotron-fast-fp32-projected",
         english_output_name="nemotron-wordpipe-en-fast-fp32-projected",
-        english_prebuilt_repo="fractalyzer/wordpipe-nemotron-en-fast-fp32-projected",
+        english_prebuilt_repo="fractalyzer/wordpipe-nemotron-en-fast-dynamic-fp32-projected",
     ),
     "compact": ModelProfileSpec(
         name="compact",
         title="Compact",
-        description="Dynamic-int8 projected-cache model with fixed shapes and ORT-format startup.",
+        description="Quantized projected-cache model; generic ONNX or legacy ORT runtime.",
         build_profile="compact-fixed-shape",
         output_name="nemotron-wordpipe-compact-fixed-shape",
         prebuilt_repo="fractalyzer/wordpipe-nemotron-compact-fixed-shape",
         english_output_name="nemotron-wordpipe-en-compact-fixed-shape",
-        english_prebuilt_repo="fractalyzer/wordpipe-nemotron-en-compact-fixed-shape",
+        english_prebuilt_repo="fractalyzer/wordpipe-nemotron-en-compact-dynamic-quint8",
         emit_ort_format=True,
     ),
 }
@@ -214,9 +216,9 @@ def profile_spec(name: str) -> ModelProfileSpec:
 
 
 def streaming_model_root(model_root: Path, latency_ms: int = 560) -> Path:
-    if latency_ms not in (560, 1120):
-        raise ValueError("streaming latency must be 560 or 1120 ms")
-    return model_root if latency_ms == 560 else model_root / "1120ms"
+    if latency_ms <= 0 or latency_ms % 80:
+        raise ValueError("streaming latency must be a positive multiple of 80 ms")
+    return model_root if latency_ms == 560 else model_root / f"{latency_ms}ms"
 
 
 def profile_streaming_latency(runtime_dir: Path) -> int:
@@ -224,10 +226,77 @@ def profile_streaming_latency(runtime_dir: Path) -> int:
     if not config_path.exists():
         return 560
     config = json.loads(config_path.read_text(encoding="utf-8"))
+    if config.get("dynamic_streaming") is not None:
+        dynamic = dynamic_streaming_config(config, config.get("model_family", "multilingual"))
+        if dynamic is None:
+            raise ValueError("invalid dynamic streaming contract")
+        return dynamic["default_chunk_frames"] * 80
     right = config.get("right_context", 6)
     if right not in (6, 13):
         raise ValueError(f"unsupported right_context: {right!r}")
     return (right + 1) * 80
+
+
+def dynamic_streaming_config(config: dict, family: ModelFamily) -> dict | None:
+    dynamic = config.get("dynamic_streaming")
+    cache_len = 70 if family == "english" else 56
+    expected = {
+        "format": 1,
+        "subsampling_factor": 8, "mel_frames_overhead": 9,
+        "cache_len": cache_len, "shape_derived_attention_context": True,
+    }
+    if not isinstance(dynamic, dict) or any(dynamic.get(key) != value for key, value in expected.items()):
+        return None
+    sizes = dynamic.get("supported_chunk_frames")
+    if not isinstance(sizes, list) or not sizes or any(type(size) is not int or size <= 0 or cache_len % size for size in sizes):
+        return None
+    if sizes != sorted(set(sizes)) or dynamic.get("default_chunk_frames") not in sizes:
+        return None
+    if "right_context" in config and (
+        type(config["right_context"]) is not int
+        or config["right_context"] + 1 != dynamic["default_chunk_frames"]
+    ):
+        return None
+    if any(config.get(key) != value for key, value in (
+        ("num_encoder_layers", 24), ("hidden_dim", 1024), ("conv_context", 8),
+    )):
+        return None
+    shapes = config.get("cache_shapes", {})
+    if not isinstance(shapes, dict) or shapes.get("cache_last_channel") != [24, 1, cache_len, 1024] or shapes.get("cache_last_time") != [24, 1, 1024, 8]:
+        return None
+    return dynamic
+
+
+def _dynamic_config_at(runtime_dir: Path, family: ModelFamily) -> dict | None:
+    try:
+        config = json.loads((runtime_dir / "config.json").read_text())
+    except (OSError, ValueError):
+        return None
+    return dynamic_streaming_config(config, family)
+
+
+def profile_is_dynamic(runtime_dir: Path, family: ModelFamily = "multilingual") -> bool:
+    return _dynamic_config_at(runtime_dir, family) is not None
+
+
+def profile_supports_streaming_latency(runtime_dir: Path, latency_ms: int) -> bool:
+    if latency_ms <= 0 or latency_ms % 80:
+        return False
+    try:
+        config = json.loads((runtime_dir / "config.json").read_text())
+    except FileNotFoundError:
+        return latency_ms == 560
+    except (OSError, ValueError):
+        return False
+    dynamic = dynamic_streaming_config(config, config.get("model_family", "multilingual"))
+    if dynamic is not None:
+        return latency_ms // 80 in dynamic["supported_chunk_frames"]
+    if config.get("dynamic_streaming") is not None:
+        return False
+    try:
+        return profile_streaming_latency(runtime_dir) == latency_ms
+    except ValueError:
+        return False
 
 
 def profile_runtime_dir(
@@ -334,12 +403,16 @@ def _profile_config_valid_if_present(
         or not (runtime_dir / name).is_file() for name in shared_files
     ):
         return False
-    if not isinstance(fixed, dict):
+    generic = config.get("dynamic_streaming") is not None
+    if generic:
+        if dynamic_streaming_config(config, family) is None:
+            return False
+    elif not isinstance(fixed, dict):
         return False
     right_context = config.get("right_context", 6)
-    if right_context not in (6, 13):
+    if not generic and right_context not in (6, 13):
         return False
-    if "1120ms" in runtime_dir.parts and right_context != 13:
+    if not generic and "1120ms" in runtime_dir.parts and right_context != 13:
         return False
     output_frames = right_context + 1
     expected_fixed = {
@@ -350,7 +423,7 @@ def _profile_config_valid_if_present(
         "hidden_dim": 1024,
         "conv_context": 8,
     }
-    if any(fixed.get(key) != value for key, value in expected_fixed.items()):
+    if not generic and any(fixed.get(key) != value for key, value in expected_fixed.items()):
         return False
     if config.get("projected_cache") is not True:
         return False
@@ -392,11 +465,13 @@ def install_built_profile(
     streaming_latency_ms: int | None = None,
 ) -> Path:
     prepared_source = _prepare_built_profile_source(source)
-    if streaming_latency_ms is not None and profile_streaming_latency(prepared_source.path) != streaming_latency_ms:
+    if streaming_latency_ms is not None and not profile_supports_streaming_latency(prepared_source.path, streaming_latency_ms):
         if prepared_source.cleanup_dir is not None:
             shutil.rmtree(prepared_source.cleanup_dir, ignore_errors=True)
         raise RuntimeError("source model streaming latency does not match the requested mode")
-    destination = profile_runtime_dir(model_root, profile, family)
+    destination = (profile_spec(profile).output_dir(model_root, family)
+                   if _dynamic_config_at(prepared_source.path, family) is not None
+                   else profile_runtime_dir(model_root, profile, family))
     if destination.exists():
         if not force:
             raise RuntimeError(f"profile {profile!r} is already installed at {destination}; pass --force to overwrite it")
@@ -670,14 +745,19 @@ def install_prebuilt_profile(
 ) -> Path:
     spec = profile_spec(profile)
     runtime_dir = spec.runtime_dir(model_root, family)
-    if runtime_dir.exists() and not force and profile_runtime_dir_valid(runtime_dir, profile, family):
+    source_dynamic = _dynamic_config_at(source, family) is not None
+    if runtime_dir.exists() and not force and profile_runtime_dir_valid(runtime_dir, profile, family) and (
+        not source_dynamic or _dynamic_config_at(runtime_dir, family) is not None
+    ):
         if not _profile_completion_marker(runtime_dir).exists():
             _write_profile_completion_marker(runtime_dir, profile=profile, family=family)
         _progress(progress, f"Using installed model profile: {runtime_dir}")
         return runtime_dir
 
     onnx_dir = spec.output_dir(model_root, family)
-    if onnx_dir.exists() and not force and profile_runtime_dir_valid(onnx_dir, profile, family):
+    if onnx_dir.exists() and not force and profile_runtime_dir_valid(onnx_dir, profile, family) and (
+        not source_dynamic or _dynamic_config_at(onnx_dir, family) is not None
+    ):
         if not _profile_completion_marker(onnx_dir).exists():
             _write_profile_completion_marker(onnx_dir, profile=profile, family=family)
         _progress(progress, f"Using cached ONNX profile: {onnx_dir}")
@@ -695,7 +775,7 @@ def install_prebuilt_profile(
             if prepared_source.cleanup_dir is not None:
                 shutil.rmtree(prepared_source.cleanup_dir, ignore_errors=True)
 
-    if not spec.emit_ort_format:
+    if not spec.emit_ort_format or _dynamic_config_at(onnx_dir, family) is not None:
         _progress(progress, f"Model profile ready: {onnx_dir}")
         return onnx_dir
 
@@ -762,14 +842,25 @@ def download_streaming_profile(
     repo_id: str | None = None, force: bool = False,
     progress: ProgressCallback | None = None,
 ) -> Path:
-    """Fetch a small encoder/config and reuse checksum-verified shared weights."""
-    if latency_ms != 1120:
-        raise ValueError("additional streaming mode must be 1120 ms")
+    """Fetch a generic profile, or fall back to the legacy shared-weight bundle."""
+    if latency_ms <= 0 or latency_ms % 80:
+        raise ValueError("streaming latency must be a positive multiple of 80 ms")
     from huggingface_hub import hf_hub_download, hf_hub_url
     spec = profile_spec(profile)
     repo = repo_id or spec.prebuilt_repo_for_family(family)
     shared_cache = prebuilt_profile_cache_dir(model_root, repo, profile)
     shared_cache.mkdir(parents=True, exist_ok=True)
+    probe = hf_hub_download(
+        repo_id=repo, filename="config.json", local_dir=shared_cache / "config-probe",
+        force_download=force,
+    )
+    probe_config = json.loads(Path(probe).read_text())
+    generic = dynamic_streaming_config(probe_config, family)
+    if generic is not None and latency_ms // 80 in generic["supported_chunk_frames"]:
+        return download_prebuilt_profile(
+            profile=profile, model_root=model_root, family=family, repo_id=repo,
+            force=force or _dynamic_config_at(shared_cache, family) is None, progress=progress,
+        )
     manifest_path = hf_hub_download(
         repo_id=repo, filename="wordpipe-streaming-bundle.json", local_dir=shared_cache,
         force_download=force,
@@ -957,6 +1048,7 @@ def build_profile_command(
     python: Path,
     force: bool = False,
     streaming_latency_ms: int = 560,
+    dynamic_streaming: bool = False,
 ) -> list[str]:
     spec = profile_spec(profile)
     output_dir = spec.output_dir(model_root, family)
@@ -973,7 +1065,8 @@ def build_profile_command(
         "--model-family",
         family,
         *(["--streaming-latency-ms", str(streaming_latency_ms)] if streaming_latency_ms != 560 else []),
-        *(["--emit-ort-format"] if spec.emit_ort_format else []),
+        *(["--dynamic-streaming"] if dynamic_streaming else []),
+        *(["--emit-ort-format"] if spec.emit_ort_format and not dynamic_streaming else []),
         *(["--force"] if force else []),
     ]
 
@@ -1020,6 +1113,7 @@ def build_model_profile(
     keep_build_dir: bool = False,
     progress: ProgressCallback | None = None,
     streaming_latency_ms: int = 560,
+    dynamic_streaming: bool = False,
 ) -> Path:
     command = build_profile_command(
         source=source,
@@ -1029,6 +1123,7 @@ def build_model_profile(
         python=python,
         force=force,
         streaming_latency_ms=streaming_latency_ms,
+        dynamic_streaming=dynamic_streaming,
     )
     rendered_command = " ".join(command)
     print(rendered_command, file=sys.stderr)

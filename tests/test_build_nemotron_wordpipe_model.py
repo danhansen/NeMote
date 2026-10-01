@@ -40,6 +40,20 @@ def _args(**overrides):  # type: ignore[no-untyped-def]
 
 
 class NemotronWordpipePipelineTests(unittest.TestCase):
+    def test_dynamic_mode_accepts_small_chunks_and_zero_right_context(self) -> None:
+        builder = _load_builder()
+        for latency, shapes in ((80, (0, 17, 1)), (160, (1, 25, 2))):
+            args = _args(dynamic_streaming=True, streaming_latency_ms=latency,
+                         right_context=None, input_frames=None, output_frames=None)
+            builder.validate_args(args)
+            self.assertEqual((args.right_context, args.input_frames, args.output_frames), shapes)
+        with self.assertRaisesRegex(SystemExit, "positive multiple"):
+            builder.validate_args(_args(dynamic_streaming=True, streaming_latency_ms=81))
+
+    def test_dynamic_mode_rejects_static_ort_conversion(self) -> None:
+        with self.assertRaisesRegex(SystemExit, "dynamic ONNX"):
+            _load_builder().validate_args(_args(dynamic_streaming=True, emit_ort_format=True))
+
     def test_1120ms_derives_shapes_and_rejects_560ms_shapes(self) -> None:
         builder = _load_builder()
         args = _args(streaming_latency_ms=1120, right_context=None,

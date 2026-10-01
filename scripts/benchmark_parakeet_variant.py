@@ -281,6 +281,10 @@ def run_once(args: argparse.Namespace, label: str, model_dir: Path, run_index: i
                 str(args.ort_optimized_model_cache_dir),
             ]
         )
+    if getattr(args, "chunk_samples", None) is not None:
+        command.extend(["--chunk-samples", str(args.chunk_samples)])
+    if getattr(args, "measure_peak_memory", False):
+        command = ["/usr/bin/time", "-f", "WORDPIPE_PEAK_RSS_KIB=%M", *command]
     started = time.perf_counter()
     power_before = read_power_metadata()
     memory_before = read_memory_metadata()
@@ -308,6 +312,8 @@ def run_once(args: argparse.Namespace, label: str, model_dir: Path, run_index: i
         "run_index": run_index,
         "wall_seconds": wall_seconds,
         "load_seconds": load_metrics.get("load_seconds"),
+        "peak_rss_kib": next((int(line.split("=", 1)[1]) for line in proc.stderr.splitlines()
+                              if line.startswith("WORDPIPE_PEAK_RSS_KIB=")), None),
         "text": str(event.get("text") or ""),
         "metrics": metrics,
         "power_before": power_before,
@@ -329,10 +335,13 @@ def median_metric(rows: list[dict[str, Any]], metric: str) -> float | None:
 
 def summarize(label: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
     load_values = [float(row["load_seconds"]) for row in rows if row.get("load_seconds") is not None]
+    peak_values = [row["peak_rss_kib"] for row in rows if row.get("peak_rss_kib") is not None]
     return {
         "label": label,
         "runs": len(rows),
         "median_load_seconds": statistics.median(load_values) if load_values else None,
+        "median_peak_rss_kib": statistics.median(peak_values) if peak_values else None,
+        "max_peak_rss_kib": max(peak_values) if peak_values else None,
         "median_real_time_factor": median_metric(rows, "real_time_factor"),
         "median_real_audio_real_time_factor": median_metric(rows, "real_audio_real_time_factor"),
         "median_decode_seconds": median_metric(rows, "decode_seconds"),
@@ -358,6 +367,8 @@ def make_output(
             "interleave": args.interleave,
             "num_threads": args.num_threads,
             "flush_chunks": args.flush_chunks,
+            "chunk_samples": getattr(args, "chunk_samples", None),
+            "measure_peak_memory": getattr(args, "measure_peak_memory", False),
             "graph_optimization": args.graph_optimization,
             "min_mem_available_gb": args.min_mem_available_gb,
             "child_memory_limit_gb": args.child_memory_limit_gb,
@@ -440,6 +451,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--num-threads", type=int, default=2)
     parser.add_argument("--flush-chunks", type=int, default=3)
+    parser.add_argument("--chunk-samples", type=int,
+                        help="Select a checkpoint-supported chunk size (16 samples per ms at 16 kHz).")
+    parser.add_argument("--measure-peak-memory", action="store_true",
+                        help="Measure per-worker peak RSS, including cold optimization, using GNU /usr/bin/time.")
     parser.add_argument("--graph-optimization", default="all")
     parser.add_argument("--ort-memory-pattern", choices=("auto", "enable", "disable"), default="auto")
     parser.add_argument("--ort-parallel-execution", action="store_true")

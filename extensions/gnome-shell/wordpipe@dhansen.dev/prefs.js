@@ -414,16 +414,20 @@ class WordpipePage extends Adw.PreferencesPage {
         });
         this._modelGroup.add(this._profileRow);
 
+        this._latencyValues = [560, 1120]; // Compatibility fallback for older services.
         this._latencyRow = new Adw.ComboRow({
             title: _('Streaming Latency'),
-            subtitle: _('1120 ms provides more audio context; each mode needs its own model download.'),
-            model: Gtk.StringList.new(['560 ms', '1120 ms']),
+            subtitle: _('Choose a chunk size supported by the installed model; generic exports share one download.'),
+            model: Gtk.StringList.new(this._latencyValues.map(value => `${value} ms`)),
             selected: this._settings.get_uint('streaming-latency-ms') === 1120 ? 1 : 0,
         });
         this._latencyRow.connect('notify::selected', row => {
             if (this._syncingSettings)
                 return;
-            this._settings.set_uint('streaming-latency-ms', row.selected === 1 ? 1120 : 560);
+            const latency = this._latencyValues[row.selected];
+            if (!Number.isInteger(latency))
+                return;
+            this._settings.set_uint('streaming-latency-ms', latency);
             this._pushRuntimeOptions();
         });
         this._modelGroup.add(this._latencyRow);
@@ -820,6 +824,12 @@ class WordpipePage extends Adw.PreferencesPage {
             this._selectedPreset = selectedPreset;
         this._syncingSettings = true;
         try {
+            if (Array.isArray(values.supported_streaming_latencies_ms) &&
+                values.supported_streaming_latencies_ms.length &&
+                values.supported_streaming_latencies_ms.every(value => Number.isInteger(value) && value > 0)) {
+                this._latencyValues = [...values.supported_streaming_latencies_ms];
+                this._latencyRow.model = Gtk.StringList.new(this._latencyValues.map(value => `${value} ms`));
+            }
             if (typeof values.backend === 'string')
                 this._settings.set_string('backend', values.backend);
             if (typeof values.model_profile === 'string')
@@ -895,7 +905,7 @@ class WordpipePage extends Adw.PreferencesPage {
         this._modelInstallerPathRow.text = this._settings.get_string('model-installer-path');
         this._threadsRow.value = this._settings.get_uint('num-threads');
         this._sampleRateRow.value = this._settings.get_uint('sample-rate');
-        this._latencyRow.selected = this._settings.get_uint('streaming-latency-ms') === 1120 ? 1 : 0;
+        this._latencyRow.selected = Math.max(0, this._latencyValues.indexOf(this._settings.get_uint('streaming-latency-ms')));
         this._shortcutModeRow.selected = this._selectedIndex(
             SHORTCUT_MODES,
             this._settings.get_string('shortcut-mode'));

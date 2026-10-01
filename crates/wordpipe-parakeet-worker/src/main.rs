@@ -36,7 +36,7 @@ struct Args {
     stats_interval_seconds: f32,
     #[arg(skip = NEMOTRON_CHUNK_SAMPLES)]
     chunk_samples: usize,
-    /// Optional consistency check; defaults to the model's chunk size.
+    /// Select a context for dynamic exports; fixed exports must match their context.
     #[arg(long = "chunk-samples")]
     chunk_samples_override: Option<usize>,
     #[arg(long, default_value_t = 3)]
@@ -586,6 +586,12 @@ fn load_model(args: &Args) -> Result<Nemotron> {
         config.with_ort_optimized_model_cache_dir(cache_dir)
     } else {
         config
+    };
+    let config = match args.chunk_samples_override {
+        Some(samples) if samples > 0 && samples % (8 * 160) == 0 => {
+            config.with_streaming_chunk_frames(samples / (8 * 160))
+        }
+        _ => config,
     };
     let mut model = Nemotron::from_pretrained(model_dir.to_string_lossy().as_ref(), Some(config))
         .with_context(|| {

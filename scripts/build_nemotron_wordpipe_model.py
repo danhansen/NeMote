@@ -112,7 +112,9 @@ def parse_args() -> argparse.Namespace:
         help="Stop after this phase.",
     )
     parser.add_argument("--left-context", type=int)
-    parser.add_argument("--streaming-latency-ms", type=int, choices=(560, 1120), default=560)
+    parser.add_argument("--streaming-latency-ms", type=int, default=560)
+    parser.add_argument("--dynamic-streaming", action="store_true",
+                        help="Build one generic encoder supporting every checkpoint-advertised chunk size.")
     parser.add_argument("--right-context", type=int)
     parser.add_argument("--sample-rate", type=int, default=16000)
     parser.add_argument("--verify-lang", default="en-US")
@@ -202,7 +204,18 @@ def active_phases(args: argparse.Namespace) -> tuple[str, ...]:
 
 
 def validate_args(args: argparse.Namespace) -> None:
+    args.dynamic_streaming = getattr(args, "dynamic_streaming", False)
+    if args.dynamic_streaming and args.profile == "ffn-fp32":
+        raise SystemExit("--dynamic-streaming currently supports fast and compact profiles only")
+    if args.dynamic_streaming and getattr(args, "constant_processed_signal_length", False):
+        raise SystemExit("a dynamic encoder cannot use constant processed signal length")
+    if args.dynamic_streaming and getattr(args, "emit_ort_format", False):
+        raise SystemExit("a generic encoder must retain dynamic ONNX dimensions; runtime optimization is mode-specific")
     latency = getattr(args, "streaming_latency_ms", 560)
+    if latency <= 0 or latency % 80 or latency > 60000:
+        raise SystemExit("--streaming-latency-ms must be a positive multiple of 80 ms, at most 60000")
+    if not args.dynamic_streaming and latency not in (560, 1120):
+        raise SystemExit("legacy fixed exports support 560 or 1120 ms; use --dynamic-streaming for checkpoint-advertised modes")
     output_frames = latency // 80
     for name, expected in (
         ("right_context", output_frames - 1),
@@ -212,7 +225,7 @@ def validate_args(args: argparse.Namespace) -> None:
         value = getattr(args, name, None)
         if value is None:
             setattr(args, name, expected)
-        elif value <= 0:
+        elif value < 0 or (value == 0 and name != "right_context"):
             raise SystemExit(f"--{name.replace('_', '-')} must be positive")
         elif value != expected:
             raise SystemExit(f"--{name.replace('_', '-')} must be {expected} for {latency} ms")
@@ -227,6 +240,8 @@ def validate_args(args: argparse.Namespace) -> None:
     if getattr(args, "cache_len", None) is None:
         args.cache_len = default_cache_len
     for name in POSITIVE_INT_ARGS:
+        if name == "right_context" and getattr(args, name) == 0:
+            continue
         if getattr(args, name) <= 0:
             option = name.replace("_", "-")
             raise SystemExit(f"--{option} must be positive")
@@ -317,10 +332,21 @@ def main() -> None:
                 "--model-family",
                 args.model_family,
                 "--export-only",
+                *(["--dynamic-streaming"] if args.dynamic_streaming else []),
             ],
             dry_run=args.dry_run,
             temp_dir=temp_dir,
         )
+
+    if args.dynamic_streaming and (
+        phase_enabled(args, "export") or phase_enabled(args, "transform")
+    ):
+        run([
+            python, script("verify_dynamic_nemotron_export.py"),
+            "--encoder", str(export_dir / "encoder.fp32.consolidated.onnx"),
+            "--fixtures", str(export_dir / "dynamic-reference"),
+            "--output", str(args.work_dir / "native-onnx-parity.json"),
+        ], dry_run=args.dry_run, temp_dir=temp_dir)
 
     if phase_enabled(args, "transform"):
         run(
@@ -342,35 +368,13 @@ def main() -> None:
 
     if phase_enabled(args, "fixed-shape"):
         prepare_output(fixed_dir, force=args.force, dry_run=args.dry_run)
-        run(
-            [
-                python,
-                script("build_nemotron_fixed_shape_model.py"),
-                "--source-dir",
-                str(export_dir),
-                "--output-dir",
-                str(fixed_dir),
-                "--input-frames",
-                str(args.input_frames),
-                "--output-frames",
-                str(args.output_frames),
-                "--num-layers",
-                str(args.num_layers),
-                "--cache-len",
-                str(args.cache_len),
-                "--hidden-dim",
-                str(args.hidden_dim),
-                "--conv-context",
-                str(args.conv_context),
-                *(["--constant-processed-signal-length"] if args.constant_processed_signal_length else []),
-                "--ort-optimize-final",
-                args.ort_optimize_final,
-                "--ort-optimize-threads",
-                str(args.ort_optimize_threads),
-            ],
-            dry_run=args.dry_run,
-            temp_dir=temp_dir,
-        )
+        if args.dynamic_streaming:
+            run([
+                python, script("build_nemotron_dynamic_shape_model.py"),
+                "--source-dir", str(export_dir), "--output-dir", str(fixed_dir),
+            ], dry_run=args.dry_run, temp_dir=temp_dir)
+        else:
+            run_fixed_shape(args, python, export_dir, fixed_dir, temp_dir)
 
     if phase_enabled(args, "ffn-fp32"):
         prepare_output(args.output_dir, force=args.force, dry_run=args.dry_run)
@@ -394,27 +398,41 @@ def main() -> None:
         )
 
     if args.emit_ort_format and args.stop_after == phases[-1]:
-        ort_format_dir = args.ort_format_output_dir or args.output_dir.with_name(
-            f"{args.output_dir.name}-ort-format"
-        )
-        run(
-            [
-                python,
-                script("convert_nemotron_to_ort_format.py"),
-                str(args.output_dir),
-                str(ort_format_dir),
-                "--optimization-level",
-                args.ort_format_optimization_level,
-                *(["--force"] if args.force else []),
-            ],
-            dry_run=args.dry_run,
-            temp_dir=temp_dir,
-        )
+        emit_ort_format(args)
 
     if args.stop_after == phases[-1]:
         print(f"[pipeline] complete final={args.output_dir}", flush=True)
     else:
         print(f"[pipeline] stopped after {args.stop_after} output={phase_output(args, args.stop_after)}", flush=True)
+
+
+def run_fixed_shape(args, python, export_dir, fixed_dir, temp_dir):
+    run(
+        [
+            python, script("build_nemotron_fixed_shape_model.py"),
+            "--source-dir", str(export_dir), "--output-dir", str(fixed_dir),
+            "--input-frames", str(args.input_frames),
+            "--output-frames", str(args.output_frames),
+            "--num-layers", str(args.num_layers), "--cache-len", str(args.cache_len),
+            "--hidden-dim", str(args.hidden_dim), "--conv-context", str(args.conv_context),
+            *(["--constant-processed-signal-length"] if args.constant_processed_signal_length else []),
+            "--ort-optimize-final", args.ort_optimize_final,
+            "--ort-optimize-threads", str(args.ort_optimize_threads),
+        ], dry_run=args.dry_run, temp_dir=temp_dir,
+    )
+
+def emit_ort_format(args):
+    ort_format_dir = args.ort_format_output_dir or args.output_dir.with_name(
+        f"{args.output_dir.name}-ort-format"
+    )
+    run(
+        [
+            str(args.python), script("convert_nemotron_to_ort_format.py"),
+            str(args.output_dir), str(ort_format_dir),
+            "--optimization-level", args.ort_format_optimization_level,
+            *(["--force"] if args.force else []),
+        ], dry_run=args.dry_run, temp_dir=args.work_dir / "tmp",
+    )
 
 
 if __name__ == "__main__":

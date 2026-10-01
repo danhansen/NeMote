@@ -39,6 +39,7 @@ import soundfile as sf
 import torch
 
 from rewrite_nemotron_projected_kv_cache import rewrite_model as rewrite_projected_cache
+from nemotron_dynamic_encoder import dynamic_attention_context, validate_dynamic_encoder, supported_chunk_frames
 
 ORT_OPTIMIZATION_LEVELS = {"disable", "basic", "extended", "all"}
 
@@ -81,7 +82,24 @@ def load_model(input_path: str, device: torch.device):
 
     if Path(input_path).exists():
         print(f"[export] restoring NeMo model from {input_path}", flush=True)
-        return nemo_asr.models.ASRModel.restore_from(input_path, map_location=device)
+        from nemo.core.connectors.save_restore_connector import SaveRestoreConnector
+
+        # Explicitly validate archive paths/types before extraction. This also
+        # supports Python builds that predate tarfile's filter= API, which
+        # current NeMo's built-in extractor assumes is available.
+        with tempfile.TemporaryDirectory(prefix="wordpipe-nemo-restore-") as temporary:
+            root = Path(temporary).resolve()
+            with tarfile.open(input_path, "r:*") as archive:
+                for member in archive.getmembers():
+                    target = (root / member.name).resolve()
+                    if (target != root and root not in target.parents) or not (member.isfile() or member.isdir()):
+                        raise ValueError(f"unsafe NeMo archive member: {member.name}")
+                archive.extractall(root)
+            connector = SaveRestoreConnector()
+            connector.model_extracted_dir = str(root)
+            return nemo_asr.models.ASRModel.restore_from(
+                input_path, map_location=device, save_restore_connector=connector,
+            )
     print(f"[export] loading NeMo model {input_path}", flush=True)
     model = nemo_asr.models.ASRModel.from_pretrained(model_name=input_path)
     try:
@@ -175,11 +193,18 @@ def tokenizer_vocab_size(model) -> int | None:
 
 
 class EncoderWrapper(torch.nn.Module):
-    def __init__(self, model, drop_extra: int, prompted: bool):
+    def __init__(self, model, drop_extra: int, prompted: bool, *,
+                 dynamic_chunk_size: bool = False, mel_frames_overhead: int = 9):
         super().__init__()
         self.encoder = model.encoder
         self.drop_extra = drop_extra
         self.prompted = prompted
+        self.dynamic_chunk_size = dynamic_chunk_size
+        self.mel_frames_overhead = mel_frames_overhead
+        self.subsampling_factor = int(model.encoder.subsampling_factor)
+        if dynamic_chunk_size:
+            validate_dynamic_encoder(self.encoder)
+        self.supported_chunk_frames = supported_chunk_frames(self.encoder) if dynamic_chunk_size else []
         if prompted:
             self.prompt_kernel = model.prompt_kernel
             self.num_prompts = int(model.num_prompts)
@@ -193,15 +218,26 @@ class EncoderWrapper(torch.nn.Module):
         cache_last_channel_len,
         prompt_index=None,
     ):
-        encoded, enc_len, ch_next, tm_next, len_next = self.encoder.cache_aware_stream_step(
-            processed_signal=processed_signal,
-            processed_signal_length=processed_signal_length,
-            cache_last_channel=cache_last_channel,
-            cache_last_time=cache_last_time,
-            cache_last_channel_len=cache_last_channel_len,
-            keep_all_outputs=False,
-            drop_extra_pre_encoded=self.drop_extra,
-        )
+        from contextlib import nullcontext
+
+        chunk_frames = torch.div(
+            torch._shape_as_tensor(processed_signal)[2] - self.mel_frames_overhead,
+            self.subsampling_factor, rounding_mode="trunc",
+        ) if self.dynamic_chunk_size else None
+        context = dynamic_attention_context(self.encoder, chunk_frames) if self.dynamic_chunk_size else nullcontext()
+        with context:
+            encoded, enc_len, ch_next, tm_next, len_next = self.encoder.cache_aware_stream_step(
+                processed_signal=processed_signal,
+                processed_signal_length=processed_signal_length,
+                cache_last_channel=cache_last_channel,
+                cache_last_time=cache_last_time,
+                cache_last_channel_len=cache_last_channel_len,
+                keep_all_outputs=self.dynamic_chunk_size,
+                drop_extra_pre_encoded=self.drop_extra,
+            )
+        if self.dynamic_chunk_size:
+            encoded = encoded[:, :, :chunk_frames]
+            enc_len = torch.minimum(enc_len, chunk_frames)
         if self.prompted:
             encoded = encoded.transpose(1, 2)
             batch, frames, _ = encoded.shape
@@ -348,6 +384,57 @@ def make_streaming_example(model, sample_rate: int):
         Path(wav_path).unlink(missing_ok=True)
 
 
+def verify_dynamic_wrapper(model, args, wrapper: EncoderWrapper, prompt_index):
+    """Check native NeMo parity and retain fixtures for a separate ORT process."""
+    original_context = list(model.encoder.att_context_size)
+    records = []
+    fixture_dir = args.output_dir / "dynamic-reference"
+    fixture_dir.mkdir()
+    generator = torch.Generator(device="cpu").manual_seed(20260930)
+    try:
+        for chunk_frames in wrapper.supported_chunk_frames:
+            model.encoder.set_default_att_context_size([args.left_context, chunk_frames - 1])
+            model.encoder.setup_streaming_params(chunk_size=chunk_frames, shift_size=chunk_frames)
+            features, length = make_streaming_example(model, args.sample_rate)
+            overhead = int(features.shape[2]) - chunk_frames * wrapper.subsampling_factor
+            if overhead != wrapper.mel_frames_overhead:
+                raise ValueError("streaming feature overhead varies between supported modes")
+            native = EncoderWrapper(model, wrapper.drop_extra, wrapper.prompted).eval()
+            for valid_cache in (0, min(5, args.left_context), args.left_context):
+                channel, time, cache_length = model.encoder.get_initial_cache_state(batch_size=1)
+                channel = torch.randn(channel.shape, generator=generator) * 0.01
+                time = torch.randn(time.shape, generator=generator) * 0.01
+                cache_length.fill_(valid_cache)
+                inputs = (features, length, channel, time, cache_length)
+                if wrapper.prompted:
+                    inputs = (*inputs, prompt_index)
+                with torch.no_grad():
+                    expected = native(*inputs)
+                    actual = wrapper(*inputs)
+                maximum_error = 0.0
+                for left, right in zip(expected, actual, strict=True):
+                    torch.testing.assert_close(left, right, rtol=1e-5, atol=1e-5)
+                    if left.is_floating_point():
+                        maximum_error = max(maximum_error, float((left - right).abs().max()))
+                filename = f"chunk-{chunk_frames}-cache-{valid_cache}.npz"
+                names = INPUT_NAMES + (["prompt_index"] if wrapper.prompted else [])
+                arrays = {name: value.detach().cpu().numpy() for name, value in zip(names, inputs, strict=True)}
+                arrays.update({"expected_" + name: value.detach().cpu().numpy()
+                               for name, value in zip(OUTPUT_NAMES, expected, strict=True)})
+                np.savez(fixture_dir / filename, **arrays)
+                records.append({"chunk_frames": chunk_frames, "valid_cache": valid_cache,
+                                "fixture": filename, "wrapper_max_absolute_error": maximum_error})
+                print(f"[dynamic-parity] frames={chunk_frames} cache={valid_cache} maxError={maximum_error}", flush=True)
+    finally:
+        model.encoder.set_default_att_context_size(original_context)
+        model.encoder.setup_streaming_params(chunk_size=args.right_context + 1, shift_size=args.right_context + 1)
+    (fixture_dir / "manifest.json").write_text(json.dumps({
+        "format": 1, "mel_frames_overhead": wrapper.mel_frames_overhead,
+        "subsampling_factor": wrapper.subsampling_factor, "records": records,
+    }, indent=2) + "\n")
+    return records
+
+
 def export_decoder_joint(model, output_dir: Path) -> Path:
     print("[export] exporting decoder/joint FP32 ONNX", flush=True)
     temp_prefix = output_dir / "temp_model"
@@ -385,7 +472,12 @@ def main() -> None:
         help="Attention left context. Nemotron 3.5 multilingual expects 56.",
     )
     parser.add_argument("--right-context", type=int, default=6)
+    parser.add_argument(
+        "--dynamic-streaming", action="store_true",
+        help="Export one shape-derived encoder for both 560 and 1120 ms chunks.",
+    )
     parser.add_argument("--sample-rate", type=int, default=16000)
+    parser.add_argument("--torch-threads", type=int, default=2)
     parser.add_argument(
         "--projected-cache",
         action=argparse.BooleanOptionalAction,
@@ -444,6 +536,9 @@ def main() -> None:
         help="Language prompt to use for pre-export wrapper parity verification.",
     )
     args = parser.parse_args()
+    if args.torch_threads <= 0:
+        raise ValueError("--torch-threads must be positive")
+    torch.set_num_threads(args.torch_threads)
 
     logging.getLogger("nemo_logging").setLevel(logging.ERROR)
     try:
@@ -485,7 +580,15 @@ def main() -> None:
     prompt_dict = prompt_dictionary(model) if prompted else {}
     prompt_index = torch.tensor([prompt_dict.get("auto", 101)], dtype=torch.long)
 
-    wrapper = EncoderWrapper(model, drop_extra, prompted).eval()
+    mel_frames_overhead = int(processed_signal.shape[2]) - (
+        (args.right_context + 1) * int(model.encoder.subsampling_factor)
+    )
+    if mel_frames_overhead < 0:
+        raise ValueError("streaming example is shorter than the configured chunk")
+    wrapper = EncoderWrapper(
+        model, drop_extra, prompted, dynamic_chunk_size=args.dynamic_streaming,
+        mel_frames_overhead=mel_frames_overhead,
+    ).eval()
     encoder_inputs = (
         processed_signal,
         processed_signal_length,
@@ -507,6 +610,7 @@ def main() -> None:
             args.verify_lang,
         )
         prompt_index = torch.tensor([verified_prompt_index], dtype=torch.long)
+    dynamic_parity = verify_dynamic_wrapper(model, args, wrapper, prompt_index) if args.dynamic_streaming else None
     input_names = list(INPUT_NAMES)
     dynamic_axes = {
         "processed_signal": {0: "batch", 2: "mel_frames"},
@@ -551,6 +655,16 @@ def main() -> None:
         "left_context": args.left_context,
         "right_context": args.right_context,
         "chunk_size_output_frames": args.right_context + 1,
+        "dynamic_streaming": ({
+            "format": 1,
+            "supported_chunk_frames": wrapper.supported_chunk_frames,
+            "default_chunk_frames": args.right_context + 1,
+            "subsampling_factor": wrapper.subsampling_factor,
+            "mel_frames_overhead": mel_frames_overhead,
+            "cache_len": args.left_context,
+            "shape_derived_attention_context": True,
+            "native_wrapper_parity": dynamic_parity,
+        } if args.dynamic_streaming else None),
         "drop_extra_pre_encoded": drop_extra,
         "num_encoder_layers": int(cache_last_channel.shape[0]),
         "hidden_dim": int(cache_last_channel.shape[3]),

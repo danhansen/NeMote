@@ -7,8 +7,8 @@ ONNX files at the repository root:
 ```text
 fractalyzer/wordpipe-nemotron-fast-fp32-projected
 fractalyzer/wordpipe-nemotron-compact-fixed-shape
-fractalyzer/wordpipe-nemotron-en-fast-fp32-projected
-fractalyzer/wordpipe-nemotron-en-compact-fixed-shape
+fractalyzer/wordpipe-nemotron-en-fast-dynamic-fp32-projected
+fractalyzer/wordpipe-nemotron-en-compact-dynamic-quint8
 ```
 
 Each repo should contain:
@@ -24,8 +24,40 @@ If an ONNX graph uses external tensor data, the matching `encoder.onnx.data` or
 includes those sidecars automatically when present and excludes stale duplicate
 export files such as `*.fp32.*`.
 
-Do not publish the local `*-ort-format` runtime cache for `compact`; Wordpipe
-downloads the compact ONNX files and converts them to ORT format during install.
+Do not publish local runtime caches. Generic profiles retain dynamic ONNX;
+only legacy fixed compact profiles are converted to ORT during installation.
+
+## Generic English Releases (0.1.19+)
+
+The English generic repos each contain exactly one encoder for their precision
+profile, supporting all checkpoint-advertised finite chunk contexts. The old
+English fixed-model repos remain untouched for older clients. Do not append
+per-mode graphs to a generic release.
+
+Maintainers export with `--dynamic-streaming`, validate native/ONNX parity,
+and benchmark real speech against the deployed profile. The release gate is
+`scripts/validate_dynamic_nemotron_release.py`: it requires five matched speech
+clips, all supported worker modes, five interleaved performance runs, unchanged
+transcripts, and no decode or peak-memory regression beyond the user's ±5%
+noise band. First-use and warm startup are recorded separately. These are small
+regression tests, not broad WER claims. FP32 native parity uses 1e-4 absolute and
+relative tolerance; the projected-cache path permits 1e-3 absolute because
+splitting cached/current GEMMs changes floating-point accumulation.
+
+The gate writes `validation.json` with SHA-256 hashes of every runtime artifact.
+The publisher refuses a generic source without this evidence or if any artifact
+has changed since validation. Stage with `publish_wordpipe_model_profiles.py`
+and the explicit `--fast-dir` or `--compact-dir`; add `--upload` only after
+reviewing the generated model card and specification. The family wrapper's
+`--dynamic-streaming` avoids per-latency builds, but cannot replace the required
+numerical/audio/performance validation before publication.
+
+Users download the result; they never install NeMo/Torch or export locally.
+ORT session optimization selects the chunk size and may cache a host-specific
+optimized graph. Cold optimization has a measured startup cost and does not
+hold the NeMo checkpoint or Torch model in memory.
+
+The workflow below remains applicable to legacy fixed models.
 
 ## Hub Conventions
 

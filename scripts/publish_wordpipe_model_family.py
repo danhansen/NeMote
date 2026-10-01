@@ -24,6 +24,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-family", choices=tuple(FAMILY_SOURCES), required=True)
     parser.add_argument("--streaming-latency-ms", type=int, choices=(560, 1120), default=560)
+    parser.add_argument("--dynamic-streaming", action="store_true",
+                        help="Build one generic encoder per profile, without per-mode exports.")
     parser.add_argument("--source", help="Local .nemo path or Hugging Face model id.")
     parser.add_argument("--model-root", type=Path, default=DEFAULT_MODEL_ROOT)
     parser.add_argument("--release-root", type=Path, default=DEFAULT_RELEASE_ROOT)
@@ -44,7 +46,8 @@ def commands(args: argparse.Namespace) -> list[list[str]]:
     model_root = args.model_root.expanduser()
     source = args.source or FAMILY_SOURCES[args.model_family]
     latency = getattr(args, "streaming_latency_ms", 560)
-    latencies = (560, 1120) if latency == 1120 else (560,)
+    dynamic = getattr(args, "dynamic_streaming", False)
+    latencies = (latency,) if dynamic else ((560, 1120) if latency == 1120 else (560,))
     result: list[list[str]] = []
     if not args.skip_build:
         for mode in latencies:
@@ -54,6 +57,7 @@ def commands(args: argparse.Namespace) -> list[list[str]]:
                     "--profile", profile, "--model-family", args.model_family,
                     "--model-root", str(model_root), "--build-from-nemo",
                     "--source", source, "--python", python,
+                    *(["--dynamic-streaming"] if dynamic else []),
                     *(["--streaming-latency-ms", str(mode)] if mode != 560 else []),
                     *(["--force"] if args.force else []),
                     *(["--force-source"] if args.force_source else []),
@@ -69,7 +73,7 @@ def commands(args: argparse.Namespace) -> list[list[str]]:
             python, str(ROOT / "scripts" / "publish_wordpipe_model_profiles.py"),
             "--profile", profile, "--model-family", args.model_family,
             "--model-root", str(model_root),
-            *(["--1120ms-dir", str(mode_dir)] if latency == 1120 else []),
+            *(["--1120ms-dir", str(mode_dir)] if latency == 1120 and not dynamic else []),
             "--output-dir", str(args.release_root.expanduser() / args.model_family / profile),
             "--force-card",
             *(["--force"] if args.force else []),

@@ -22,6 +22,7 @@ from wordpipe.models import (  # noqa: E402
     model_runtime_dir_valid,
     profile_spec,
     profile_streaming_latency,
+    dynamic_streaming_config,
 )
 
 
@@ -34,6 +35,7 @@ OPTIONAL_PROFILE_FILES = (
     "config.json",
     "preprocessor_config.json",
     "tokenizer_config.json",
+    "validation.json",
 )
 REPRODUCIBILITY_SCRIPTS = (
     "build_nemotron_wordpipe_model.py",
@@ -43,6 +45,10 @@ REPRODUCIBILITY_SCRIPTS = (
     "build_nemotron_fixed_shape_model.py",
     "convert_nemotron_to_ort_format.py",
     "bundle_nemotron_streaming_modes.py",
+    "nemotron_dynamic_encoder.py",
+    "build_nemotron_dynamic_shape_model.py",
+    "verify_dynamic_nemotron_export.py",
+    "validate_dynamic_nemotron_release.py",
 )
 
 
@@ -74,7 +80,15 @@ def main() -> int:
         spec = profile_spec(profile_name)
         source = resolve_profile_source(args, spec, family)
         validate_publish_source(source, spec, family)
-        if profile_streaming_latency(source) != latency_ms:
+        config = json.loads((source / "config.json").read_text())
+        dynamic = dynamic_streaming_config(config, family)
+        if dynamic is not None:
+            if args.mode_1120_dir is not None:
+                raise SystemExit("a generic encoder must not be bundled with separate per-mode exports")
+            validate_release_evidence(source, spec, dynamic)
+            manifest["supported_streaming_latencies_ms"] = [size * 80 for size in dynamic["supported_chunk_frames"]]
+            manifest["dynamic_streaming"] = dynamic
+        elif profile_streaming_latency(source) != latency_ms:
             raise SystemExit("publication mode does not match the model's streaming latency")
         copied = copy_profile_files(
             source,
@@ -98,7 +112,7 @@ def main() -> int:
 
     readme_path = output_dir / "README.md"
     if not readme_path.exists() or args.force_card:
-        card = render_model_card(repo_id, profiles, family)
+        card = render_model_card(repo_id, profiles, family, dynamic_streaming=dynamic)
         if args.mode_1120_dir is not None:
             card += "\n## Streaming Modes\n\nThis bundle provides 560 ms and 1120 ms encoders sharing one set of weights.\n"
         readme_path.write_text(card, encoding="utf-8")
@@ -106,7 +120,9 @@ def main() -> int:
 
     model_spec_path = output_dir / "MODEL_SPEC.md"
     if not model_spec_path.exists() or args.force_card:
-        model_spec_path.write_text(render_model_spec(profiles, family, latency_ms), encoding="utf-8")
+        model_spec_path.write_text(
+            render_dynamic_model_spec(spec, family, dynamic) if dynamic is not None
+            else render_model_spec(profiles, family, latency_ms), encoding="utf-8")
         print(f"model spec: {model_spec_path}")
 
     copy_reproducibility_scripts(output_dir, force=args.force)
@@ -233,6 +249,11 @@ def validate_profile_config(
     except json.JSONDecodeError as exc:
         raise SystemExit(f"{config_path} is not valid JSON: {exc}") from exc
 
+    if config.get("dynamic_streaming") is not None:
+        if dynamic_streaming_config(config, family) is None or config.get("fixed_streaming_shapes") is not None:
+            raise SystemExit("invalid generic streaming contract or conflicting fixed shapes")
+        validate_profile_kind(config, source, spec, family)
+        return
     fixed = config.get("fixed_streaming_shapes")
     if not isinstance(fixed, dict):
         raise SystemExit(
@@ -264,6 +285,10 @@ def validate_profile_config(
             + ", ".join(mismatched)
         )
 
+    validate_profile_kind(config, source, spec, family)
+
+
+def validate_profile_kind(config, source, spec, family):
     if config.get("projected_cache") is not True:
         raise SystemExit(f"{source} is not publishable as {spec.name}: projected_cache must be true")
 
@@ -278,6 +303,31 @@ def validate_profile_config(
         raise SystemExit(f"{source} is not publishable as fast: expected FP32, got quantized config")
     if spec.name == "compact" and not quantized:
         raise SystemExit(f"{source} is not publishable as compact: expected dynamic QUInt8 config")
+
+
+def validate_release_evidence(source, spec, dynamic):
+    path = source / "validation.json"
+    if not path.is_file():
+        raise SystemExit("generic publication requires artifact-bound validation.json")
+    report = json.loads(path.read_text())
+    if report.get("format") != 1 or report.get("passed") is not True or report.get("profile") != spec.name:
+        raise SystemExit("invalid dynamic release evidence")
+    if report.get("supported_chunk_frames") != dynamic["supported_chunk_frames"]:
+        raise SystemExit("release evidence does not cover the advertised chunk modes")
+    if report.get("performance_noise_percent") != 5 or report.get("decode_regression_percent", 100) > 5:
+        raise SystemExit("release evidence exceeds the 5% performance gate")
+    files = report.get("files", {})
+    required = set(REQUIRED_ONNX_FILES) | {"config.json"}
+    config = json.loads((source / "config.json").read_text())
+    required.update(config.get("shared_weight_files", []))
+    if set(files) != required:
+        raise SystemExit("release evidence does not cover all runtime artifacts")
+    for name, record in files.items():
+        if Path(name).is_absolute() or ".." in Path(name).parts:
+            raise SystemExit("unsafe validation artifact path")
+        artifact = source / name
+        if artifact.stat().st_size != record.get("bytes") or sha256_file(artifact) != record.get("sha256"):
+            raise SystemExit(f"artifact changed since validation: {name}")
 
 
 def copy_profile_files(
@@ -356,6 +406,7 @@ def render_model_card(
     repo_id: str,
     profiles: Iterable[str],
     family: str = "multilingual",
+    *, dynamic_streaming: dict | None = None,
 ) -> str:
     selected = tuple(profiles)
     if len(selected) != 1:
@@ -368,6 +419,16 @@ def render_model_card(
     model_title = "Nemotron Speech Streaming English" if family == "english" else "Nemotron 3.5 ASR Streaming"
     license_text = "the NVIDIA Open Model License" if family == "english" else "the OpenMDW 1.1 license"
     license_terms = "NVIDIA Open Model License" if family == "english" else "OpenMDW"
+    runtime_description = spec.description if dynamic_streaming is None else (
+        "One generic projected-cache ONNX encoder; runtime chunk size is selected from checkpoint metadata."
+    )
+    local_runtime = (
+        "The compact profile intentionally publishes the ONNX graph; the Wordpipe installer converts it to ORT format locally for startup-time behavior."
+        if dynamic_streaming is None else
+        "Users download a ready-to-use model; NeMo/PyTorch and local model export are not required. "
+        "ONNX Runtime optimizes the selected chunk size locally and can cache the result. "
+        "First-use optimization has a startup cost; validation.json records cold/warm timing and peak RAM."
+    )
     return f"""---
 language:
 - {language}
@@ -395,7 +456,7 @@ is not a separately trained checkpoint.
 This repository publishes the `{profile_name}` Wordpipe profile:
 
 - Build profile: `{spec.build_profile}`
-- Runtime description: {spec.description}
+- Runtime description: {runtime_description}
 
 It is consumed by Wordpipe with:
 
@@ -439,9 +500,7 @@ these transformed artifacts.
 ## Limitations
 
 This profile is packaged for CPU-oriented Wordpipe usage and may not match
-NeMo's standard runtime interface. The compact profile intentionally publishes
-the ONNX graph; the Wordpipe installer converts it to ORT format locally for
-startup-time behavior.
+NeMo's standard runtime interface. {local_runtime}
 
 ## License and Attribution
 
@@ -450,6 +509,45 @@ The upstream model card states that use of
 Review the upstream NVIDIA model card and {license_terms} terms before redistribution or
 deployment. This repository preserves that attribution and publishes derived
 inference artifacts for Wordpipe.
+"""
+
+
+def render_dynamic_model_spec(spec, family, dynamic):
+    latencies = ", ".join(str(size * 80) for size in dynamic["supported_chunk_frames"])
+    cache = dynamic["cache_len"]
+    return f"""# Wordpipe Generic Nemotron Runtime Specification
+
+Source checkpoint: `{source_model_for_family(family)}`. Profile: `{spec.name}`.
+One encoder is published for this precision profile; no separate chunk-size exports.
+Supported chunk durations, derived from checkpoint metadata: {latencies} ms.
+Requires Wordpipe 0.1.19 or newer with its matching parakeet-rs fork.
+
+For selected encoder chunk length C, the input is `[1,128,8*C+9]` and
+the encoded output is `[1,1024,C]`. Batch size is 1, audio is mono 16 kHz.
+The graph derives attention context from the input shape, not fixed Python state.
+Streaming caches have 24 layers, hidden size 1024, left length {cache}, convolution length 8.
+`cache_key_layer_N` and `cache_value_layer_N` are `[1,{cache},1024]`;
+`projected_current_key_layer_N` and `projected_current_value_layer_N` are `[1,C,1024]`.
+The caller rolls the projected K/V cache after each chunk.
+
+The fast profile retains FP32 weights; compact uses one coherent dynamic QUInt8 pass.
+Neither profile requires users to install NeMo or export a checkpoint.
+ORT free-dimension overrides select C when opening a worker session. A local
+optimized cache is optional and specific to the mode, ORT version, and host.
+Changing chunk size restarts the idle worker; it is not a mid-utterance context change.
+
+`validation.json` binds numerical, transcript, performance, and peak-memory
+checks to SHA-256 hashes of these artifacts. Performance noise band: ±5%.
+It includes the measured first-use optimization cost, which is not a NeMo export.
+This is a small English LibriSpeech regression set, not a general WER estimate.
+
+Maintainer reproduction (not an end-user installation step):
+
+```sh
+python scripts/build_nemotron_wordpipe_model.py SOURCE.nemo OUTPUT \\
+  --profile {spec.build_profile} --model-family {family} --dynamic-streaming
+```
+The separate process phases avoid holding Torch and ORT models concurrently.
 """
 
 
@@ -603,6 +701,7 @@ def upload_release(
                 "README.md",
                 "MODEL_SPEC.md",
                 "wordpipe-model-profiles-manifest.json",
+                "validation.json",
                 "scripts/*.py",
                 "tokenizer.model",
                 "encoder.onnx",

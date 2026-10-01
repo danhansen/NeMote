@@ -525,9 +525,9 @@ impl WordpipeService {
             let mut language_update = None;
             let mut model_root_changed = false;
             if let Some(value) = get_u32(&options, "streaming_latency_ms") {
-                if !matches!(value, 560 | 1120) {
+                if value == 0 || value > 60000 || value % 80 != 0 {
                     return Err(zbus::fdo::Error::InvalidArgs(
-                        "streaming_latency_ms must be 560 or 1120".to_string(),
+                        "streaming_latency_ms must be a positive multiple of 80 ms".to_string(),
                     ));
                 }
                 if next_config.streaming_latency_ms != value
@@ -600,6 +600,14 @@ impl WordpipeService {
                 let previous_profile = next_config.model_profile.clone();
                 select_installed_model_profile(&mut next_config);
                 restart_worker |= next_config.model_profile != previous_profile;
+            }
+            if get_u32(&options, "streaming_latency_ms").is_some()
+                && !supported_streaming_latencies(&next_config)
+                    .contains(&next_config.streaming_latency_ms)
+            {
+                return Err(zbus::fdo::Error::InvalidArgs(
+                    "the selected model does not support this streaming latency".to_string(),
+                ));
             }
             if restart_worker {
                 language_update = None;
@@ -1147,6 +1155,10 @@ fn apply_model_preset(config: &mut ServiceConfig, preset: &ModelPresetSpec) -> b
     }
     config.model_profile = preset.model_profile.to_string();
     config.model_family = preset.model_family.to_string();
+    let supported = supported_streaming_latencies(config);
+    if !supported.contains(&config.streaming_latency_ms) {
+        config.streaming_latency_ms = supported[0];
+    }
     if !language_available_for_model_family(&config.model_family, &config.language) {
         config.language = DEFAULT_LANGUAGE.to_string();
     }
@@ -1257,6 +1269,10 @@ fn state_map(data: &ServiceData) -> VariantMap {
 
 fn config_map(config: &ServiceConfig) -> VariantMap {
     let mut map = VariantMap::new();
+    map.insert(
+        "supported_streaming_latencies_ms".to_string(),
+        owned(Value::from(supported_streaming_latencies(config))),
+    );
     insert_str(&mut map, "backend", &config.backend);
     insert_str(&mut map, "model_profile", &config.model_profile);
     insert_str(&mut map, "model_family", &config.model_family);
@@ -1382,8 +1398,10 @@ fn apply_persisted_config(
         config.sample_rate = value;
     }
     if let Some(value) = persisted.streaming_latency_ms {
-        if !matches!(value, 560 | 1120) {
-            return Err(anyhow!("streaming_latency_ms must be 560 or 1120"));
+        if value == 0 || value > 60000 || value % 80 != 0 {
+            return Err(anyhow!(
+                "streaming_latency_ms must be a positive multiple of 80 ms"
+            ));
         }
         config.streaming_latency_ms = value;
     }
@@ -1582,9 +1600,6 @@ fn model_profile_metadata_valid_if_present(runtime_dir: &Path, profile: &str) ->
         Some(payload) => payload,
         None => return false,
     };
-    let Some(fixed) = payload.get("fixed_streaming_shapes") else {
-        return false;
-    };
     if let Some(shared) = payload.get("shared_weight_files") {
         let Some(files) = shared.as_array() else {
             return false;
@@ -1601,40 +1616,52 @@ fn model_profile_metadata_valid_if_present(runtime_dir: &Path, profile: &str) ->
         Some("multilingual") | None => 56,
         Some(_) => return false,
     };
-    let right_context = payload
-        .get("right_context")
-        .and_then(JsonValue::as_u64)
-        .unwrap_or(6);
-    let expected_right = if runtime_dir
-        .parent()
-        .and_then(Path::file_name)
-        .and_then(|name| name.to_str())
-        == Some("1120ms")
+    if payload
+        .get("dynamic_streaming")
+        .is_some_and(|value| !value.is_null())
     {
-        13
+        if !dynamic_streaming_metadata_valid(&payload, cache_len) {
+            return false;
+        }
     } else {
-        6
-    };
-    if right_context != expected_right {
-        return false;
-    }
-    if !matches!(right_context, 6 | 13) {
-        return false;
-    }
-    let output_frames = right_context + 1;
-    let expected = [
-        ("input_frames", output_frames * 8 + 9),
-        ("output_frames", output_frames),
-        ("num_layers", 24),
-        ("cache_len", cache_len),
-        ("hidden_dim", 1024),
-        ("conv_context", 8),
-    ];
-    if expected
-        .iter()
-        .any(|(key, value)| fixed.get(*key).and_then(JsonValue::as_u64) != Some(*value))
-    {
-        return false;
+        let Some(fixed) = payload.get("fixed_streaming_shapes") else {
+            return false;
+        };
+        let right_context = payload
+            .get("right_context")
+            .and_then(JsonValue::as_u64)
+            .unwrap_or(6);
+        let expected_right = if runtime_dir
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            == Some("1120ms")
+        {
+            13
+        } else {
+            6
+        };
+        if right_context != expected_right {
+            return false;
+        }
+        if !matches!(right_context, 6 | 13) {
+            return false;
+        }
+        let output_frames = right_context + 1;
+        let expected = [
+            ("input_frames", output_frames * 8 + 9),
+            ("output_frames", output_frames),
+            ("num_layers", 24),
+            ("cache_len", cache_len),
+            ("hidden_dim", 1024),
+            ("conv_context", 8),
+        ];
+        if expected
+            .iter()
+            .any(|(key, value)| fixed.get(*key).and_then(JsonValue::as_u64) != Some(*value))
+        {
+            return false;
+        }
     }
     if payload.get("projected_cache").and_then(JsonValue::as_bool) != Some(true) {
         return false;
@@ -1648,6 +1675,77 @@ fn model_profile_metadata_valid_if_present(runtime_dir: &Path, profile: &str) ->
         "compact" => quantized,
         _ => false,
     }
+}
+
+fn dynamic_streaming_metadata_valid(payload: &JsonValue, cache_len: u64) -> bool {
+    let Some(dynamic) = payload.get("dynamic_streaming") else {
+        return false;
+    };
+    let Some(sizes) = dynamic
+        .get("supported_chunk_frames")
+        .and_then(JsonValue::as_array)
+    else {
+        return false;
+    };
+    if sizes.is_empty()
+        || sizes.iter().any(|value| {
+            value
+                .as_u64()
+                .is_none_or(|frames| frames == 0 || cache_len % frames != 0)
+        })
+        || sizes
+            .windows(2)
+            .any(|pair| pair[0].as_u64() >= pair[1].as_u64())
+    {
+        return false;
+    }
+    dynamic.get("format").and_then(JsonValue::as_u64) == Some(1)
+        && dynamic
+            .get("shape_derived_attention_context")
+            .and_then(JsonValue::as_bool)
+            == Some(true)
+        && dynamic
+            .get("default_chunk_frames")
+            .and_then(JsonValue::as_u64)
+            .is_some_and(|frames| sizes.iter().any(|size| size.as_u64() == Some(frames)))
+        && dynamic
+            .get("subsampling_factor")
+            .and_then(JsonValue::as_u64)
+            == Some(8)
+        && dynamic
+            .get("mel_frames_overhead")
+            .and_then(JsonValue::as_u64)
+            == Some(9)
+        && dynamic.get("cache_len").and_then(JsonValue::as_u64) == Some(cache_len)
+        && payload
+            .get("num_encoder_layers")
+            .and_then(JsonValue::as_u64)
+            == Some(24)
+        && payload.get("hidden_dim").and_then(JsonValue::as_u64) == Some(1024)
+        && payload.get("conv_context").and_then(JsonValue::as_u64) == Some(8)
+        && payload
+            .get("cache_shapes")
+            .and_then(|value| value.get("cache_last_channel"))
+            == Some(&serde_json::json!([24, 1, cache_len, 1024]))
+        && payload
+            .get("cache_shapes")
+            .and_then(|value| value.get("cache_last_time"))
+            == Some(&serde_json::json!([24, 1, 1024, 8]))
+}
+
+fn runtime_has_dynamic_config(runtime_dir: &Path) -> bool {
+    fs::read(runtime_dir.join("config.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<JsonValue>(&bytes).ok())
+        .is_some_and(|payload| {
+            let cache_len =
+                if payload.get("model_family").and_then(JsonValue::as_str) == Some("english") {
+                    70
+                } else {
+                    56
+                };
+            dynamic_streaming_metadata_valid(&payload, cache_len)
+        })
 }
 
 fn model_runtime_structure_valid(runtime_dir: &Path) -> bool {
@@ -1730,10 +1828,25 @@ fn profile_installed(runtime_dir: &str, profile: &str) -> bool {
 }
 
 fn profile_runtime_dir(model_root: &str, output_name: &str, ort_format: bool) -> String {
+    let raw = format!("{model_root}/{output_name}");
+    // Generic compact ONNX is specialized/cached per mode by the worker.
+    // Do not select a stale, fixed-mode ORT conversion ahead of the new graph.
+    if runtime_has_dynamic_config(Path::new(&raw)) {
+        return raw;
+    }
     if ort_format {
         format!("{model_root}/{output_name}-ort-format")
     } else {
         format!("{model_root}/{output_name}")
+    }
+}
+
+fn profile_runtime_for_mode(config: &ServiceConfig, output_name: &str, ort_format: bool) -> String {
+    let base = profile_runtime_dir(&config.model_root, output_name, ort_format);
+    if config.streaming_latency_ms == 560 || runtime_has_dynamic_config(Path::new(&base)) {
+        base
+    } else {
+        profile_runtime_dir(&streaming_model_root(config), output_name, ort_format)
     }
 }
 
@@ -1749,19 +1862,48 @@ fn selected_runtime_dir(config: &ServiceConfig) -> String {
     } else {
         profile.output_name
     };
-    profile_runtime_dir(
-        &streaming_model_root(config),
-        output_name,
-        profile.ort_format,
-    )
+    profile_runtime_for_mode(config, output_name, profile.ort_format)
 }
 
 fn streaming_model_root(config: &ServiceConfig) -> String {
-    if config.streaming_latency_ms == 1120 {
-        format!("{}/1120ms", config.model_root)
+    if config.streaming_latency_ms != 560 {
+        format!("{}/{}ms", config.model_root, config.streaming_latency_ms)
     } else {
         config.model_root.clone()
     }
+}
+
+fn supported_streaming_latencies(config: &ServiceConfig) -> Vec<u32> {
+    let runtime = selected_runtime_dir(config);
+    fs::read(Path::new(&runtime).join("config.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<JsonValue>(&bytes).ok())
+        .filter(|payload| {
+            let cache_len = if config.model_family == "english" {
+                70
+            } else {
+                56
+            };
+            dynamic_streaming_metadata_valid(payload, cache_len)
+        })
+        .and_then(|payload| {
+            payload
+                .get("dynamic_streaming")
+                .and_then(|value| value.get("supported_chunk_frames"))
+                .and_then(JsonValue::as_array)
+                .map(|sizes| {
+                    sizes
+                        .iter()
+                        .filter_map(|value| {
+                            value
+                                .as_u64()?
+                                .checked_mul(80)
+                                .and_then(|ms| u32::try_from(ms).ok())
+                        })
+                        .collect::<Vec<_>>()
+                })
+        })
+        .unwrap_or_else(|| vec![560, 1120])
 }
 
 fn model_preset_installed(config: &ServiceConfig, preset: &ModelPresetSpec) -> bool {
@@ -1776,12 +1918,12 @@ fn model_preset_installed(config: &ServiceConfig, preset: &ModelPresetSpec) -> b
     } else {
         profile.output_name
     };
-    let runtime_dir = profile_runtime_dir(
-        &streaming_model_root(config),
-        output_name,
-        profile.ort_format,
-    );
+    let runtime_dir = profile_runtime_for_mode(config, output_name, profile.ort_format);
     profile_installed(&runtime_dir, profile.id)
+        || profile_installed(
+            &profile_runtime_dir(&config.model_root, output_name, profile.ort_format),
+            profile.id,
+        )
 }
 
 fn select_installed_model_profile(config: &mut ServiceConfig) {
@@ -1794,11 +1936,7 @@ fn select_installed_model_profile(config: &mut ServiceConfig) {
         } else {
             profile.output_name
         };
-        let runtime_dir = profile_runtime_dir(
-            &streaming_model_root(config),
-            output_name,
-            profile.ort_format,
-        );
+        let runtime_dir = profile_runtime_for_mode(config, output_name, profile.ort_format);
         if profile_installed(&runtime_dir, profile.id) {
             config.model_profile = profile.id.to_string();
             return;
@@ -2454,6 +2592,7 @@ mod tests {
                 "spoken_punctuation",
                 "stream_insert_delay_ms",
                 "streaming_latency_ms",
+                "supported_streaming_latencies_ms",
                 "worker_path",
             ]
         );
@@ -2842,6 +2981,44 @@ mod tests {
     }
 
     #[test]
+    fn generic_profile_reuses_one_runtime_and_advertises_checkpoint_modes() {
+        let root = unique_temp_dir("generic-profile-modes");
+        let runtime = root.join("nemotron-wordpipe-en-fast-fp32-projected");
+        fs::create_dir_all(&runtime).unwrap();
+        let mut payload = json!({
+            "model_family": "english", "projected_cache": true,
+            "dynamic_quint8_quantization": false,
+            "num_encoder_layers": 24, "hidden_dim": 1024, "conv_context": 8,
+            "cache_shapes": {"cache_last_channel": [24, 1, 70, 1024],
+                             "cache_last_time": [24, 1, 1024, 8]},
+            "dynamic_streaming": {
+                "format": 1, "shape_derived_attention_context": true,
+                "subsampling_factor": 8, "mel_frames_overhead": 9, "cache_len": 70,
+                "default_chunk_frames": 7, "supported_chunk_frames": [1, 2, 7, 14]
+            }
+        });
+        fs::write(runtime.join("config.json"), payload.to_string()).unwrap();
+        for latency in [80, 160, 560, 1120] {
+            let config = ServiceConfig {
+                model_root: root.to_string_lossy().to_string(),
+                model_profile: "fast".into(),
+                model_family: "english".into(),
+                streaming_latency_ms: latency,
+                ..ServiceConfig::default()
+            };
+            assert_eq!(selected_runtime_dir(&config), runtime.to_string_lossy());
+            assert_eq!(
+                supported_streaming_latencies(&config),
+                vec![80, 160, 560, 1120]
+            );
+        }
+        assert!(dynamic_streaming_metadata_valid(&payload, 70));
+        payload["dynamic_streaming"]["supported_chunk_frames"] = json!([1, 3, 7]);
+        assert!(!dynamic_streaming_metadata_valid(&payload, 70));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn profile_metadata_rejects_non_fixed_shape_fast_export() {
         let root = unique_temp_dir("profile-metadata-fast");
         fs::create_dir_all(&root).unwrap();
@@ -2983,6 +3160,24 @@ mod tests {
             &config,
             model_preset("fast").unwrap()
         ));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn selecting_legacy_model_from_small_generic_mode_resets_unsupported_latency() {
+        let root = unique_temp_dir("small-mode-to-legacy");
+        write_test_runtime_profile(&root.join("nemotron-wordpipe-compact-fixed-shape-ort-format"));
+        let mut config = ServiceConfig {
+            model_root: root.to_string_lossy().into(),
+            model_family: "english".into(),
+            model_profile: "fast".into(),
+            streaming_latency_ms: 80,
+            ..ServiceConfig::default()
+        };
+        let preset = model_preset("compact").unwrap();
+        assert!(model_preset_installed(&config, preset));
+        assert!(apply_model_preset(&mut config, preset));
+        assert_eq!(config.streaming_latency_ms, 560);
         fs::remove_dir_all(root).unwrap();
     }
 

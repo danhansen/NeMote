@@ -42,7 +42,7 @@
     <key name="streaming-latency-ms" type="u">
       <default>560</default>
       <summary>Streaming latency</summary>
-      <description>Nemotron streaming chunk duration: 560 or 1120 milliseconds.</description>
+      <description>Streaming chunk duration in milliseconds, selected from the installed model's supported contexts.</description>
     </key>
     <key name="input-device" type="s">
       <default>''</default>

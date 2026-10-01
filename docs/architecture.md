@@ -155,15 +155,17 @@ is not the default runtime target.
 Wordpipe keeps two performance profiles, each available with a multilingual or
 dedicated-English checkpoint:
 
-- `fast`: FP32 projected-cache export, best validated speed/accuracy, largest
+- `fast`: FP32 projected-cache export, larger
   footprint.
-- `compact`: dynamic-int8 projected-cache export with fixed shapes and
-  ORT-format startup, smaller footprint and sub-second load target.
+- `compact`: quantized projected-cache export, smaller footprint.
 
 `wordpipe model-install --profile fast|compact --model-family
 multilingual|english` downloads only the selected variant and installs it under
-`model_root`. Profiles that use ORT startup, currently `compact`, then convert
-the ONNX profile to a local ORT-format runtime cache. All variants can coexist
+`model_root`. Generic English profiles retain dynamic ONNX graphs and use
+mode-specific ORT session optimization/caching; users never export a checkpoint.
+Their supported chunk sizes come from metadata (currently 80/160/560/1120 ms),
+and changing context restarts an idle worker. Legacy fixed compact profiles
+still convert to a local ORT-format runtime cache. All variants can coexist
 under their existing directory names; the service stores `model_profile` and
 `model_family` separately. The reproducible NeMo export pipeline remains
 available with `model-install --build-from-nemo` for release/developer work.

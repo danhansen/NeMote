@@ -83,7 +83,7 @@ class StreamingBundleTests(unittest.TestCase):
                     latency_ms=1120,
                 )
             self.assertEqual(set(downloads), {
-                "wordpipe-streaming-bundle.json", "encoder.1120ms.onnx", "config.1120ms.json",
+                "config.json", "wordpipe-streaming-bundle.json", "encoder.1120ms.onnx", "config.1120ms.json",
             })
             self.assertEqual((runtime / "encoder.shared-weights.data").stat().st_ino,
                              (installed / "encoder.shared-weights.data").stat().st_ino)

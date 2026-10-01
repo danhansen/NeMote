@@ -18,6 +18,18 @@ def _load_script():
 
 
 class PublishWordpipeModelFamilyTests(unittest.TestCase):
+    def test_dynamic_release_does_not_build_additional_mode_exports(self):
+        args = argparse.Namespace(
+            model_family="english", source=None, model_root=Path("/models"),
+            release_root=Path("/release"), python=Path("python"), skip_build=False,
+            upload=False, private=False, revision=None, force=False, force_source=False,
+            keep_build_dir=False, dry_run=False, dynamic_streaming=True, streaming_latency_ms=1120,
+        )
+        commands = _load_script().commands(args)
+        self.assertEqual(len(commands), 4)
+        self.assertTrue(all("--dynamic-streaming" in command for command in commands[:2]))
+        self.assertTrue(all("--1120ms-dir" not in command for command in commands))
+
     def test_english_release_builds_and_publishes_both_profiles(self) -> None:
         module = _load_script()
         args = argparse.Namespace(

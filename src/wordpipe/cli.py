@@ -316,6 +316,8 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         source_is_built_profile,
         streaming_model_root,
         profile_streaming_latency,
+        profile_supports_streaming_latency,
+        profile_is_dynamic,
     )
 
     file_config = _load_cli_config(args)
@@ -325,7 +327,11 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         raise SystemExit("model_root is required")
     latency_ms = getattr(args, "streaming_latency_ms", 560)
     base_model_root = model_root
-    model_root = streaming_model_root(model_root, latency_ms)
+    model_root = (base_model_root if getattr(args, "dynamic_streaming", False)
+                  else streaming_model_root(model_root, latency_ms))
+    base_runtime = profile_runtime_dir(base_model_root, profile, family)
+    if profile_is_dynamic(base_runtime, family):
+        model_root = base_model_root
 
     def report(message: str) -> None:
         print(message, file=sys.stderr, flush=True)
@@ -341,7 +347,7 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         and source_candidate is None
         and model_runtime_dir_valid(runtime_dir)
     ):
-        if profile_streaming_latency(runtime_dir) != latency_ms:
+        if not profile_supports_streaming_latency(runtime_dir, latency_ms):
             raise SystemExit("installed model streaming latency does not match the requested mode")
         runtime_dir = ensure_profile_completion_marker(model_root, profile, family)
         report(f"Using installed model profile: {runtime_dir}")
@@ -350,8 +356,10 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
     if source_candidate is not None and source_candidate.exists() and (
         source_is_built_profile(source_candidate) or source_may_be_built_profile_archive(source_candidate)
     ):
-        if source_candidate.is_dir() and profile_streaming_latency(source_candidate) != latency_ms:
+        if source_candidate.is_dir() and not profile_supports_streaming_latency(source_candidate, latency_ms):
             raise SystemExit("source model streaming latency does not match the requested mode")
+        if source_candidate.is_dir() and profile_is_dynamic(source_candidate, family):
+            model_root = base_model_root
         runtime_dir = install_built_profile(
             source=source_candidate,
             model_root=model_root,
@@ -390,15 +398,23 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         if args.dry_run:
             print(source_path)
             return 0
-        if profile_streaming_latency(source_path) != latency_ms:
+        if not profile_supports_streaming_latency(source_path, latency_ms):
             raise SystemExit("downloaded model streaming latency does not match the requested mode")
+        upgrading_for_new_mode = False
+        if profile_is_dynamic(source_path, family):
+            model_root = base_model_root
+            upgrading_for_new_mode = latency_ms != 560 and not profile_supports_streaming_latency(
+                profile_runtime_dir(base_model_root, profile, family), latency_ms,
+            )
+            if upgrading_for_new_mode:
+                report("Installing a generic encoder supporting the checkpoint's chunk sizes")
         runtime_dir = install_prebuilt_profile(
             source=source_path,
             model_root=model_root,
             profile=profile,
             family=family,
             python=Path(args.python).expanduser(),
-            force=args.force,
+            force=args.force or upgrading_for_new_mode,
             progress=report,
         )
         print(runtime_dir)
@@ -438,6 +454,7 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
         keep_build_dir=args.keep_build_dir,
         progress=report,
         **({"streaming_latency_ms": latency_ms} if latency_ms != 560 else {}),
+        **({"dynamic_streaming": True} if getattr(args, "dynamic_streaming", False) else {}),
     )
     print(runtime_dir)
     return 0
@@ -1139,9 +1156,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     model_install.add_argument("--config", help="Path to config.toml.")
     model_install.add_argument(
-        "--streaming-latency-ms", type=int, choices=(560, 1120), default=560,
-        help="Streaming lookahead mode. 1120 ms models are stored separately from existing 560 ms models.",
+        "--streaming-latency-ms", type=int, default=560,
+        help="Streaming lookahead mode. Generic exports share one model across both sizes.",
     )
+    model_install.add_argument("--dynamic-streaming", action="store_true",
+                              help="With --build-from-nemo, export one generic encoder for both modes.")
     model_install.add_argument(
         "--profile",
         choices=("fast", "compact"),

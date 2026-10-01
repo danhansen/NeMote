@@ -31,12 +31,45 @@ from wordpipe.models import (
     profile_build_dir,
     profile_runtime_dir_valid,
     profile_runtime_dir,
+    profile_supports_streaming_latency,
+    profile_is_dynamic,
+    profile_streaming_latency,
     source_may_be_built_profile_archive,
     source_is_built_profile,
 )
 
 
 class ModelDownloadTests(unittest.TestCase):
+    def test_generic_profile_advertises_metadata_modes_without_separate_exports(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = Path(tmp)
+            config = {
+                "model_family": "english", "num_encoder_layers": 24,
+                "hidden_dim": 1024, "conv_context": 8,
+                "cache_shapes": {"cache_last_channel": [24, 1, 70, 1024],
+                                 "cache_last_time": [24, 1, 1024, 8]},
+                "dynamic_streaming": {
+                    "format": 1, "shape_derived_attention_context": True,
+                    "subsampling_factor": 8, "mel_frames_overhead": 9,
+                    "cache_len": 70, "default_chunk_frames": 7,
+                    "supported_chunk_frames": [1, 2, 7, 14],
+                },
+            }
+            (runtime / "config.json").write_text(json.dumps(config))
+            self.assertTrue(profile_is_dynamic(runtime, "english"))
+            for latency in (80, 160, 560, 1120):
+                self.assertTrue(profile_supports_streaming_latency(runtime, latency))
+            self.assertFalse(profile_supports_streaming_latency(runtime, 240))
+            config["right_context"] = 0
+            config["dynamic_streaming"]["default_chunk_frames"] = 1
+            (runtime / "config.json").write_text(json.dumps(config))
+            self.assertTrue(profile_is_dynamic(runtime, "english"))
+            self.assertEqual(profile_streaming_latency(runtime), 80)
+            config["dynamic_streaming"]["supported_chunk_frames"] = [1, 3, 7]
+            (runtime / "config.json").write_text(json.dumps(config))
+            self.assertFalse(profile_is_dynamic(runtime, "english"))
+            self.assertFalse(profile_supports_streaming_latency(runtime, 560))
+
     def test_model_file_url(self) -> None:
         self.assertEqual(
             model_file_url(DEFAULT_MODEL_REPO, "tokens.txt"),

@@ -1386,7 +1386,7 @@ checksum = "d7b497d21a8b6fbb4b5a544f8fadb77e801a09ae0add9e411d31c6f89e3c1e90"
 [[package]]
 name = "parakeet-rs"
 version = "0.3.6"
-source = "git+https://github.com/danhansen/parakeet-rs?rev=afbc6ba32c35a076e2057a8e1655da18c1f82811#afbc6ba32c35a076e2057a8e1655da18c1f82811"
+source = "git+https://github.com/danhansen/parakeet-rs?rev=5d24800e435a48bcca28380cff3876f236cacce9#5d24800e435a48bcca28380cff3876f236cacce9"
 dependencies = [
  "eyre",
  "hound",
@@ -2309,7 +2309,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wordpipe-parakeet-worker"
-version = "0.1.0"
+version = "0.1.19"
 dependencies = [
  "anyhow",
  "clap",
@@ -2323,11 +2323,11 @@ dependencies = [
 
 [[package]]
 name = "wordpipe-protocol"
-version = "0.1.0"
+version = "0.1.19"
 
 [[package]]
 name = "wordpipe-service"
-version = "0.1.0"
+version = "0.1.19"
 dependencies = [
  "anyhow",
  "clap",
