@@ -7,6 +7,8 @@ cd "$ROOT"
 run_tests() {
   cargo fmt --all -- --check
   cargo test --locked --workspace
+  bash scripts/build-nemo-worker
+  ctest --test-dir "${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}" --output-on-failure
   python3 scripts/probe_ort_shape_specialization.py --fixture-dir build/test-fixtures/ort
   local task_ort_dylib
   task_ort_dylib=$(python3 -c 'import pathlib, onnxruntime; print(next((pathlib.Path(onnxruntime.__file__).parent / "capi").glob("libonnxruntime.so.*")))')

@@ -91,6 +91,7 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
     --manifest-path "$ROOT/Cargo.toml" \
     -p wordpipe-service \
     -p wordpipe-parakeet-worker
+  bash "$ROOT/scripts/build-nemo-worker"
 fi
 
 rm -rf "$WORK_DIR"
@@ -105,6 +106,31 @@ mkdir -p \
 
 install -m 0755 "$RUST_TARGET_DIR/release/wordpipe-service" "$STAGE_ROOT/bin/wordpipe-service"
 install -m 0755 "$RUST_TARGET_DIR/release/wordpipe-parakeet-worker" "$STAGE_ROOT/bin/wordpipe-parakeet-worker"
+NEMO_WORKER_BUILD="${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}"
+NEMO_SOURCE="${WORDPIPE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}"
+NEMO_BUILD="${WORDPIPE_NEMO_BUILD:-$NEMO_SOURCE/build/wordpipe-cpu}"
+cmake --install "$NEMO_WORKER_BUILD" --prefix "$STAGE_ROOT"
+mkdir -p "$STAGE_ROOT/lib/nemo" "$STAGE_ROOT/share/wordpipe/licenses/nemo"
+cp -a "$NEMO_BUILD/bin/"*.so* "$STAGE_ROOT/lib/nemo/"
+# The reproducible Debian build links the system SentencePiece shared library.
+# Bundle it as well: users must not need development packages to run the worker.
+task_sentencepiece=$(ldd "$NEMO_BUILD/bin/libnemo_speech_asr.so" | awk '/libsentencepiece\.so/ {print $3}')
+if [[ -n "$task_sentencepiece" ]]; then
+  if [[ "$task_sentencepiece" != /* || ! -f "$task_sentencepiece" ]]; then
+    echo "SentencePiece runtime dependency is missing" >&2
+    exit 1
+  fi
+  cp -L "$task_sentencepiece" "$STAGE_ROOT/lib/nemo/$(basename "$task_sentencepiece")"
+  install -m 0644 /usr/share/doc/libsentencepiece0/copyright \
+    "$STAGE_ROOT/share/wordpipe/licenses/nemo/sentencepiece-copyright"
+fi
+install -m 0644 "$NEMO_SOURCE/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/LICENSE"
+install -m 0644 "$NEMO_SOURCE/NOTICE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/NOTICE"
+install -m 0644 "$NEMO_SOURCE/THIRD_PARTY_NOTICES.md" "$STAGE_ROOT/share/wordpipe/licenses/nemo/THIRD_PARTY_NOTICES.md"
+install -m 0644 "$NEMO_SOURCE/llama.cpp/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/llama-LICENSE"
+install -m 0644 "$NEMO_SOURCE/third_party/miniaudio/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/miniaudio-LICENSE"
+install -m 0644 "$NEMO_SOURCE/ggml/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/ggml-LICENSE"
+install -m 0644 "$NEMO_SOURCE/llama.cpp/licenses/LICENSE-jsonhpp" "$STAGE_ROOT/share/wordpipe/licenses/nemo/json-LICENSE"
 install -m 0644 "$ROOT/packaging/requirements-release-model-install.txt" \
   "$STAGE_ROOT/share/wordpipe/requirements-model-install.txt"
 

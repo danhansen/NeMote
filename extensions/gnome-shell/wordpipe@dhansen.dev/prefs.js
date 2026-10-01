@@ -56,6 +56,7 @@ const PROFILES = [
 
 const BACKENDS = [
     ['parakeet', 'Parakeet'],
+    ['nemo-speech', 'NeMo-Speech.cpp'],
 ];
 
 const SHORTCUT_MODES = [
@@ -719,6 +720,7 @@ class WordpipePage extends Adw.PreferencesPage {
             (_proxy, _sender, [config]) => {
                 this._syncFromConfig(deepUnpackMap(config));
                 this._refreshModelProfiles();
+                this._refreshInputDevices();
             }));
         this._signalIds.push(this._proxy.connectSignal('InstallProgress',
             (_proxy, _sender, [profile, progress]) => {

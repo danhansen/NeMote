@@ -326,6 +326,20 @@ def _cmd_model_install_family(args: argparse.Namespace, family: str) -> int:
     if model_root is None:
         raise SystemExit("model_root is required")
     latency_ms = getattr(args, "streaming_latency_ms", 560)
+    if profile == "nemo-q8":
+        from .nemo_models import install_nemo_model
+        if latency_ms not in (80, 160, 560, 1120):
+            raise SystemExit("NeMo supports 80, 160, 560, and 1120 ms chunks")
+        if args.build_from_nemo or args.prebuilt_repo:
+            raise SystemExit("NeMo Q8 uses the official GGUF; no local export or repo override is needed")
+        if args.dry_run:
+            print(profile_runtime_dir(model_root, profile, family))
+            return 0
+        print(install_nemo_model(model_root, family,
+            source=Path(args.source).expanduser() if args.source else None,
+            force=args.force or args.force_source,
+            progress=lambda message: print(message, file=sys.stderr, flush=True)))
+        return 0
     base_model_root = model_root
     model_root = (base_model_root if getattr(args, "dynamic_streaming", False)
                   else streaming_model_root(model_root, latency_ms))
@@ -467,6 +481,8 @@ def _cmd_model_profiles(args: argparse.Namespace) -> int:
     model_root = Path(args.model_root).expanduser() if args.model_root else file_config.model_root
     rows = []
     presets = (
+        ("nemo-q8", "NeMo Q8 (multilingual)", "multilingual"),
+        ("nemo-q8-english", "NeMo Q8 (English only)", "english"),
         ("compact", "compact", "multilingual"),
         ("compact-english", "compact (English only, lower WER)", "english"),
         ("fast", "fast", "multilingual"),
@@ -481,6 +497,7 @@ def _cmd_model_profiles(args: argparse.Namespace) -> int:
             {
                 "name": name,
                 "title": title,
+                "backend": "nemo-speech" if profile == "nemo-q8" else "parakeet",
                 "model_profile": profile,
                 "model_family": family,
                 "description": spec.description,
@@ -498,7 +515,6 @@ def _cmd_model_profiles(args: argparse.Namespace) -> int:
             print(f"{row['name']}: {state}")
             print(f"  {row['description']}")
             print(f"  runtime: {row['runtime_dir']}")
-            print(f"  english: {row['runtime_dirs']['english']}")
     return 0
 
 
@@ -1163,7 +1179,7 @@ def build_parser() -> argparse.ArgumentParser:
                               help="With --build-from-nemo, export one generic encoder for both modes.")
     model_install.add_argument(
         "--profile",
-        choices=("fast", "compact"),
+        choices=("fast", "compact", "nemo-q8"),
         help="Profile to build. Defaults to config.toml model_profile.",
     )
     model_install.add_argument(

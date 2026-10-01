@@ -10,13 +10,31 @@ pub const DEFAULT_LANGUAGE: &str = "en-US";
 pub const DEFAULT_SAMPLE_RATE: u32 = 16_000;
 pub const DEFAULT_NUM_THREADS: u32 = 2;
 
-pub const BACKENDS: &[BackendSpec] = &[BackendSpec {
-    id: "parakeet",
-    title: "Parakeet",
-    description: "Rust parakeet-rs Nemotron streaming backend",
-}];
+pub const BACKENDS: &[BackendSpec] = &[
+    BackendSpec {
+        id: "parakeet",
+        title: "Parakeet",
+        description: "Rust parakeet-rs Nemotron streaming backend",
+    },
+    BackendSpec {
+        id: "nemo-speech",
+        title: "NeMo-Speech.cpp",
+        description: "Native C++ streaming backend using NVIDIA's Q8 GGUF",
+    },
+];
 
 pub const MODEL_PROFILES: &[ModelProfileSpec] = &[
+    ModelProfileSpec {
+        id: "nemo-q8",
+        title: "NeMo Q8",
+        description: "NVIDIA Q8_0 GGUF; native NeMo-Speech.cpp frontend and decoder.",
+        build_profile: "nemo-q8",
+        output_name: "nemotron-nemo-q8",
+        prebuilt_repo: "nvidia/nemotron-3.5-asr-streaming-0.6b",
+        english_output_name: "nemotron-nemo-en-q8",
+        english_prebuilt_repo: "nvidia/nemotron-speech-streaming-en-0.6b",
+        ort_format: false,
+    },
     ModelProfileSpec {
         id: "fast",
         title: "Fast",
@@ -42,6 +60,18 @@ pub const MODEL_PROFILES: &[ModelProfileSpec] = &[
 ];
 
 pub const MODEL_PRESETS: &[ModelPresetSpec] = &[
+    ModelPresetSpec {
+        id: "nemo-q8",
+        title: "NeMo Q8 (multilingual)",
+        model_profile: "nemo-q8",
+        model_family: "multilingual",
+    },
+    ModelPresetSpec {
+        id: "nemo-q8-english",
+        title: "NeMo Q8 (English only)",
+        model_profile: "nemo-q8",
+        model_family: "english",
+    },
     ModelPresetSpec {
         id: "compact",
         title: "compact",
@@ -273,6 +303,14 @@ pub fn is_backend(value: &str) -> bool {
     BACKENDS.iter().any(|backend| backend.id == value)
 }
 
+pub fn backend_for_profile(profile: &str) -> &'static str {
+    if profile == "nemo-q8" {
+        "nemo-speech"
+    } else {
+        "parakeet"
+    }
+}
+
 pub fn is_model_profile(value: &str) -> bool {
     MODEL_PROFILES.iter().any(|profile| profile.id == value)
 }
@@ -410,6 +448,8 @@ mod tests {
                 .map(|preset| preset.title)
                 .collect::<Vec<_>>(),
             [
+                "NeMo Q8 (multilingual)",
+                "NeMo Q8 (English only)",
                 "compact",
                 "compact (English only, lower WER)",
                 "fast",

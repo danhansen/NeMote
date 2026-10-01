@@ -42,6 +42,10 @@ def parse_args() -> argparse.Namespace:
                         help="Lower Conformer unit-kernel pointwise convs to MatMul before quantization.")
     parser.add_argument("--pointwise-parity-output", type=Path,
                         help="Verify lowered FP32 encoder against dynamic native fixtures before quantization.")
+    parser.add_argument("--depthwise-integer-float-kernel", action="store_true",
+                        help="Use FP32 for exact, integer-valued depthwise kernels after quantization.")
+    parser.add_argument("--depthwise-parity-output", type=Path,
+                        help="Require bit-exact generic/specialized encoder equivalence before promotion.")
     parser.add_argument(
         "--projected-cache",
         action=argparse.BooleanOptionalAction,
@@ -203,6 +207,26 @@ def main() -> None:
     else:
         final_encoder.write_bytes(encoder_for_projected.read_bytes())
 
+    depthwise_count = 0
+    if args.depthwise_integer_float_kernel:
+        if not args.quantize:
+            raise ValueError("integer depthwise lowering requires a quantized encoder")
+        if args.depthwise_parity_output is None:
+            raise ValueError("integer depthwise lowering requires --depthwise-parity-output")
+        from dequantize_nemotron_conv_blocks import rewrite_integer_depthwise_file
+        rewritten_encoder = model_dir / "encoder.depthwise-integer.onnx"
+        depthwise_count = rewrite_integer_depthwise_file(final_encoder, rewritten_encoder)
+        expected = load_config(model_dir)["num_encoder_layers"]
+        if depthwise_count != expected:
+            raise ValueError(f"incomplete depthwise kernel rewrite: {depthwise_count}/{expected}")
+        from verify_nemotron_encoder_rewrite import verify
+        report = verify(final_encoder, rewritten_encoder, model_dir / "dynamic-reference")
+        args.depthwise_parity_output.parent.mkdir(parents=True, exist_ok=True)
+        args.depthwise_parity_output.write_text(json.dumps(report, indent=2) + "\n")
+        rewritten_encoder.replace(final_encoder)
+    elif args.depthwise_parity_output is not None:
+        raise ValueError("--depthwise-parity-output requires integer depthwise lowering")
+
     if args.ort_optimize_final:
         optimized_encoder = model_dir / "encoder.ort_optimized.onnx"
         ort_optimize_to_file(
@@ -216,6 +240,7 @@ def main() -> None:
     config = load_config(model_dir)
     config["projected_cache"] = args.projected_cache
     config["pointwise_linear_rewrite_count"] = pointwise_count
+    config["depthwise_integer_float_rewrite_count"] = depthwise_count
     config["projected_cache_current_projection"] = current_projection if args.projected_cache else None
     config["dynamic_quint8_quantization"] = args.quantize
     config["dynamic_quint8_per_channel"] = args.quantize_per_channel if args.quantize else False

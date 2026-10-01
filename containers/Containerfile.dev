@@ -8,9 +8,11 @@ RUN rustup component add rustfmt
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
+        cmake \
         git \
         libasound2-dev \
         libglib2.0-bin \
+        libsentencepiece-dev \
         nodejs \
         pkg-config \
         python3 \

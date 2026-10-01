@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# The C++ API is source-versioned: build headers and libraries from one revision.
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+REVISION=4c101bc7113f49101a3e11d2c994c519f41939f6
+GGML_REVISION=c03b4e2bcece5134827881af90242086daf75be5
+SOURCE=${WORDPIPE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}
+UPSTREAM_BUILD=${WORDPIPE_NEMO_BUILD:-$SOURCE/build/wordpipe-cpu}
+WORKER_BUILD=${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}
+if [[ ! -d "$SOURCE" ]]; then
+  git clone --no-checkout https://github.com/NVIDIA/NeMo-Speech.cpp.git "$SOURCE"
+  git -C "$SOURCE" checkout --detach "$REVISION"
+  git -C "$SOURCE" submodule update --init --recursive
+fi
+if [[ "$(git -C "$SOURCE" rev-parse HEAD)" != "$REVISION" ]]; then
+  echo "NeMo headers/libraries must match pinned revision $REVISION" >&2
+  exit 1
+fi
+if [[ "$(git -C "$SOURCE/ggml" rev-parse HEAD)" != "$GGML_REVISION" ]]; then
+  echo "NeMo requires its pinned ggml submodule $GGML_REVISION" >&2
+  exit 1
+fi
+# Upstream pins stock ggml and ships required runtime extensions separately.
+# Its setup script verifies the complete patch series and is safe to rerun.
+bash "$SOURCE/scripts/apply-ggml-patches.sh"
+if [[ ! -f "$UPSTREAM_BUILD/bin/libnemo_speech_asr.so" ]]; then
+  cmake -S "$SOURCE" -B "$UPSTREAM_BUILD" -DCMAKE_BUILD_TYPE=Release \
+    -DSENTENCEPIECE_STATIC_LIB=OFF -USENTENCEPIECE_INCLUDE_DIR \
+    -DNEMO_SPEECH_DEPENDENCY_PREFIX="$UPSTREAM_BUILD/deps" \
+    -DNEMO_SPEECH_BUILD_ASR=ON -DNEMO_SPEECH_BUILD_CLI=OFF \
+    -DNEMO_SPEECH_BUILD_TTS=OFF -DNEMO_SPEECH_BUILD_NMT=OFF \
+    -DNEMO_SPEECH_BUILD_DIAR=OFF -DNEMO_SPEECH_BUILD_S2S=OFF -DNEMO_SPEECH_WITH_NORM=OFF \
+    -DNEMO_SPEECH_WITH_FLASHLIGHT=OFF -DBUILD_TESTING=OFF \
+    -DNEMO_SPEECH_BUILD_GRPC=OFF -DNEMO_SPEECH_BUILD_HTTP=OFF \
+    -DNEMO_SPEECH_BUILD_TESTS=OFF -DNEMO_SPEECH_BUILD_TOOLS=OFF \
+    -DNEMO_SPEECH_BUILD_EXAMPLES=OFF -DGGML_CUDA=OFF -DGGML_NATIVE=OFF
+  cmake --build "$UPSTREAM_BUILD" --target nemo_speech_asr -j "${WORDPIPE_BUILD_JOBS:-2}"
+fi
+cmake -S "$ROOT/native/wordpipe-nemo-worker" -B "$WORKER_BUILD" \
+  -DCMAKE_BUILD_TYPE=Release -DNEMO_SPEECH_SOURCE_DIR="$SOURCE" \
+  -DNEMO_SPEECH_LIBRARY_DIR="$UPSTREAM_BUILD/bin"
+cmake --build "$WORKER_BUILD" -j "${WORDPIPE_BUILD_JOBS:-2}"

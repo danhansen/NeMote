@@ -46,7 +46,7 @@ PREBUILT_PROFILE_FILES = (
 REQUIRED_PREBUILT_PROFILE_FILES = ("tokenizer.model", "encoder.onnx", "decoder_joint.onnx")
 PROFILE_COMPLETION_MARKER = ".wordpipe-profile.json"
 RANGED_DOWNLOAD_MIN_SIZE = 64 * 1024 * 1024
-ModelProfile = Literal["fast", "compact"]
+ModelProfile = Literal["fast", "compact", "nemo-q8"]
 ModelFamily = Literal["multilingual", "english"]
 ProgressCallback = Callable[[str], None]
 
@@ -106,6 +106,14 @@ class _PrebuiltFile:
 
 
 MODEL_PROFILES: dict[ModelProfile, ModelProfileSpec] = {
+    "nemo-q8": ModelProfileSpec(
+        name="nemo-q8", title="NeMo Q8",
+        description="NVIDIA Q8_0 GGUF; native NeMo-Speech.cpp frontend and decoder.",
+        build_profile="nemo-q8", output_name="nemotron-nemo-q8",
+        prebuilt_repo="nvidia/nemotron-3.5-asr-streaming-0.6b",
+        english_output_name="nemotron-nemo-en-q8",
+        english_prebuilt_repo="nvidia/nemotron-speech-streaming-en-0.6b",
+    ),
     "fast": ModelProfileSpec(
         name="fast",
         title="Fast",
@@ -280,6 +288,8 @@ def profile_is_dynamic(runtime_dir: Path, family: ModelFamily = "multilingual") 
 
 
 def profile_supports_streaming_latency(runtime_dir: Path, latency_ms: int) -> bool:
+    if (runtime_dir / "model.gguf").is_file():
+        return latency_ms in (80, 160, 560, 1120)
     if latency_ms <= 0 or latency_ms % 80:
         return False
     try:
@@ -341,6 +351,14 @@ def profile_runtime_dir_valid(
     profile: str,
     family: ModelFamily = "multilingual",
 ) -> bool:
+    if profile == "nemo-q8":
+        from .nemo_models import MODELS
+        path = runtime_dir / "model.gguf"
+        try:
+            with path.open("rb") as model:
+                return path.stat().st_size == MODELS[family][3] and model.read(4) == b"GGUF"
+        except OSError:
+            return False
     return model_runtime_dir_valid(runtime_dir) and _profile_config_valid_if_present(
         runtime_dir, profile, family
     )

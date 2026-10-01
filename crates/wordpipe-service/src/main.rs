@@ -13,11 +13,11 @@ use futures_lite::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use wordpipe_protocol::{
-    is_backend, is_english_language, is_language, is_model_family, is_model_profile,
-    language_available_for_model_family, model_preset, model_preset_id, ModelPresetSpec, BACKENDS,
-    BUS_NAME, DEFAULT_BACKEND, DEFAULT_LANGUAGE, DEFAULT_MODEL_FAMILY, DEFAULT_MODEL_PROFILE,
-    DEFAULT_NUM_THREADS, DEFAULT_SAMPLE_RATE, DEFAULT_SHORTCUT, MODEL_PRESETS, MODEL_PROFILES,
-    OBJECT_PATH,
+    backend_for_profile, is_backend, is_english_language, is_language, is_model_family,
+    is_model_profile, language_available_for_model_family, model_preset, model_preset_id,
+    ModelPresetSpec, BACKENDS, BUS_NAME, DEFAULT_BACKEND, DEFAULT_LANGUAGE, DEFAULT_MODEL_FAMILY,
+    DEFAULT_MODEL_PROFILE, DEFAULT_NUM_THREADS, DEFAULT_SAMPLE_RATE, DEFAULT_SHORTCUT,
+    MODEL_PRESETS, MODEL_PROFILES, OBJECT_PATH,
 };
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedValue, Value};
@@ -338,13 +338,14 @@ impl WordpipeService {
     }
 
     fn list_model_profiles(&self) -> Vec<VariantMap> {
-        let model_root = self
+        let config = self
             .data
             .lock()
-            .map(|data| streaming_model_root(&data.config))
+            .map(|data| data.config.clone())
             .unwrap_or_default();
         MODEL_PRESETS
             .iter()
+            .filter(|preset| backend_for_profile(preset.model_profile) == config.backend)
             .filter_map(|preset| {
                 let profile = MODEL_PROFILES
                     .iter()
@@ -360,7 +361,8 @@ impl WordpipeService {
                 } else {
                     profile.prebuilt_repo
                 };
-                let runtime_dir = profile_runtime_dir(&model_root, output_name, profile.ort_format);
+                let runtime_dir =
+                    profile_runtime_for_mode(&config, output_name, profile.ort_format);
                 let mut item = VariantMap::new();
                 insert_str(&mut item, "id", preset.id);
                 insert_str(&mut item, "title", preset.title);
@@ -383,6 +385,32 @@ impl WordpipeService {
     }
 
     fn list_input_devices(&self) -> zbus::fdo::Result<Vec<VariantMap>> {
+        let config = self.lock_data()?.config.clone();
+        if config.backend == "nemo-speech" {
+            let output = Command::new(worker_path_for_backend(&config))
+                .arg("--list-input-devices")
+                .output()
+                .map_err(|err| fdo_failed(err.into()))?;
+            if !output.status.success() {
+                return Err(zbus::fdo::Error::Failed(
+                    String::from_utf8_lossy(&output.stderr).into_owned(),
+                ));
+            }
+            return String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .map(|line| {
+                    let event: JsonValue =
+                        serde_json::from_str(line).map_err(|err| fdo_failed(err.into()))?;
+                    let device = &event["data"];
+                    Ok(input_device_map(
+                        device["index"].as_u64().unwrap_or(0) as u32,
+                        device["name"].as_str().unwrap_or("unknown"),
+                        device["is_default"].as_bool().unwrap_or(false),
+                    ))
+                })
+                .collect();
+        }
         enumerate_input_devices().map_err(fdo_failed)
     }
 
@@ -398,7 +426,23 @@ impl WordpipeService {
         }
         let (config_data, config, state) = {
             let mut data = self.lock_data()?;
+            let changed_backend = data.config.backend != backend;
             data.config.backend = backend.to_string();
+            if backend_for_profile(&data.config.model_profile) != backend {
+                data.config.model_profile = if backend == "nemo-speech" {
+                    "nemo-q8"
+                } else {
+                    DEFAULT_MODEL_PROFILE
+                }
+                .to_string();
+            }
+            if changed_backend {
+                data.config.input_device.clear(); // Device indexes belong to the capture backend.
+            }
+            let supported = supported_streaming_latencies(&data.config);
+            if !supported.contains(&data.config.streaming_latency_ms) {
+                data.config.streaming_latency_ms = supported[0];
+            }
             shutdown_worker(&mut data);
             let config_data = data.config.clone();
             let config = config_map(&data.config);
@@ -1028,10 +1072,7 @@ impl WordpipeService {
                 text
             };
             data.seq = data.seq.saturating_add(1);
-            let delta = text
-                .strip_prefix(&data.partial_text)
-                .unwrap_or(&text)
-                .to_string();
+            let delta = insertion_delta(&data.config.backend, &data.partial_text, &text);
             data.partial_text = text.clone();
             data.last_metrics = metrics.clone();
             (data.session_id, data.seq, delta, text)
@@ -1148,12 +1189,18 @@ fn model_installer_command(
 }
 
 fn apply_model_preset(config: &mut ServiceConfig, preset: &ModelPresetSpec) -> bool {
-    let changed =
-        config.model_profile != preset.model_profile || config.model_family != preset.model_family;
+    let changed = config.model_profile != preset.model_profile
+        || config.model_family != preset.model_family
+        || config.backend != backend_for_profile(preset.model_profile);
     if !changed {
         return false;
     }
     config.model_profile = preset.model_profile.to_string();
+    let backend = backend_for_profile(preset.model_profile);
+    if config.backend != backend {
+        config.input_device.clear();
+    }
+    config.backend = backend.to_string();
     config.model_family = preset.model_family.to_string();
     let supported = supported_streaming_latencies(config);
     if !supported.contains(&config.streaming_latency_ms) {
@@ -1422,6 +1469,14 @@ fn apply_persisted_config(
     }
     if let Some(value) = persisted.show_overlay {
         config.show_overlay = value;
+    }
+    if backend_for_profile(&config.model_profile) != config.backend {
+        config.model_profile = if config.backend == "nemo-speech" {
+            "nemo-q8"
+        } else {
+            DEFAULT_MODEL_PROFILE
+        }
+        .to_string();
     }
     Ok(config)
 }
@@ -1816,6 +1871,25 @@ fn legacy_model_runtime_dir_valid(runtime_dir: &Path) -> bool {
 
 fn profile_installed(runtime_dir: &str, profile: &str) -> bool {
     let path = Path::new(runtime_dir);
+    if profile == "nemo-q8" {
+        return fs::File::open(path.join("model.gguf"))
+            .and_then(|mut file| {
+                use std::io::Read;
+                let mut magic = [0u8; 4];
+                let expected_size = if path
+                    .file_name()
+                    .is_some_and(|name| name == "nemotron-nemo-en-q8")
+                {
+                    699872960
+                } else {
+                    742090464
+                };
+                let size = file.metadata()?.len();
+                file.read_exact(&mut magic)
+                    .map(|()| magic == *b"GGUF" && size == expected_size)
+            })
+            .unwrap_or(false);
+    }
     if model_runtime_dir_valid(path) {
         model_profile_metadata_valid_if_present(path, profile)
     } else {
@@ -1843,6 +1917,9 @@ fn profile_runtime_dir(model_root: &str, output_name: &str, ort_format: bool) ->
 
 fn profile_runtime_for_mode(config: &ServiceConfig, output_name: &str, ort_format: bool) -> String {
     let base = profile_runtime_dir(&config.model_root, output_name, ort_format);
+    if output_name.starts_with("nemotron-nemo-") {
+        return base;
+    }
     if config.streaming_latency_ms == 560 || runtime_has_dynamic_config(Path::new(&base)) {
         base
     } else {
@@ -1874,6 +1951,9 @@ fn streaming_model_root(config: &ServiceConfig) -> String {
 }
 
 fn supported_streaming_latencies(config: &ServiceConfig) -> Vec<u32> {
+    if config.backend == "nemo-speech" {
+        return vec![80, 160, 560, 1120];
+    }
     let runtime = selected_runtime_dir(config);
     fs::read(Path::new(&runtime).join("config.json"))
         .ok()
@@ -1931,6 +2011,9 @@ fn select_installed_model_profile(config: &mut ServiceConfig) {
         return;
     }
     for profile in MODEL_PROFILES {
+        if backend_for_profile(profile.id) != config.backend {
+            continue;
+        }
         let output_name = if config.model_family == "english" {
             profile.english_output_name
         } else {
@@ -2157,11 +2240,27 @@ fn find_ort_in_venv(venv: &Path) -> Option<PathBuf> {
     None
 }
 
+fn worker_path_for_backend(config: &ServiceConfig) -> PathBuf {
+    if config.backend == "nemo-speech" {
+        if let Some(path) = std::env::var_os("WORDPIPE_NEMO_WORKER") {
+            return PathBuf::from(path);
+        }
+        let path = Path::new(&config.worker_path);
+        if path
+            .file_name()
+            .is_some_and(|name| name == "wordpipe-parakeet-worker")
+        {
+            return path.with_file_name("wordpipe-nemo-worker");
+        }
+    }
+    PathBuf::from(&config.worker_path)
+}
+
 fn spawn_worker(
     config: &ServiceConfig,
     runtime_dir: &str,
 ) -> Result<(WorkerProcess, std::process::ChildStdout)> {
-    let mut command = Command::new(&config.worker_path);
+    let mut command = Command::new(worker_path_for_backend(config));
     command
         .arg("--model-dir")
         .arg(runtime_dir)
@@ -2173,24 +2272,30 @@ fn spawn_worker(
         .arg(&config.language)
         .arg("--chunk-samples")
         .arg((config.streaming_latency_ms * 16).to_string())
-        .arg("--ort-optimized-model-cache-dir")
-        .arg(Path::new(&config.model_root).join("runtime-cache"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit());
+    if config.backend == "parakeet" {
+        command
+            .arg("--ort-optimized-model-cache-dir")
+            .arg(Path::new(&config.model_root).join("runtime-cache"));
+    }
     if !config.input_device.is_empty() {
         command.arg("--input-device").arg(&config.input_device);
     }
     if std::env::var_os("ORT_DYLIB_PATH").is_none() {
-        if let Some(path) = default_ort_dylib_path() {
+        if let Some(path) = (config.backend == "parakeet")
+            .then(default_ort_dylib_path)
+            .flatten()
+        {
             command.env("ORT_DYLIB_PATH", path);
         }
     }
     apply_worker_thread_env(&mut command, config.num_threads);
     let mut child = command.spawn().with_context(|| {
         format!(
-            "failed to start ASR worker '{}'; build/install wordpipe-parakeet-worker or set WORDPIPE_WORKER",
-            config.worker_path
+            "failed to start {} ASR worker '{}'; build/install its worker executable or configure the worker path",
+            config.backend, worker_path_for_backend(config).display()
         )
     })?;
     let stdin = child
@@ -2257,6 +2362,15 @@ fn shutdown_worker(data: &mut ServiceData) {
 fn normalize_spoken_punctuation(text: &str) -> String {
     let words: Vec<&str> = text.split_whitespace().collect();
     normalize_spoken_words(&words)
+}
+
+fn insertion_delta(backend: &str, previous: &str, text: &str) -> String {
+    // Supported Nemotron greedy RNN-T models append tokens/text. Never insert
+    // an entire non-prefix native snapshot if a future SDK violates that contract.
+    if backend == "nemo-speech" {
+        return text.strip_prefix(previous).unwrap_or_default().to_string();
+    }
+    text.strip_prefix(previous).unwrap_or(text).to_string()
 }
 
 fn normalize_spoken_punctuation_partial(text: &str) -> String {
@@ -2497,6 +2611,84 @@ fn json_to_variant_map(value: &JsonValue) -> VariantMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_append_only_text_streams_without_duplicating_a_non_prefix_snapshot() {
+        assert_eq!(insertion_delta("nemo-speech", "", "a partial"), "a partial");
+        assert_eq!(
+            insertion_delta("nemo-speech", "a partial", "a partial continues"),
+            " continues"
+        );
+        assert_eq!(
+            insertion_delta("nemo-speech", "a partial", "a correction"),
+            ""
+        );
+        assert_eq!(
+            insertion_delta("parakeet", "a partial", "a partial continues"),
+            " continues"
+        );
+    }
+
+    #[test]
+    fn native_backend_keeps_one_model_for_all_contexts_and_filters_profiles() {
+        let config = ServiceConfig {
+            backend: "nemo-speech".into(),
+            model_profile: "nemo-q8".into(),
+            model_root: "/models".into(),
+            worker_path: "/bin/wordpipe-parakeet-worker".into(),
+            ..ServiceConfig::default()
+        };
+        assert_eq!(
+            worker_path_for_backend(&config),
+            PathBuf::from("/bin/wordpipe-nemo-worker")
+        );
+        assert_eq!(
+            supported_streaming_latencies(&config),
+            vec![80, 160, 560, 1120]
+        );
+        for latency in [80, 160, 560, 1120] {
+            let mut selected = config.clone();
+            selected.streaming_latency_ms = latency;
+            assert_eq!(
+                selected_runtime_dir(&selected),
+                "/models/nemotron-nemo-en-q8"
+            );
+        }
+        let service = WordpipeService::new(PathBuf::from("unused.json"), config);
+        let profiles = service.list_model_profiles();
+        assert_eq!(profiles.len(), 2);
+        for profile in profiles {
+            assert_eq!(
+                String::try_from(profile["model_profile"].clone()).unwrap(),
+                "nemo-q8"
+            );
+        }
+    }
+
+    #[test]
+    fn native_presets_switch_backend_and_roundtrip_config_without_changing_defaults() {
+        let mut config = ServiceConfig::default();
+        let original_worker = config.worker_path.clone();
+        config.input_device = "old device".into();
+        assert!(apply_model_preset(
+            &mut config,
+            model_preset("nemo-q8-english").unwrap()
+        ));
+        assert_eq!(config.backend, "nemo-speech");
+        assert_eq!(config.model_profile, "nemo-q8");
+        assert_eq!(config.input_device, "");
+        let restored =
+            apply_persisted_config(ServiceConfig::default(), PersistedConfig::from(&config))
+                .unwrap();
+        assert_eq!(restored.backend, "nemo-speech");
+        assert_eq!(restored.model_profile, "nemo-q8");
+        assert!(apply_model_preset(
+            &mut config,
+            model_preset("fast-english").unwrap()
+        ));
+        assert_eq!(config.backend, "parakeet");
+        assert_eq!(config.worker_path, original_worker);
+    }
 
     fn sorted_keys(map: &VariantMap) -> Vec<&str> {
         let mut keys = map.keys().map(String::as_str).collect::<Vec<_>>();

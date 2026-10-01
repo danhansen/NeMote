@@ -150,7 +150,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--profile",
         action="append",
-        choices=tuple(MODEL_PROFILES),
+        choices=tuple(name for name in MODEL_PROFILES if name != "nemo-q8"),
         help="Profile to publish. Defaults to fast. Publish one profile per Hugging Face model repo.",
     )
     parser.add_argument(

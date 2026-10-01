@@ -71,7 +71,16 @@ def dequantized_weight(
     return (quantized - zero_point.reshape(reshape)) * scale.reshape(reshape)
 
 
-def build_rewrite_specs(model: onnx.ModelProto, include: list[str], exclude: list[str]) -> list[RewriteSpec]:
+def build_rewrite_specs(
+    model: onnx.ModelProto,
+    include: list[str],
+    exclude: list[str],
+    *,
+    preserve_activation_quantization: bool = False,
+    integer_float_kernel: bool = False,
+) -> list[RewriteSpec]:
+    if integer_float_kernel:
+        preserve_activation_quantization = True
     initializers = {init.name: init for init in model.graph.initializer}
     nodes = list(model.graph.node)
     producers: dict[str, int] = {}
@@ -139,27 +148,63 @@ def build_rewrite_specs(model: onnx.ModelProto, include: list[str], exclude: lis
         if weight is None:
             continue
 
+        if integer_float_kernel:
+            # Only accept depthwise convolutions whose integer accumulations are
+            # exactly representable in FP32. Preserve the original scale tail.
+            attrs = {a.name: helper.get_attribute_value(a) for a in node.attribute}
+            quantized = const_array(initializers, rhs_quant)
+            if (quantized.dtype not in (np.dtype('uint8'), np.dtype('int8'))
+                    or quantized.ndim != 3 or quantized.shape[1] != 1
+                    or attrs.get('group', 1) != quantized.shape[0]
+                    or quantized.shape[2] * 255 * 255 > 2 ** 24):
+                continue
+            zero = const_array(initializers, rhs_zero_point).astype(np.float32)
+            if zero.size == 1:
+                weight = quantized.astype(np.float32) - zero.reshape(())
+            elif zero.shape == (quantized.shape[0],):
+                weight = quantized.astype(np.float32) - zero.reshape(-1, 1, 1)
+            else:
+                continue
+
         base = (node.name or node.output[0]).replace("/", "_")
         weight_name = f"{base}_dequant_weight"
         model.graph.initializer.append(numpy_helper.from_array(weight.astype(np.float32), weight_name))
 
+        replacement_nodes = []
+        conv_input = lhs_input
+        if preserve_activation_quantization:
+            # Keep the original dynamic activation rounding. Only the convolution
+            # kernel changes; this does not recover unquantized activations.
+            conv_input = f"{base}_dequant_activation"
+            activation_scale = lhs_scale
+            if integer_float_kernel:
+                activation_scale = f"{base}_unit_scale"
+                model.graph.initializer.append(numpy_helper.from_array(
+                    np.array(1, dtype=np.float32), activation_scale))
+            replacement_nodes.append(helper.make_node(
+                "DequantizeLinear", [lhs_quant, activation_scale, lhs_zero_point],
+                [conv_input], name=f"{base}_activation_dequantized",
+            ))
         conv_node = helper.make_node(
             "Conv",
-            [lhs_input, weight_name],
-            [conv_float_output],
+            [conv_input, weight_name],
+            [cast_node.output[0] if integer_float_kernel else conv_float_output],
             name=f"{base}_conv_dequantized",
         )
         conv_node.attribute.extend(node.attribute)
+        replacement_nodes.append(conv_node)
 
-        remove = {conv_index, cast_index, output_mul_index}
+        remove = {conv_index, cast_index}
+        if not integer_float_kernel:
+            remove.add(output_mul_index)
         dql_outputs = set(dql.output)
         dql_use_sites = {idx for output in dql_outputs for idx in consumers.get(output, [])}
-        if dql_use_sites <= {conv_index, scale_mul_index}:
+        if not preserve_activation_quantization and dql_use_sites <= {conv_index, scale_mul_index}:
             remove.add(dql_index)
-        if all(idx in {output_mul_index} for idx in consumers.get(scale_mul_output, [])):
+        if not integer_float_kernel and all(idx in {output_mul_index} for idx in consumers.get(scale_mul_output, [])):
             remove.add(scale_mul_index)
 
-        specs.append(RewriteSpec(min(remove), remove, [conv_node]))
+        specs.append(RewriteSpec(min(remove), remove, replacement_nodes))
     return specs
 
 
@@ -217,6 +262,8 @@ def update_config(
     rewritten: int,
     pruned_initializers: int,
     ort_optimize_final: str | None,
+    preserve_activation_quantization: bool = False,
+    integer_float_kernel: bool = False,
 ) -> None:
     source_config = source_dir / "config.json"
     if not source_config.exists():
@@ -228,6 +275,8 @@ def update_config(
         "rewritten_blocks": rewritten,
         "pruned_initializers": pruned_initializers,
         "ort_optimized_final_encoder": ort_optimize_final,
+        "preserve_activation_quantization": preserve_activation_quantization or integer_float_kernel,
+        "integer_float_kernel": integer_float_kernel,
     }
     (output_dir / "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
 
@@ -239,6 +288,8 @@ def build_model_dir(
     exclude: list[str],
     ort_optimize_final: str | None,
     ort_optimize_threads: int,
+    preserve_activation_quantization: bool = False,
+    integer_float_kernel: bool = False,
 ) -> None:
     source_encoder = source_dir / "encoder.onnx"
     if not source_encoder.exists():
@@ -246,7 +297,9 @@ def build_model_dir(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     model = onnx.load(source_encoder, load_external_data=False)
-    specs = build_rewrite_specs(model, include, exclude)
+    specs = build_rewrite_specs(model, include, exclude,
+                                preserve_activation_quantization=preserve_activation_quantization,
+                                integer_float_kernel=integer_float_kernel)
     rewritten = apply_rewrites(model, specs)
     pruned_initializers = prune_unused_initializers(model)
     output_encoder = output_dir / "encoder.onnx"
@@ -269,6 +322,8 @@ def build_model_dir(
         rewritten=rewritten,
         pruned_initializers=pruned_initializers,
         ort_optimize_final=ort_optimize_final,
+        preserve_activation_quantization=preserve_activation_quantization,
+        integer_float_kernel=integer_float_kernel,
     )
 
     print(
@@ -280,6 +335,21 @@ def build_model_dir(
             print(f"  {path.name}: {path.stat().st_size / 1024 / 1024:.1f} MiB")
 
 
+def rewrite_integer_depthwise_file(source: Path, output: Path) -> int:
+    """Change only representable depthwise integer kernels, retaining scale tails."""
+    if output.exists():
+        raise FileExistsError(output)
+    model = onnx.load(source)
+    specs = build_rewrite_specs(model, ["depthwise_conv"], [], integer_float_kernel=True)
+    count = apply_rewrites(model, specs)
+    if not count:
+        raise ValueError("no supported integer depthwise convolutions found")
+    prune_unused_initializers(model)
+    onnx.save(model, output)
+    onnx.checker.check_model(str(output))
+    return count
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-dir", type=Path, required=True)
@@ -288,6 +358,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exclude", action="append", default=[], help="Substring that matched ConvInteger node names must not contain.")
     parser.add_argument("--ort-optimize-final", choices=sorted(ORT_OPTIMIZATION_LEVELS))
     parser.add_argument("--ort-optimize-threads", type=int, default=1)
+    parser.add_argument("--preserve-activation-quantization", action="store_true",
+                        help="Retain original activation quantization before the float convolution kernel.")
+    parser.add_argument("--integer-float-kernel", action="store_true",
+                        help="Use exact FP32 integer-valued depthwise accumulation, preserving quantization and scales.")
     return parser.parse_args()
 
 
@@ -300,6 +374,8 @@ def main() -> None:
         args.exclude,
         args.ort_optimize_final,
         args.ort_optimize_threads,
+        args.preserve_activation_quantization,
+        args.integer_float_kernel,
     )
 
 

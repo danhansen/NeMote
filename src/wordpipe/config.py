@@ -293,6 +293,6 @@ def _overlay(value: object) -> str:
 
 def _model_profile(value: object) -> str:
     profile = _string({"model_profile": value}, "model_profile", "fast")
-    if profile not in {"fast", "compact"}:
-        raise ValueError("model_profile must be 'fast' or 'compact'")
+    if profile not in {"fast", "compact", "nemo-q8"}:
+        raise ValueError("model_profile must be 'fast', 'compact', or 'nemo-q8'")
     return profile

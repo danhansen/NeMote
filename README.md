@@ -1,6 +1,12 @@
 # Wordpipe
 
-Release target: **v0.1.20**. English FP32 and QUInt8 profiles use one generic encoder
+Release target: **v0.1.21**. Select either Parakeet/ONNX Runtime or the native
+NeMo-Speech.cpp backend in preferences. The native backend downloads NVIDIA's
+official English or multilingual Q8 GGUF directly, supports all four chunk sizes,
+and handles end of stream with its upstream implementation. See
+[backend setup and validation](docs/asr-backends.md).
+
+English FP32 and QUInt8 profiles use one generic encoder
 each, with checkpoint-supported 80/160/560/1120 ms chunk selection. Existing
 fixed-model installations remain compatible; users do not export models locally.
 QUInt8 pointwise projections use fused matrix multiplies to preserve the deployed
@@ -8,13 +14,14 @@ execution path. See [the measured investigation](docs/dynamic-chunk-performance.
 
 Wordpipe is a Wayland-only GNOME dictation app built around true streaming
 speech recognition. The primary implementation is a GNOME Shell frontend backed
-by a Rust D-Bus service and a Rust `parakeet-rs` ASR worker.
+by a Rust D-Bus service and either a Rust `parakeet-rs` ASR worker or a native
+C++ NeMo-Speech.cpp worker.
 
 ## Direction
 
 - GNOME Shell-first Linux desktop integration.
 - Wayland only; no X11 tooling.
-- Streaming ASR with `parakeet-rs`.
+- Streaming ASR with selectable Parakeet and NeMo-Speech.cpp backends.
 - Target model family: Parakeet/Nemotron cache-aware streaming ASR.
 - No external VAD for the MVP.
 - Endpoint detection is disabled by default while raw continuous streaming is
@@ -33,6 +40,7 @@ The current implementation provides:
 - Rust `wordpipe-service` D-Bus session service for configuration, profile
   install, dictation control, and worker lifecycle.
 - `wordpipe-parakeet-worker` Rust newline-JSON streaming worker.
+- `wordpipe-nemo-worker` C++ newline-JSON streaming worker with official GGUF downloads.
 - `wordpipe model-install` profile install from the published Wordpipe Nemotron
   `fast` and `compact` Hugging Face model repos.
 - `wordpipe probe` capability checks for GNOME, portals, and Python modules.
