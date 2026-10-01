@@ -30,6 +30,7 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     for context in (1, 2, 7, 14):
         worker_command = [str(args.worker), "--model-dir", str(args.model), "--wav", str(args.wav),
+                          "--device", "cpu",
                           "--num-threads", "2", "--chunk-samples", str(context * 1280),
                           "--wav-repeat", str(args.repetitions + 1)]
         native_command = [str(args.native_cli), "bench", "asr", str(args.wav), "-m", str(args.model),

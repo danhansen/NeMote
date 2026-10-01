@@ -1,6 +1,6 @@
 # Wordpipe
 
-Release target: **v0.1.22**. Select either Parakeet/ONNX Runtime or the native
+Release target: **v0.1.23**. Select either Parakeet/ONNX Runtime or the native
 NeMo-Speech.cpp backend in preferences. The native backend downloads NVIDIA's
 official English or multilingual Q8 GGUF directly, supports all four chunk sizes,
 and handles end of stream with its upstream implementation. See

@@ -13,13 +13,16 @@ class NemoWorkerProtocolTests(unittest.TestCase):
     def setUp(self):
         self.process = subprocess.Popen([
             os.environ["WORDPIPE_NEMO_TEST_WORKER"], "--model-dir", os.environ["WORDPIPE_NEMO_TEST_MODEL"],
+            "--device", "cpu",
             "--input-device", "wordpipe-nonexistent-test-input-device"],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         self.selector = selectors.DefaultSelector()
         self.selector.register(self.process.stdout, selectors.EVENT_READ)
         self.buffer = b""
         self.assertEqual(self.event()["event"], "loading_model")
-        self.assertEqual(self.event()["event"], "model_loaded")
+        loaded = self.event()
+        self.assertEqual(loaded["event"], "model_loaded")
+        self.assertEqual(loaded["data"]["compute_backend"], "cpu")
         self.assertEqual(self.event()["event"], "ready")
 
     def tearDown(self):
@@ -73,3 +76,21 @@ class NemoWorkerProtocolTests(unittest.TestCase):
     def test_stdin_eof_exits_cleanly(self):
         self.process.stdin.close()
         self.assertEqual(self.process.wait(timeout=10), 0)
+
+    def test_invalid_compute_backend_is_rejected(self):
+        result = subprocess.run([
+            os.environ["WORDPIPE_NEMO_TEST_WORKER"], "--model-dir", os.environ["WORDPIPE_NEMO_TEST_MODEL"],
+            "--device", "npu"], capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("--device must be", json.loads(result.stdout)["message"])
+
+    def test_auto_selection_reports_actual_backend_and_cpu_features(self):
+        result = subprocess.run([
+            os.environ["WORDPIPE_NEMO_TEST_WORKER"], "--model-dir", os.environ["WORDPIPE_NEMO_TEST_MODEL"],
+            "--device", "auto"], input='{"command":"shutdown"}\n',
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        events = [json.loads(line) for line in result.stdout.splitlines()]
+        loaded = next(e for e in events if e["event"] == "model_loaded")
+        self.assertEqual(loaded["data"]["compute_backend"], "cpu")
+        self.assertIsInstance(loaded["data"]["cpu_features"], dict)

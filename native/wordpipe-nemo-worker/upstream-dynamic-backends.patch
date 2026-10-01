@@ -1,0 +1,62 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -232,5 +232,10 @@
+-set(GGML_DEPENDENCIES ggml ggml-base ggml-cpu)
++set(GGML_DEPENDENCIES ggml ggml-base)
++if(NOT GGML_BACKEND_DL)
++    list(APPEND GGML_DEPENDENCIES ggml-cpu)
++endif()
+ if(GGML_CUDA)
+-    list(APPEND GGML_DEPENDENCIES ggml-cuda)
++    if(NOT GGML_BACKEND_DL)
++        list(APPEND GGML_DEPENDENCIES ggml-cuda)
++    endif()
+     # libggml-cuda.so has libcuda.so.1 (the CUDA driver) as a NEEDED entry.
+     # The driver is provided at runtime by NVIDIA's container toolkit and is
+@@ -255,6 +260,10 @@
+ if(GGML_VULKAN)
+-    list(APPEND GGML_DEPENDENCIES ggml-vulkan)
++    if(NOT GGML_BACKEND_DL)
++        list(APPEND GGML_DEPENDENCIES ggml-vulkan)
++    endif()
+ endif()
+ if(GGML_METAL)
+-    list(APPEND GGML_DEPENDENCIES ggml-metal)
++    if(NOT GGML_BACKEND_DL)
++        list(APPEND GGML_DEPENDENCIES ggml-metal)
++    endif()
+ endif()
+@@ -273,3 +282,7 @@
+ set_property(TARGET ggml PROPERTY PUBLIC_HEADER "")
+-install(TARGETS ggml ggml-base ggml-cpu
++set(NEMO_GGML_INSTALL_TARGETS ggml ggml-base)
++if(TARGET ggml-cpu)
++    list(APPEND NEMO_GGML_INSTALL_TARGETS ggml-cpu)
++endif()
++install(TARGETS ${NEMO_GGML_INSTALL_TARGETS}
+     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+diff --git a/src/runtime/ggml/CMakeLists.txt b/src/runtime/ggml/CMakeLists.txt
+--- a/src/runtime/ggml/CMakeLists.txt
++++ b/src/runtime/ggml/CMakeLists.txt
+@@ -43,6 +43,6 @@
+ # here so tests/ and riva_server inherit it and ld can resolve libggml-cuda's
+ # NEEDED libcuda.so.1 at link time. CUDAToolkit was found in the top-level
+ # CMakeLists.txt under the same GGML_CUDA gate.
+-if(GGML_CUDA)
++if(GGML_CUDA AND NOT GGML_BACKEND_DL)
+     target_link_libraries(nemo_speech_runtime_ggml PUBLIC CUDA::cuda_driver)
+ endif()
+diff --git a/src/runtime/ggml/backend.cpp b/src/runtime/ggml/backend.cpp
+--- a/src/runtime/ggml/backend.cpp
++++ b/src/runtime/ggml/backend.cpp
+@@ -133,7 +133,7 @@
+             ++extra_bufts;
+         }
+     }
+-    buft_list.emplace_back(cpu_dev, ggml_backend_cpu_buffer_type());
++    buft_list.emplace_back(cpu_dev, ggml_backend_dev_buffer_type(cpu_dev));
+-
++
+     for (const auto& buft : buft_list) {
+         ggml_backend_dev_t dev = buft.first;

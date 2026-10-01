@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -17,6 +18,7 @@
 #include "recognizer.h"
 #include "transcript.h"
 #include "session_thread.h"
+#include <ggml-backend.h>
 #include "nlohmann/json.hpp"
 #define MA_NO_ENCODING
 #define MA_NO_RESOURCE_MANAGER
@@ -40,6 +42,7 @@ static double seconds(Clock::time_point start) {
 
 struct Args {
     std::string model_dir, language = "en-US", input_device, wav;
+    std::string device = "auto";
     int threads = 2, sample_rate = 16000, chunk_samples = 8960;
     int wav_repeat = 1;
     double queue_seconds = 10, stats_interval = 1;
@@ -47,13 +50,15 @@ struct Args {
 };
 static Args parse_args(int argc, char** argv) {
     Args args;
+    if (const char* device = std::getenv("WORDPIPE_NEMO_DEVICE")) args.device = device;
     for (int i = 1; i < argc; ++i) {
         std::string key = argv[i];
         if (key == "--list-input-devices") { args.list_devices = true; continue; }
         if (key == "--help") {
             std::cout << "wordpipe-nemo-worker --model-dir DIR|GGUF [--wav WAV] "
                          "[--chunk-samples 1280|2560|8960|17920] [--num-threads N] "
-                         "[--language en-US|auto] [--input-device NAME|INDEX]\n";
+                         "[--language en-US|auto] [--input-device NAME|INDEX] "
+                         "[--device auto|cpu]\n";
             std::exit(0);
         }
         if (i + 1 == argc) throw std::invalid_argument("missing value for " + key);
@@ -63,6 +68,7 @@ static Args parse_args(int argc, char** argv) {
         else if (key == "--input-device") args.input_device = value;
         else if (key == "--wav") args.wav = value;
         else if (key == "--wav-repeat") args.wav_repeat = std::stoi(value);
+        else if (key == "--device") args.device = value;
         else if (key == "--num-threads") args.threads = std::stoi(value);
         else if (key == "--sample-rate") args.sample_rate = std::stoi(value);
         else if (key == "--chunk-samples") args.chunk_samples = std::stoi(value);
@@ -72,6 +78,8 @@ static Args parse_args(int argc, char** argv) {
     }
     if (!args.list_devices && args.model_dir.empty()) throw std::invalid_argument("--model-dir is required");
     if (args.sample_rate != 16000) throw std::invalid_argument("--sample-rate must be 16000");
+    if (args.device != "auto" && args.device != "cpu")
+        throw std::invalid_argument("--device must be auto or cpu; GPU acceleration is not enabled in this worker");
     if (args.threads < 1) throw std::invalid_argument("--num-threads must be positive");
     if (args.wav_repeat < 1 || args.wav_repeat > 100) throw std::invalid_argument("--wav-repeat must be in [1,100]");
     if (args.chunk_samples != 1280 && args.chunk_samples != 2560 &&
@@ -81,6 +89,30 @@ static Args parse_args(int argc, char** argv) {
         !std::isfinite(args.stats_interval) || args.stats_interval <= 0)
         throw std::invalid_argument("queue seconds must be in (0,60]; stats interval must be positive");
     return args;
+}
+
+static void initialize_backends() {
+#ifdef WORDPIPE_NEMO_DYNAMIC_BACKENDS
+    // Relocated release libraries take precedence; the matching SDK path is
+    // only a development-build fallback. Load modules before device discovery.
+    auto executable = std::filesystem::canonical("/proc/self/exe");
+    auto libraries = executable.parent_path().parent_path() / "lib/nemo";
+    if (!std::filesystem::is_directory(libraries)) libraries = WORDPIPE_NEMO_BUILD_LIBRARY_DIR;
+    ggml_backend_load_all_from_path(libraries.c_str());
+#endif
+}
+
+static Json cpu_features() {
+    Json features = Json::object();
+    auto cpu = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU);
+    if (!cpu) return features;
+    auto reg = ggml_backend_dev_backend_reg(cpu);
+    auto get_features = reinterpret_cast<ggml_backend_get_features_t>(
+        ggml_backend_reg_get_proc_address(reg, "ggml_backend_get_features"));
+    if (get_features)
+        for (auto feature = get_features(reg); feature && feature->name; ++feature)
+            features[feature->name] = feature->value ? feature->value : "";
+    return features;
 }
 
 class Capture {
@@ -251,6 +283,7 @@ int main(int argc, char** argv) {
         auto path = std::filesystem::path(args.model_dir);
         if (std::filesystem::is_directory(path)) path /= "model.gguf";
         if (!std::filesystem::is_regular_file(path)) throw std::invalid_argument("GGUF model is not installed at " + path.string());
+        initialize_backends();
         asr::RecognizerConfig config;
         config.backend.gpu = -1; config.backend.threads = args.threads;
         config.model.path = path.string();
@@ -261,7 +294,8 @@ int main(int argc, char** argv) {
         asr::Recognizer model(config);
         if (model.sample_rate() != 16000) throw std::invalid_argument("this worker requires a 16 kHz model");
         { Session validate(model, args); }
-        emit({{"event", "model_loaded"}, {"data", {{"load_seconds", seconds(start)}, {"num_threads", args.threads}}}});
+        emit({{"event", "model_loaded"}, {"data", {{"load_seconds", seconds(start)}, {"num_threads", args.threads},
+             {"compute_backend", "cpu"}, {"cpu_features", cpu_features()}}}});
         if (!args.wav.empty()) {
             for (int repeat = 0; repeat < args.wav_repeat; ++repeat) {
             ma_decoder_config decode_config = ma_decoder_config_init(ma_format_f32, 1, 16000);

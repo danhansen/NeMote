@@ -23,6 +23,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--repeat", type=int, default=2, choices=(1, 2))
+    parser.add_argument("--device", choices=("auto", "cpu"), default="cpu")
     args = parser.parse_args()
     helpers = load_eval_helpers()
     manifest = json.loads(args.manifest.read_text())
@@ -32,7 +33,7 @@ def main():
     expected = {(row["chunk_frames"], row["clip"]): row for row in baseline["results"]}
     report = {"status": "running", "worker_sha256": sha(args.worker), "model_sha256": sha(args.model),
               "manifest_sha256": sha(args.manifest), "baseline_sha256": sha(args.baseline),
-              "threads": 2, "concurrency": 1, "batching": False, "results": []}
+              "threads": 2, "concurrency": 1, "batching": False, "requested_device": args.device, "results": []}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     def save():
         args.output.write_text(json.dumps(report, indent=2) + "\n")
@@ -45,6 +46,7 @@ def main():
                 raise SystemExit("Corpus audio identity mismatch")
             # Two independent streams on the SAME recognizer test cache/state isolation.
             command = [str(args.worker), "--model-dir", str(args.model), "--wav", clip["audio"],
+                       "--device", args.device,
                        "--num-threads", "2", "--chunk-samples", str(context * 1280), "--wav-repeat", str(args.repeat)]
             process = subprocess.run(command, capture_output=True, text=True, check=True, timeout=180)
             events = [json.loads(line) for line in process.stdout.splitlines()]

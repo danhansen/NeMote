@@ -4,6 +4,17 @@ set -euo pipefail
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 REVISION=4c101bc7113f49101a3e11d2c994c519f41939f6
 GGML_REVISION=c03b4e2bcece5134827881af90242086daf75be5
+NATIVE=${WORDPIPE_NEMO_NATIVE:-OFF}
+# Ship portable CPU plugins selected at runtime, not client-side compilation.
+# An explicitly requested native build uses a single host-tuned CPU backend.
+if [[ "$NATIVE" == ON ]]; then default_cpu_variants=OFF; else default_cpu_variants=ON; fi
+CPU_VARIANTS=${WORDPIPE_NEMO_CPU_VARIANTS:-$default_cpu_variants}
+case "$NATIVE" in ON|OFF) ;; *) echo "WORDPIPE_NEMO_NATIVE must be ON or OFF" >&2; exit 2 ;; esac
+case "$CPU_VARIANTS" in ON|OFF) ;; *) echo "WORDPIPE_NEMO_CPU_VARIANTS must be ON or OFF" >&2; exit 2 ;; esac
+if [[ "$NATIVE" == ON && "$CPU_VARIANTS" == ON ]]; then
+  echo "Native compilation and portable CPU variants are mutually exclusive" >&2
+  exit 2
+fi
 SOURCE=${WORDPIPE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}
 UPSTREAM_BUILD=${WORDPIPE_NEMO_BUILD:-$SOURCE/build/wordpipe-cpu}
 WORKER_BUILD=${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}
@@ -23,20 +34,29 @@ fi
 # Upstream pins stock ggml and ships required runtime extensions separately.
 # Its setup script verifies the complete patch series and is safe to rerun.
 bash "$SOURCE/scripts/apply-ggml-patches.sh"
-if [[ ! -f "$UPSTREAM_BUILD/bin/libnemo_speech_asr.so" ]]; then
-  cmake -S "$SOURCE" -B "$UPSTREAM_BUILD" -DCMAKE_BUILD_TYPE=Release \
-    -DSENTENCEPIECE_STATIC_LIB=OFF -USENTENCEPIECE_INCLUDE_DIR \
-    -DNEMO_SPEECH_DEPENDENCY_PREFIX="$UPSTREAM_BUILD/deps" \
-    -DNEMO_SPEECH_BUILD_ASR=ON -DNEMO_SPEECH_BUILD_CLI=OFF \
-    -DNEMO_SPEECH_BUILD_TTS=OFF -DNEMO_SPEECH_BUILD_NMT=OFF \
-    -DNEMO_SPEECH_BUILD_DIAR=OFF -DNEMO_SPEECH_BUILD_S2S=OFF -DNEMO_SPEECH_WITH_NORM=OFF \
-    -DNEMO_SPEECH_WITH_FLASHLIGHT=OFF -DBUILD_TESTING=OFF \
-    -DNEMO_SPEECH_BUILD_GRPC=OFF -DNEMO_SPEECH_BUILD_HTTP=OFF \
-    -DNEMO_SPEECH_BUILD_TESTS=OFF -DNEMO_SPEECH_BUILD_TOOLS=OFF \
-    -DNEMO_SPEECH_BUILD_EXAMPLES=OFF -DGGML_CUDA=OFF -DGGML_NATIVE=OFF
-  cmake --build "$UPSTREAM_BUILD" --target nemo_speech_asr -j "${WORDPIPE_BUILD_JOBS:-2}"
+# NeMo's pinned SDK links CPU/CUDA targets directly. ggml's multi-variant
+# mode builds plugin modules instead, so adapt only this build/link boundary.
+task_patch="$ROOT/native/wordpipe-nemo-worker/upstream-dynamic-backends.patch"
+if ! git -C "$SOURCE" apply --reverse --check "$task_patch" 2>/dev/null; then
+  git -C "$SOURCE" apply --check "$task_patch"
+  git -C "$SOURCE" apply "$task_patch"
 fi
+# Always configure: a cached .so must not silently ignore changed build options.
+cmake -S "$SOURCE" -B "$UPSTREAM_BUILD" -DCMAKE_BUILD_TYPE=Release \
+  -DSENTENCEPIECE_STATIC_LIB=OFF -USENTENCEPIECE_INCLUDE_DIR \
+  -DNEMO_SPEECH_DEPENDENCY_PREFIX="$UPSTREAM_BUILD/deps" \
+  -DNEMO_SPEECH_BUILD_ASR=ON -DNEMO_SPEECH_BUILD_CLI=OFF \
+  -DNEMO_SPEECH_BUILD_TTS=OFF -DNEMO_SPEECH_BUILD_NMT=OFF \
+  -DNEMO_SPEECH_BUILD_DIAR=OFF -DNEMO_SPEECH_BUILD_S2S=OFF -DNEMO_SPEECH_WITH_NORM=OFF \
+  -DNEMO_SPEECH_WITH_FLASHLIGHT=OFF -DBUILD_TESTING=OFF \
+  -DNEMO_SPEECH_BUILD_GRPC=OFF -DNEMO_SPEECH_BUILD_HTTP=OFF \
+  -DNEMO_SPEECH_BUILD_TESTS=OFF -DNEMO_SPEECH_BUILD_TOOLS=OFF \
+  -DNEMO_SPEECH_BUILD_EXAMPLES=OFF -DGGML_CUDA=OFF -DGGML_VULKAN=OFF \
+  -DGGML_NATIVE="$NATIVE" -DGGML_CPU_ALL_VARIANTS="$CPU_VARIANTS" \
+  -DGGML_BACKEND_DL="$CPU_VARIANTS"
+cmake --build "$UPSTREAM_BUILD" --target nemo_speech_asr -j "${WORDPIPE_BUILD_JOBS:-2}"
 cmake -S "$ROOT/native/wordpipe-nemo-worker" -B "$WORKER_BUILD" \
   -DCMAKE_BUILD_TYPE=Release -DNEMO_SPEECH_SOURCE_DIR="$SOURCE" \
-  -DNEMO_SPEECH_LIBRARY_DIR="$UPSTREAM_BUILD/bin"
+  -DNEMO_SPEECH_LIBRARY_DIR="$UPSTREAM_BUILD/bin" \
+  -DWORDPIPE_NEMO_DYNAMIC_BACKENDS="$CPU_VARIANTS"
 cmake --build "$WORKER_BUILD" -j "${WORDPIPE_BUILD_JOBS:-2}"
