@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wordpipe"
-version = "0.1.27"
+version = "0.1.28"
 description = "Wayland-first GNOME dictation with streaming Parakeet/Nemotron ASR"
 readme = "README.md"
 requires-python = ">=3.11"
