@@ -172,7 +172,7 @@ EOF
 cat > "$STAGE_ROOT/share/systemd/user/nemote-service.service" <<'EOF'
 [Unit]
 Description=NeMote dictation service
-Documentation=https://github.com/danhansen/nemote
+Documentation=https://github.com/danhansen/NeMote
 
 [Service]
 Type=dbus

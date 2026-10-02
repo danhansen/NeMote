@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-REPO="${NEMOTE_GITHUB_REPO:-danhansen/nemote}"
+REPO="${NEMOTE_GITHUB_REPO:-danhansen/NeMote}"
 VERSION="${NEMOTE_VERSION:-latest}"
 ARCH="$(uname -m)"
 UUID="nemote@dhansen.dev"
@@ -19,7 +19,7 @@ current user account. By default this downloads the latest GitHub Release
 archive from $NEMOTE_GITHUB_REPO.
 
 Environment:
-  NEMOTE_GITHUB_REPO       GitHub repo, default danhansen/nemote
+  NEMOTE_GITHUB_REPO       GitHub repo, default danhansen/NeMote
   NEMOTE_VERSION           Release tag, default latest
   NEMOTE_LIBEXEC_DIR       Binary installation directory (default ~/.local/libexec/nemote)
 EOF

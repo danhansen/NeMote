@@ -7,7 +7,21 @@ models. There is no Rust, ONNX Runtime, local model export, or client compilatio
 
 ## Install
 
-Download a Linux release from [GitHub Releases](https://github.com/danhansen/nemote/releases),
+Install the latest release into your user account:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/danhansen/NeMote/main/scripts/install-nemote-release | sh
+```
+
+To inspect the installer before running it:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/danhansen/NeMote/main/scripts/install-nemote-release
+less install-nemote-release
+sh install-nemote-release
+```
+
+Alternatively, download a Linux release from [GitHub Releases](https://github.com/danhansen/NeMote/releases),
 extract it, and run `./install.sh`. Python 3.11 or newer is required; no pip
 packages or virtual environment are needed. Log out and back in after an
 extension upgrade so GNOME Shell loads the new code.
@@ -76,7 +90,7 @@ See [architecture](docs/architecture.md) and [runtime/protocol](docs/asr-backend
 ## Historical performance research
 
 The former Parakeet-RS/ORT implementation and its experiment tooling are preserved
-on [archive/parakeet-rs-v0.1.28](https://github.com/danhansen/nemote/tree/archive/parakeet-rs-v0.1.28).
+on [archive/parakeet-rs-v0.1.28](https://github.com/danhansen/NeMote/tree/archive/parakeet-rs-v0.1.28).
 The following documents remain as historical evidence for future optimization
 work, **not current installation or implementation instructions**. Referenced
 retired scripts and source paths can be found on that archival branch.

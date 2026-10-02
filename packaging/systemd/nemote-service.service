@@ -1,6 +1,6 @@
 [Unit]
 Description=NeMote dictation service
-Documentation=https://github.com/danhansen/nemote
+Documentation=https://github.com/danhansen/NeMote
 PartOf=graphical-session.target
 After=graphical-session.target
 

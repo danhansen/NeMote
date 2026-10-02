@@ -4,5 +4,5 @@
   "description": "GNOME voice keyboard backed by the NeMote ASR service",
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.nemote",
-  "url": "https://github.com/danhansen/nemote"
+  "url": "https://github.com/danhansen/NeMote"
 }
