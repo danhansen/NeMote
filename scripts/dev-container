@@ -19,6 +19,8 @@ fi
 build_image() {
   "$ENGINE" build \
     --file "$ROOT/containers/Containerfile.dev" \
+    --build-arg "NEMOTE_DEV_UID=$(id -u)" \
+    --build-arg "NEMOTE_DEV_GID=$(id -g)" \
     --tag "$IMAGE" \
     "$ROOT"
 }

@@ -2,6 +2,8 @@
 FROM docker.io/library/debian@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG NEMOTE_DEV_UID=1000
+ARG NEMOTE_DEV_GID=1000
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -33,6 +35,16 @@ RUN apt-get update \
         zip \
     && rm -rf /var/lib/apt/lists/*
 
+# Docker's --user UID:GID doesn't create a passwd entry. The private D-Bus
+# daemon requires one; Podman keep-id normally supplies it and hid this failure.
+RUN if ! getent group "$NEMOTE_DEV_GID" >/dev/null; then \
+        groupadd --gid "$NEMOTE_DEV_GID" nemote-dev; \
+    fi \
+    && if ! getent passwd "$NEMOTE_DEV_UID" >/dev/null; then \
+        useradd --uid "$NEMOTE_DEV_UID" --gid "$NEMOTE_DEV_GID" \
+            --create-home --shell /bin/bash nemote-dev; \
+    fi
+
 RUN python3 -m venv --system-site-packages /opt/nemote-venv
 COPY containers/requirements-dev.lock /tmp/nemote-requirements-dev.lock
 RUN /opt/nemote-venv/bin/python -m pip install --no-cache-dir \
@@ -49,5 +61,6 @@ ENV PATH="/opt/nemote-venv/bin:${PATH}" \
     XDG_CACHE_HOME="/tmp/nemote-cache"
 
 WORKDIR /workspace
+USER ${NEMOTE_DEV_UID}:${NEMOTE_DEV_GID}
 ENTRYPOINT ["nemote-container-entrypoint"]
 CMD ["scripts/run-build-pipeline", "test"]
