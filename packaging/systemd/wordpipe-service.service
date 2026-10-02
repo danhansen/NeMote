@@ -1,5 +1,5 @@
 [Unit]
-Description=Wordpipe Rust dictation service
+Description=Wordpipe dictation service
 Documentation=https://github.com/danhansen/wordpipe
 PartOf=graphical-session.target
 After=graphical-session.target

@@ -48,15 +48,8 @@ const SERVICE_XML = `
 const WordpipeProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
 
 const PROFILES = [
-    ['compact', 'compact', 'Dynamic-int8 fixed-shape multilingual model.', 'compact', 'multilingual'],
-    ['compact-english', 'compact (English only, lower WER)', 'Dynamic-int8 dedicated English model; selectable chunk size.', 'compact', 'english'],
-    ['fast', 'fast', 'FP32 projected-cache multilingual model; largest footprint.', 'fast', 'multilingual'],
-    ['fast-english', 'fast (English only, lower WER)', 'FP32 projected-cache dedicated English model; largest footprint.', 'fast', 'english'],
-];
-
-const BACKENDS = [
-    ['parakeet', 'Parakeet'],
-    ['nemo-speech', 'NeMo-Speech.cpp'],
+    ['nemo-q8-english', 'English (lower WER)', 'Dedicated English Nemotron model.', 'nemo-q8', 'english'],
+    ['nemo-q8', 'Multilingual', 'Multilingual Nemotron model.', 'nemo-q8', 'multilingual'],
 ];
 
 const SHORTCUT_MODES = [
@@ -313,7 +306,6 @@ class WordpipePage extends Adw.PreferencesPage {
         this._selectedPreset = modelPresetId(
             this._settings.get_string('model-profile'),
             this._settings.get_string('model-family'));
-        this._backends = BACKENDS.map(([id, title]) => ({id, title, description: ''}));
         this._allLanguages = LANGUAGES.map(([id, title]) => ({id, title}));
         this._languages = [];
         this._profiles = PROFILES.map(([id, title, description, modelProfile, modelFamily]) => ({
@@ -372,29 +364,10 @@ class WordpipePage extends Adw.PreferencesPage {
         });
         this._appendSection(section, this._modelGroup);
 
-        this._backendModel = new Gtk.StringList();
-        this._backends.forEach(backend => this._backendModel.append(backend.title));
-        this._backendRow = new Adw.ComboRow({
-            title: _('Backend'),
-            model: this._backendModel,
-        });
-        this._backendRow.selected = this._selectedIndex(
-            this._backends, this._settings.get_string('backend'));
-        this._backendRow.connect('notify::selected', row => {
-            if (this._syncingSettings)
-                return;
-            const backend = this._backends[row.selected]?.id;
-            if (!backend)
-                return;
-            this._settings.set_string('backend', backend);
-            this._callRemote('SetBackend', backend);
-        });
-        this._modelGroup.add(this._backendRow);
-
         this._profileModel = new Gtk.StringList();
         this._selectableProfiles.forEach(profile => this._profileModel.append(profile.title));
         this._profileRow = new Adw.ComboRow({
-            title: _('Model Preset'),
+            title: _('Model'),
             subtitle: _('Install a model below before selecting it.'),
             model: this._profileModel,
             sensitive: this._selectableProfiles.length > 0,
@@ -415,12 +388,12 @@ class WordpipePage extends Adw.PreferencesPage {
         });
         this._modelGroup.add(this._profileRow);
 
-        this._latencyValues = [560, 1120]; // Compatibility fallback for older services.
+        this._latencyValues = [80, 160, 560, 1120];
         this._latencyRow = new Adw.ComboRow({
             title: _('Streaming Chunk Size'),
-            subtitle: _('Choose a chunk size supported by the installed model; generic exports share one download.'),
+            subtitle: _('All chunk sizes use the same model download.'),
             model: Gtk.StringList.new(this._latencyValues.map(value => `${value} ms`)),
-            selected: this._settings.get_uint('streaming-latency-ms') === 1120 ? 1 : 0,
+            selected: Math.max(0, this._latencyValues.indexOf(this._settings.get_uint('streaming-latency-ms'))),
         });
         this._latencyRow.connect('notify::selected', row => {
             if (this._syncingSettings)
@@ -498,7 +471,7 @@ class WordpipePage extends Adw.PreferencesPage {
 
         row = new Adw.SwitchRow({
             title: _('Inverse Text Normalization'),
-            subtitle: _('NeMo only: format numbers, dates and units. Grammars: English, Arabic, Chinese, French, German, Hindi and Spanish. Change while stopped.'),
+            subtitle: _('Format numbers, dates and units. Grammars: English, Arabic, Chinese, French, German, Hindi and Spanish. Change while stopped.'),
             active: this._settings.get_boolean('itn'),
         });
         row.connect('notify::active', widget => {
@@ -512,7 +485,7 @@ class WordpipePage extends Adw.PreferencesPage {
         this._endpointModes = ['disabled', 'preview', 'commit'];
         this._endpointModeRow = new Adw.ComboRow({
             title: _('Pause Endpointing'),
-            subtitle: _('NeMo only. Uses about 800 ms of decoded token silence. ITN switch controls normalization. Preview mode needs partial insertion to show text before Stop.'),
+            subtitle: _('Uses about 800 ms of decoded token silence. ITN switch controls normalization. Preview mode needs partial insertion to show text before Stop.'),
             model: Gtk.StringList.new([_('Disabled'), _('ITN Preview — Do Not Finalize'), _('ITN + Finalize / Commit')]),
             selected: Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode'))),
         });
@@ -529,7 +502,7 @@ class WordpipePage extends Adw.PreferencesPage {
 
         this._phraseBoostingRow = new Adw.SwitchRow({
             title: _('Vocabulary / Phrase Boosting'),
-            subtitle: _('NeMo only: favor the names and terms below. May also bias incorrect matches. Change while stopped.'),
+            subtitle: _('Favor the names and terms below. May also bias incorrect matches. Change while stopped.'),
             active: this._settings.get_boolean('phrase-boosting'),
         });
         this._phraseBoostingRow.connect('notify::active', widget => {
@@ -586,7 +559,7 @@ class WordpipePage extends Adw.PreferencesPage {
         group.add(this._vadModelPathRow);
         this._vadFilteringRow = new Adw.SwitchRow({
             title: _('VAD Filtering'),
-            subtitle: _('NeMo only: mask non-speech features. Silero is downloaded automatically. Does not enable endpointing. Change while stopped.'),
+            subtitle: _('Mask non-speech features. Silero is downloaded automatically. Does not enable endpointing. Change while stopped.'),
             active: this._settings.get_boolean('vad-filtering'),
         });
         this._vadFilteringRow.connect('notify::active', widget => {
@@ -712,16 +685,6 @@ class WordpipePage extends Adw.PreferencesPage {
         });
         group.add(this._threadsRow);
 
-        this._sampleRateRow = Adw.SpinRow.new_with_range(8000, 48000, 1000);
-        this._sampleRateRow.title = _('Sample Rate');
-        this._sampleRateRow.value = this._settings.get_uint('sample-rate');
-        this._sampleRateRow.connect('notify::value', row => {
-            if (this._syncingSettings)
-                return;
-            this._settings.set_uint('sample-rate', Math.max(1, Math.round(row.value)));
-            this._pushRuntimeOptions();
-        });
-        group.add(this._sampleRateRow);
     }
 
     _buildTranscriptGroup(section) {
@@ -805,7 +768,6 @@ class WordpipePage extends Adw.PreferencesPage {
                 }
                 this._statusRow.subtitle = _('Connected');
                 this._subscribeSignals();
-                this._refreshBackends();
                 this._refreshModelProfiles();
                 this._refreshConfig();
                 this._refreshState();
@@ -858,25 +820,6 @@ class WordpipePage extends Adw.PreferencesPage {
     _refreshConfig() {
         this._callRemote('GetConfig', config => {
             this._syncFromConfig(deepUnpackMap(config));
-        });
-    }
-
-    _refreshBackends() {
-        this._callRemote('ListBackends', backends => {
-            const parsed = backends.map(item => deepUnpackMap(item))
-                .filter(item => typeof item.id === 'string');
-            if (parsed.length === 0)
-                return;
-            this._backends = parsed.map(item => ({
-                id: item.id,
-                title: item.title ?? item.id,
-                description: item.description ?? '',
-            }));
-            this._withSyncing(() => {
-                clearStringList(this._backendModel);
-                this._backends.forEach(backend => this._backendModel.append(backend.title));
-                this._syncComboSelections();
-            });
         });
     }
 
@@ -991,15 +934,13 @@ class WordpipePage extends Adw.PreferencesPage {
     }
 
     _syncComboSelections() {
-        if (!this._backendRow || !this._profileRow || !this._languageRow)
+        if (!this._profileRow || !this._languageRow)
             return;
-        const backend = this._settings.get_string('backend');
         const preset = this._selectedPresetId();
         const family = this._settings.get_string('model-family');
         const language = this._settings.get_string('language');
         this._withSyncing(() => {
             this._updateLanguageOptions(family, language);
-            this._backendRow.selected = this._selectedIndex(this._backends, backend);
             this._profileRow.selected = this._selectedProfileIndex(preset);
             this._languageRow.selected = this._selectedIndex(this._languages, language);
         });
@@ -1019,11 +960,7 @@ class WordpipePage extends Adw.PreferencesPage {
         this._spokenPunctuationRow.active = this._settings.get_boolean('spoken-punctuation');
         this._insertPartialsRow.selected = this._settings.get_boolean('insert-partials') ? 0 : 1;
         this._itnRow.active = this._settings.get_boolean('itn');
-        this._itnRow.sensitive = this._settings.get_string('backend') === 'nemo-speech';
-        this._endpointModeRow.sensitive = this._itnRow.sensitive;
         this._endpointModeRow.selected = Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode')));
-        for (const row of [this._phraseBoostingRow, this._boostPhrasesRow, this._boostTokenizerPathRow, this._vadFilteringRow, this._vadModelPathRow])
-            row.sensitive = this._itnRow.sensitive;
         this._vadModelPathRow.text = this._settings.get_string('vad-model-path');
         this._boostTokenizerPathRow.text = this._settings.get_string('boost-tokenizer-path');
         const phrases = this._settings.get_string('boost-phrases');
@@ -1037,7 +974,6 @@ class WordpipePage extends Adw.PreferencesPage {
         this._workerPathRow.text = this._settings.get_string('worker-path');
         this._modelInstallerPathRow.text = this._settings.get_string('model-installer-path');
         this._threadsRow.value = this._settings.get_uint('num-threads');
-        this._sampleRateRow.value = this._settings.get_uint('sample-rate');
         this._latencyRow.selected = Math.max(0, this._latencyValues.indexOf(this._settings.get_uint('streaming-latency-ms')));
         this._shortcutModeRow.selected = this._selectedIndex(
             SHORTCUT_MODES,

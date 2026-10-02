@@ -22,20 +22,18 @@ test('invalid chunk metadata preserves the compatibility fallback', () => {
 
 test('model selector exposes installed profiles only', () => {
     const profiles = [
-        {id: 'compact', installed: true},
-        {id: 'compact-english', installed: false},
-        {id: 'fast', installed: true},
-        {id: 'fast-english', installed: false},
+        {id: 'nemo-q8-english', installed: true},
+        {id: 'nemo-q8', installed: false},
     ];
 
     assert.deepEqual(
         installedModelProfiles(profiles).map(profile => profile.id),
-        ['compact', 'fast']);
+        ['nemo-q8-english']);
 });
 
 test('model selector is empty when no profile is installed', () => {
     assert.deepEqual(installedModelProfiles([
-        {id: 'compact', installed: false},
-        {id: 'fast', installed: false},
+        {id: 'nemo-q8', installed: false},
+        {id: 'nemo-q8-english', installed: false},
     ]), []);
 });

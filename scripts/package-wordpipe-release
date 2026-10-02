@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RUST_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
+SERVICE_BUILD="${WORDPIPE_SERVICE_BUILD:-$ROOT/build/service}"
 UUID="wordpipe@dhansen.dev"
 ARCH="$(uname -m)"
 
@@ -81,17 +81,14 @@ copy_extension() {
   rm -f "$destination/schemas/gschemas.compiled"
 }
 
-require_tool cargo
+require_tool cmake
 require_tool glib-compile-schemas
 require_tool tar
 require_tool zip
 
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
-  cargo build --release \
-    --manifest-path "$ROOT/Cargo.toml" \
-    -p wordpipe-service \
-    -p wordpipe-parakeet-worker
   bash "$ROOT/scripts/build-nemo-worker"
+  bash "$ROOT/scripts/build-service"
 fi
 
 rm -rf "$WORK_DIR"
@@ -104,8 +101,7 @@ mkdir -p \
   "$STAGE_ROOT/share/systemd/user" \
   "$STAGE_ROOT/share/gnome-shell/extensions"
 
-install -m 0755 "$RUST_TARGET_DIR/release/wordpipe-service" "$STAGE_ROOT/bin/wordpipe-service"
-install -m 0755 "$RUST_TARGET_DIR/release/wordpipe-parakeet-worker" "$STAGE_ROOT/bin/wordpipe-parakeet-worker"
+cmake --install "$SERVICE_BUILD" --prefix "$STAGE_ROOT"
 install -m 0755 "$ROOT/scripts/wordpipe-companion-install" "$STAGE_ROOT/bin/wordpipe-companion-install"
 NEMO_WORKER_BUILD="${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}"
 NEMO_SOURCE="${WORDPIPE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}"
@@ -152,38 +148,16 @@ install -m 0644 "$NEMO_SOURCE/llama.cpp/LICENSE" "$STAGE_ROOT/share/wordpipe/lic
 install -m 0644 "$NEMO_SOURCE/third_party/miniaudio/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/miniaudio-LICENSE"
 install -m 0644 "$NEMO_SOURCE/ggml/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/ggml-LICENSE"
 install -m 0644 "$NEMO_SOURCE/llama.cpp/licenses/LICENSE-jsonhpp" "$STAGE_ROOT/share/wordpipe/licenses/nemo/json-LICENSE"
-install -m 0644 "$ROOT/packaging/requirements-release-model-install.txt" \
-  "$STAGE_ROOT/share/wordpipe/requirements-model-install.txt"
-
 cp -a "$ROOT/src/wordpipe" "$STAGE_ROOT/lib/python/wordpipe"
 find "$STAGE_ROOT/lib/python/wordpipe" -type d -name __pycache__ -prune -exec rm -rf {} +
 find "$STAGE_ROOT/lib/python/wordpipe" -type f -name '*.pyc' -delete
-install -m 0755 "$ROOT/scripts/convert_nemotron_to_ort_format.py" \
-  "$STAGE_ROOT/share/wordpipe/scripts/convert_nemotron_to_ort_format.py"
-install -m 0755 "$ROOT/scripts/build_nemotron_wordpipe_model.py" \
-  "$STAGE_ROOT/share/wordpipe/scripts/build_nemotron_wordpipe_model.py"
-for task_model_script in export_nemotron_parakeet_optimized.py transform_nemotron_parakeet_export.py \
-    rewrite_nemotron_projected_kv_cache.py rewrite_nemotron_pointwise_convs.py build_nemotron_fixed_shape_model.py \
-    build_nemotron_dynamic_shape_model.py nemotron_dynamic_encoder.py \
-    verify_dynamic_nemotron_export.py validate_dynamic_nemotron_release.py; do
-  install -m 0755 "$ROOT/scripts/$task_model_script" "$STAGE_ROOT/share/wordpipe/scripts/$task_model_script"
-done
-install -m 0755 "$ROOT/scripts/download_hf_ranged.py" \
-  "$STAGE_ROOT/share/wordpipe/scripts/download_hf_ranged.py"
-install -m 0755 "$ROOT/scripts/bundle_nemotron_streaming_modes.py" \
-  "$STAGE_ROOT/share/wordpipe/scripts/bundle_nemotron_streaming_modes.py"
-
 cat > "$STAGE_ROOT/bin/wordpipe-model-install" <<'EOF'
 #!/usr/bin/env sh
 set -eu
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PREFIX=$(CDPATH= cd -- "$SELF_DIR/.." && pwd)
-PYTHON="$PREFIX/python-venv/bin/python"
-if [ ! -x "$PYTHON" ]; then
-  PYTHON="${WORDPIPE_PYTHON:-python3}"
-fi
+PYTHON="${WORDPIPE_PYTHON:-python3}"
 export PYTHONPATH="$PREFIX/lib/python${PYTHONPATH:+:$PYTHONPATH}"
-export WORDPIPE_SCRIPTS_DIR="$PREFIX/share/wordpipe/scripts"
 exec "$PYTHON" -m wordpipe model-install "$@"
 EOF
 chmod 0755 "$STAGE_ROOT/bin/wordpipe-model-install"
@@ -197,7 +171,7 @@ EOF
 
 cat > "$STAGE_ROOT/share/systemd/user/wordpipe-service.service" <<'EOF'
 [Unit]
-Description=Wordpipe Rust dictation service
+Description=Wordpipe dictation service
 Documentation=https://github.com/danhansen/wordpipe
 
 [Service]
@@ -218,7 +192,7 @@ cat > "$STAGE_ROOT/README.release" <<EOF
 Wordpipe ${VERSION}
 
 Run ./install.sh from this extracted directory to install the GNOME Shell
-extension, Rust D-Bus service, ASR worker, and model-install helper into your
+extension, native D-Bus service, ASR worker, and model-download helper into your
 user account.
 EOF
 

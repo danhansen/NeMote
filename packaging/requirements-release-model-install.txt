@@ -1,4 +1,0 @@
-huggingface_hub>=0.36.2
-hf_transfer>=0.1.9
-onnx>=1.19
-onnxruntime>=1.27

@@ -4,24 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wordpipe"
-version = "0.1.28"
-description = "Wayland-first GNOME dictation with streaming Parakeet/Nemotron ASR"
+version = "0.1.29"
+description = "GNOME dictation with native Nemotron streaming ASR"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
-
-[project.optional-dependencies]
-asr = [
-  "sherpa-onnx>=1.13.3",
-  "sounddevice",
-  "numpy",
-]
-model-tools = [
-  "onnx",
-  "onnxruntime>=1.27",
-  "onnx_ir",
-  "onnxslim",
-]
 
 [project.scripts]
 wordpipe = "wordpipe.cli:main"

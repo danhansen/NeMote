@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+SOURCE=${WORDPIPE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}
+BUILD=${WORDPIPE_SERVICE_BUILD:-$ROOT/build/service}
+cmake -S "$ROOT/native/wordpipe-service" -B "$BUILD" \
+  -DCMAKE_BUILD_TYPE=Release -DNEMO_SPEECH_SOURCE_DIR="$SOURCE"
+cmake --build "$BUILD" -j "${WORDPIPE_BUILD_JOBS:-2}"

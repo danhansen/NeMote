@@ -6,7 +6,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from score_benchmark_wer import load_eval_helpers
+import wer as helpers
 
 
 def sha(path):
@@ -25,7 +25,6 @@ def main():
     parser.add_argument("--repeat", type=int, default=2, choices=(1, 2))
     parser.add_argument("--device", choices=("auto", "cpu"), default="cpu")
     args = parser.parse_args()
-    helpers = load_eval_helpers()
     manifest = json.loads(args.manifest.read_text())
     baseline = json.loads(args.baseline.read_text())
     if baseline["model_sha256"] != sha(args.model) or baseline["manifest_sha256"] != sha(args.manifest):

@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 set -eu
 
-mkdir -p "$HOME" "$CARGO_HOME"
+mkdir -p /tmp/wordpipe-config /tmp/wordpipe-data /tmp/wordpipe-cache
 exec "$@"

@@ -5,19 +5,14 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 
 run_tests() {
-  cargo fmt --all -- --check
-  cargo test --locked --workspace
   bash scripts/build-nemo-worker
+  bash scripts/build-service
+  ctest --test-dir "${WORDPIPE_SERVICE_BUILD:-$ROOT/build/service}" --output-on-failure
   ctest --test-dir "${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}" --output-on-failure
-  python3 scripts/probe_ort_shape_specialization.py --fixture-dir build/test-fixtures/ort
-  local task_ort_dylib
-  task_ort_dylib=$(python3 -c 'import pathlib, onnxruntime; print(next((pathlib.Path(onnxruntime.__file__).parent / "capi").glob("libonnxruntime.so.*")))')
-  WORDPIPE_ORT_TEST_FIXTURES="$ROOT/build/test-fixtures/ort" ORT_DYLIB_PATH="$task_ort_dylib" \
-    cargo test --locked -p parakeet-rs --lib
+  dbus-run-session -- env WORDPIPE_TEST_BUS=1 python3 scripts/check_service_lifecycle.py --service "${WORDPIPE_SERVICE_BUILD:-$ROOT/build/service}/wordpipe-service"
   PYTHONPATH=src python3 -m unittest discover -s tests
   python3 scripts/check_gnome_dbus_xml.py
   sh -n scripts/install-wordpipe-release
-  bash -n scripts/install-wordpipe-gnome
   node --input-type=module --check \
     < extensions/gnome-shell/wordpipe@dhansen.dev/extension.js
   node --input-type=module --check \

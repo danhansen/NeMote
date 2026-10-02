@@ -1,22 +1,12 @@
-# Wordpipe Development Container
+# Development container
 
-`Containerfile.dev` is the canonical environment for tests and release builds.
-It provides the pinned Rust toolchain, Python model tooling, ALSA headers,
-GNOME schema compiler, Node syntax checker, and archive tools used by CI.
+Run `scripts/dev-container test` for build and regression checks, or
+`scripts/dev-container all VERSION build/release` to package a release.
+Podman or Docker is required. The image uses Debian Bookworm, C++/CMake, GLib/GIO,
+and pinned Python dependencies for building ITN grammars. No Rust or ONNX stack
+is required. Runtime model-download helpers use only Python's standard library.
 
-Use the repository wrapper from the project root:
-
-```sh
-scripts/dev-container build
-scripts/dev-container test
-scripts/dev-container shell
-scripts/dev-container package dev-local dist
-```
-
-Set `CONTAINER_ENGINE=docker` or `CONTAINER_ENGINE=podman` to override automatic
-engine selection. Set `WORDPIPE_DEV_IMAGE` to use a different local image tag.
-After explicitly building an image, `WORDPIPE_CONTAINER_SKIP_BUILD=1` reuses it.
-
-The source tree is mounted at `/workspace`; model files are not copied into the
-image. The CI and release workflows call the same wrapper and
-`scripts/run-build-pipeline` used locally.
+Use `WORDPIPE_CONTAINER_SKIP_BUILD=1` to reuse an existing image. Build parallelism
+is controlled by `WORDPIPE_BUILD_JOBS` (default 2). Existing pinned SDK builds can
+be selected with `WORDPIPE_NEMO_SOURCE`, `WORDPIPE_NEMO_BUILD`, and
+`WORDPIPE_NEMO_WORKER_BUILD`; `WORDPIPE_SERVICE_BUILD` selects the service build.

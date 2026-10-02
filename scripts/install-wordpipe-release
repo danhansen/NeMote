@@ -14,14 +14,13 @@ usage() {
   cat <<'EOF'
 Usage: install-wordpipe-release [--from-extracted DIR]
 
-Install Wordpipe's GNOME Shell extension plus the Rust D-Bus service into the
+Install Wordpipe's GNOME Shell extension plus the native D-Bus service into the
 current user account. By default this downloads the latest GitHub Release
 archive from $WORDPIPE_GITHUB_REPO.
 
 Environment:
   WORDPIPE_GITHUB_REPO       GitHub repo, default danhansen/wordpipe
   WORDPIPE_VERSION           Release tag, default latest
-  WORDPIPE_SKIP_PYTHON_DEPS  Set to 1 to skip model-installer venv setup
 EOF
 }
 
@@ -92,6 +91,9 @@ if [ ! -x "$PACKAGE_DIR/bin/wordpipe-service" ]; then
   exit 1
 fi
 
+need_tool python3
+python3 -c 'import sys; assert sys.version_info >= (3, 11), "Wordpipe requires Python 3.11 or newer"'
+
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 LIBEXEC_DIR="$HOME/.local/libexec/wordpipe"
@@ -106,16 +108,7 @@ cp -a "$PACKAGE_DIR/bin" "$LIBEXEC_DIR/bin"
 cp -a "$PACKAGE_DIR/lib" "$LIBEXEC_DIR/lib"
 cp -a "$PACKAGE_DIR/share" "$LIBEXEC_DIR/share"
 
-if [ "${WORDPIPE_SKIP_PYTHON_DEPS:-0}" != "1" ]; then
-  need_tool python3
-  echo "Installing model-download/conversion Python environment"
-  python3 -m venv "$LIBEXEC_DIR/python-venv"
-  "$LIBEXEC_DIR/python-venv/bin/python" -m pip install --upgrade pip
-  "$LIBEXEC_DIR/python-venv/bin/python" -m pip install \
-    -r "$LIBEXEC_DIR/share/wordpipe/requirements-model-install.txt"
-else
-  echo "Skipping Python dependency setup because WORDPIPE_SKIP_PYTHON_DEPS=1"
-fi
+# Downloads use only the standard library: no venv, pip or ONNX packages.
 
 echo "Installing D-Bus activation service"
 mkdir -p "$DBUS_SERVICE_DIR"

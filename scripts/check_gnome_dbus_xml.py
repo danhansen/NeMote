@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RUST_PROTOCOL = ROOT / "crates/wordpipe-protocol/src/lib.rs"
+SERVICE_PROTOCOL = ROOT / "native/wordpipe-service/interface.xml"
 GNOME_CLIENTS = [
     ROOT / "extensions/gnome-shell/wordpipe@dhansen.dev/extension.js",
     ROOT / "extensions/gnome-shell/wordpipe@dhansen.dev/prefs.js",
@@ -48,7 +48,7 @@ EXPECTED_SETTINGS_KEYS = {
 
 
 def main() -> int:
-    expected = interface_shape(extract_rust_xml(RUST_PROTOCOL))
+    expected = interface_shape(SERVICE_PROTOCOL.read_text(encoding="utf-8"))
     errors: list[str] = []
     for path in GNOME_CLIENTS:
         actual = interface_shape(extract_js_xml(path))
@@ -69,18 +69,6 @@ def main() -> int:
         print("\n\n".join(errors), file=sys.stderr)
         return 1
     return 0
-
-
-def extract_rust_xml(path: Path) -> str:
-    text = path.read_text(encoding="utf-8")
-    match = re.search(
-        r'pub const INTROSPECTION_XML: &str = r#"\n(?P<xml>.*?)\n"#;',
-        text,
-        re.DOTALL,
-    )
-    if not match:
-        raise RuntimeError(f"could not find INTROSPECTION_XML in {path}")
-    return match.group("xml")
 
 
 def extract_js_xml(path: Path) -> str:
@@ -174,7 +162,7 @@ def format_difference(
     expected: dict[str, tuple[Signature, ...]],
     actual: dict[str, tuple[Signature, ...]],
 ) -> str:
-    lines = [f"{path.relative_to(ROOT)} D-Bus XML differs from Rust protocol"]
+    lines = [f"{path.relative_to(ROOT)} D-Bus XML differs from service protocol"]
     for key in ("methods", "signals"):
         expected_by_name = {item[0]: item for item in expected[key]}
         actual_by_name = {item[0]: item for item in actual[key]}

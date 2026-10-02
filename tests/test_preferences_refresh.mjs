@@ -13,8 +13,8 @@ function method(name, next) {
     return source.slice(source.indexOf(`    ${name}(`), source.indexOf(`    ${next}(`));
 }
 
-function harness(kind, configured) {
-    const values = {[kind === 'device' ? 'input-device' : 'backend']: configured};
+function harness(configured) {
+    const values = {'input-device': configured};
     const calls = [];
     const context = vm.createContext({
         _: text => text,
@@ -25,7 +25,6 @@ function harness(kind, configured) {
         },
     });
     const Page = vm.runInContext(`(class {
-        ${method('_refreshBackends', '_refreshModelProfiles')}
         ${method('_refreshInputDevices', '_syncFromConfig')}
         ${method('_withSyncing', '_pushInsertionOptions')}
     })`, context);
@@ -36,7 +35,6 @@ function harness(kind, configured) {
         set_string: (key, value) => { values[key] = value; },
     };
     page._deviceSelectors = [''];
-    page._backends = [{id: 'parakeet', title: 'Parakeet'}, {id: 'nemo-speech', title: 'NeMo'}];
     let reply = [];
     page._callRemote = (name, arg) => {
         if (name.startsWith('List'))
@@ -44,11 +42,11 @@ function harness(kind, configured) {
         else
             calls.push([name, arg]);
     };
-    const prefix = kind === 'device' ? '_device' : '_backend';
+    const prefix = '_device';
     const callback = source.match(new RegExp(
         `this\\.${prefix}Row\\.connect\\('notify::selected', row => \\{([\\s\\S]*?)\\n        \\}\\);`))[1];
     const onSelected = vm.runInContext(`(function(row) {${callback}})`, context);
-    let selected = kind === 'device' ? 0 : 1;
+    let selected = 0;
     const row = {
         get selected() { return selected; },
         set selected(value) {
@@ -59,7 +57,7 @@ function harness(kind, configured) {
         },
     };
     const model = {
-        items: kind === 'device' ? ['System Default'] : ['Parakeet', 'NeMo'],
+        items: ['System Default'],
         get_n_items() { return this.items.length; },
         remove(index) {
             this.items.splice(index, 1);
@@ -76,14 +74,11 @@ function harness(kind, configured) {
     };
     page[`${prefix}Row`] = row;
     page[`${prefix}Model`] = model;
-    page._syncComboSelections = () => page._withSyncing(() => {
-        row.selected = page._backends.findIndex(item => item.id === values.backend);
-    });
     return {
         page, row, calls, values,
         refresh(items) {
             reply = items;
-            page[kind === 'device' ? '_refreshInputDevices' : '_refreshBackends']();
+            page._refreshInputDevices();
         },
     };
 }
@@ -95,7 +90,7 @@ const devices = [
 
 for (const configured of ['', '9', 'missing-device']) {
     test(`device refresh preserves ${JSON.stringify(configured)} without configuration feedback`, () => {
-        const h = harness('device', configured);
+        const h = harness(configured);
         for (let i = 0; i < 20; i++)
             h.refresh(devices);
         assert.deepEqual(h.calls, []);
@@ -108,19 +103,8 @@ for (const configured of ['', '9', 'missing-device']) {
     });
 }
 
-test('backend refresh does not switch NeMo back to Parakeet', () => {
-    const h = harness('backend', 'nemo-speech');
-    for (let i = 0; i < 20; i++)
-        h.refresh(h.page._backends);
-    assert.deepEqual(h.calls, []);
-    assert.equal(h.values.backend, 'nemo-speech');
-    assert.equal(h.row.selected, 1);
-    h.row.selected = 0;
-    assert.deepEqual(h.calls, [['SetBackend', 'parakeet']]);
-});
-
 test('device rebuild restores an enclosing sync guard', () => {
-    const h = harness('device', '9');
+    const h = harness('9');
     h.page._syncingSettings = true;
     h.refresh(devices);
     assert.equal(h.page._syncingSettings, true);
