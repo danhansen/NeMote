@@ -1,4 +1,4 @@
-# Wordpipe graph and streaming pipeline performance audit
+# NeMote graph and streaming pipeline performance audit
 
 This audit examines the current 0.1.20 source, the English FP32 and corrected
 QUInt8 model artifacts, and the pinned parakeet-rs fork. Its purpose is to

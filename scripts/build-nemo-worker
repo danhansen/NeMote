@@ -4,22 +4,22 @@ set -euo pipefail
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 REVISION=4c101bc7113f49101a3e11d2c994c519f41939f6
 GGML_REVISION=c03b4e2bcece5134827881af90242086daf75be5
-NATIVE=${WORDPIPE_NEMO_NATIVE:-OFF}
-ITN=${WORDPIPE_NEMO_ITN:-ON}
-case "$ITN" in ON|OFF) ;; *) echo "WORDPIPE_NEMO_ITN must be ON or OFF" >&2; exit 2 ;; esac
+NATIVE=${NEMOTE_NEMO_NATIVE:-OFF}
+ITN=${NEMOTE_NEMO_ITN:-ON}
+case "$ITN" in ON|OFF) ;; *) echo "NEMOTE_NEMO_ITN must be ON or OFF" >&2; exit 2 ;; esac
 # Ship portable CPU plugins selected at runtime, not client-side compilation.
 # An explicitly requested native build uses a single host-tuned CPU backend.
 if [[ "$NATIVE" == ON ]]; then default_cpu_variants=OFF; else default_cpu_variants=ON; fi
-CPU_VARIANTS=${WORDPIPE_NEMO_CPU_VARIANTS:-$default_cpu_variants}
-case "$NATIVE" in ON|OFF) ;; *) echo "WORDPIPE_NEMO_NATIVE must be ON or OFF" >&2; exit 2 ;; esac
-case "$CPU_VARIANTS" in ON|OFF) ;; *) echo "WORDPIPE_NEMO_CPU_VARIANTS must be ON or OFF" >&2; exit 2 ;; esac
+CPU_VARIANTS=${NEMOTE_NEMO_CPU_VARIANTS:-$default_cpu_variants}
+case "$NATIVE" in ON|OFF) ;; *) echo "NEMOTE_NEMO_NATIVE must be ON or OFF" >&2; exit 2 ;; esac
+case "$CPU_VARIANTS" in ON|OFF) ;; *) echo "NEMOTE_NEMO_CPU_VARIANTS must be ON or OFF" >&2; exit 2 ;; esac
 if [[ "$NATIVE" == ON && "$CPU_VARIANTS" == ON ]]; then
   echo "Native compilation and portable CPU variants are mutually exclusive" >&2
   exit 2
 fi
-SOURCE=${WORDPIPE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}
-UPSTREAM_BUILD=${WORDPIPE_NEMO_BUILD:-$SOURCE/build/wordpipe-cpu}
-WORKER_BUILD=${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}
+SOURCE=${NEMOTE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}
+UPSTREAM_BUILD=${NEMOTE_NEMO_BUILD:-$SOURCE/build/nemote-cpu}
+WORKER_BUILD=${NEMOTE_NEMO_WORKER_BUILD:-$ROOT/build/nemote-worker}
 if [[ ! -d "$SOURCE" ]]; then
   git clone --no-checkout https://github.com/NVIDIA/NeMo-Speech.cpp.git "$SOURCE"
   git -C "$SOURCE" checkout --detach "$REVISION"
@@ -38,18 +38,18 @@ fi
 bash "$SOURCE/scripts/apply-ggml-patches.sh"
 # NeMo's pinned SDK links CPU/CUDA targets directly. ggml's multi-variant
 # mode builds plugin modules instead, so adapt only this build/link boundary.
-task_patch="$ROOT/native/wordpipe-nemo-worker/upstream-dynamic-backends.patch"
+task_patch="$ROOT/native/nemote-nemo-worker/upstream-dynamic-backends.patch"
 if ! git -C "$SOURCE" apply --reverse --check "$task_patch" 2>/dev/null; then
   git -C "$SOURCE" apply --check "$task_patch"
   git -C "$SOURCE" apply "$task_patch"
 fi
 # Always configure: a cached .so must not silently ignore changed build options.
-task_tokenizer_patch="$ROOT/native/wordpipe-nemo-worker/upstream-boost-tokenizer.patch"
+task_tokenizer_patch="$ROOT/native/nemote-nemo-worker/upstream-boost-tokenizer.patch"
 if ! git -C "$SOURCE" apply --reverse --check "$task_tokenizer_patch" 2>/dev/null; then
   git -C "$SOURCE" apply --check "$task_tokenizer_patch"
   git -C "$SOURCE" apply "$task_tokenizer_patch"
 fi
-task_endpoint_patch="$ROOT/native/wordpipe-nemo-worker/upstream-endpoint-preview.patch"
+task_endpoint_patch="$ROOT/native/nemote-nemo-worker/upstream-endpoint-preview.patch"
 if ! git -C "$SOURCE" apply --reverse --check "$task_endpoint_patch" 2>/dev/null; then
   git -C "$SOURCE" apply --check "$task_endpoint_patch"
   git -C "$SOURCE" apply "$task_endpoint_patch"
@@ -58,14 +58,14 @@ sentencepiece_cmake=(-DSENTENCEPIECE_STATIC_LIB=OFF -USENTENCEPIECE_INCLUDE_DIR)
 if [[ "$ITN" == ON ]]; then
   task_sentencepiece_prefix="$UPSTREAM_BUILD/deps/sentencepiece"
   if [[ ! -f "$task_sentencepiece_prefix/lib/libsentencepiece.a" ]]; then
-    env PREFIX="$task_sentencepiece_prefix" JOBS="${WORDPIPE_BUILD_JOBS:-2}" \
+    env PREFIX="$task_sentencepiece_prefix" JOBS="${NEMOTE_BUILD_JOBS:-2}" \
       bash "$SOURCE/scripts/build_sentencepiece_static.sh" "$UPSTREAM_BUILD/deps/sentencepiece-build"
   fi
   sentencepiece_cmake=("-DSENTENCEPIECE_STATIC_LIB=$task_sentencepiece_prefix/lib/libsentencepiece.a" \
     "-DSENTENCEPIECE_INCLUDE_DIR=$task_sentencepiece_prefix/include")
   task_itn_prefix="$UPSTREAM_BUILD/deps/itn"
   if [[ ! -f "$task_itn_prefix/lib/libsparrowhawk.so" ]]; then
-    env PREFIX="$task_itn_prefix" JOBS="${WORDPIPE_BUILD_JOBS:-2}" CC=gcc CXX=g++ \
+    env PREFIX="$task_itn_prefix" JOBS="${NEMOTE_BUILD_JOBS:-2}" CC=gcc CXX=g++ \
       bash "$SOURCE/scripts/build_itn_deps.sh" "$UPSTREAM_BUILD/deps/itn-build"
   fi
   python3 "$ROOT/scripts/install_nemo_itn_grammars.py" "$UPSTREAM_BUILD/deps/itn_configs"
@@ -83,10 +83,10 @@ cmake -S "$SOURCE" -B "$UPSTREAM_BUILD" -DCMAKE_BUILD_TYPE=Release \
   -DNEMO_SPEECH_BUILD_EXAMPLES=OFF -DGGML_CUDA=OFF -DGGML_VULKAN=OFF \
   -DGGML_NATIVE="$NATIVE" -DGGML_CPU_ALL_VARIANTS="$CPU_VARIANTS" \
   -DGGML_BACKEND_DL="$CPU_VARIANTS"
-cmake --build "$UPSTREAM_BUILD" --target nemo_speech_asr -j "${WORDPIPE_BUILD_JOBS:-2}"
-cmake -S "$ROOT/native/wordpipe-nemo-worker" -B "$WORKER_BUILD" \
+cmake --build "$UPSTREAM_BUILD" --target nemo_speech_asr -j "${NEMOTE_BUILD_JOBS:-2}"
+cmake -S "$ROOT/native/nemote-nemo-worker" -B "$WORKER_BUILD" \
   -DCMAKE_BUILD_TYPE=Release -DNEMO_SPEECH_SOURCE_DIR="$SOURCE" \
   -DNEMO_SPEECH_LIBRARY_DIR="$UPSTREAM_BUILD/bin" \
-  -DWORDPIPE_NEMO_DYNAMIC_BACKENDS="$CPU_VARIANTS" \
-  -DWORDPIPE_NEMO_ITN="$ITN" -DWORDPIPE_NEMO_ITN_GRAMMAR_DIR="$UPSTREAM_BUILD/deps/itn_configs"
-cmake --build "$WORKER_BUILD" -j "${WORDPIPE_BUILD_JOBS:-2}"
+  -DNEMOTE_NEMO_DYNAMIC_BACKENDS="$CPU_VARIANTS" \
+  -DNEMOTE_NEMO_ITN="$ITN" -DNEMOTE_NEMO_ITN_GRAMMAR_DIR="$UPSTREAM_BUILD/deps/itn_configs"
+cmake --build "$WORKER_BUILD" -j "${NEMOTE_BUILD_JOBS:-2}"

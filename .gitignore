@@ -1,6 +1,7 @@
 .agents/
 .codex/
 .git/
+.nemote.git/
 .wordpipe.git/
 
 __pycache__/
@@ -14,6 +15,7 @@ venv/
 
 dist/
 build/
+build-pipeline.log
 target/
 *.egg-info/
 

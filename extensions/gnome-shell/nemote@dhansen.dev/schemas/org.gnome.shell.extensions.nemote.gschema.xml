@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema id="org.gnome.shell.extensions.wordpipe" path="/org/gnome/shell/extensions/wordpipe/">
+  <schema id="org.gnome.shell.extensions.nemote" path="/org/gnome/shell/extensions/nemote/">
     <key name="toggle-shortcut" type="as">
       <default>['&lt;Control&gt;&lt;Alt&gt;space']</default>
       <summary>Dictation shortcut</summary>
-      <description>Keyboard shortcut handled by GNOME Shell to control Wordpipe dictation.</description>
+      <description>Keyboard shortcut handled by GNOME Shell to control NeMote dictation.</description>
     </key>
     <key name="shortcut-mode" type="s">
       <choices>
@@ -23,7 +23,7 @@
     <key name="backend" type="s">
       <default>'nemo-speech'</default>
       <summary>ASR backend</summary>
-      <description>Selected ASR backend exposed by the Wordpipe service.</description>
+      <description>Selected ASR backend exposed by the NeMote service.</description>
     </key>
     <key name="model-profile" type="s">
       <default>'nemo-q8'</default>
@@ -57,17 +57,17 @@
     <key name="model-root" type="s">
       <default>''</default>
       <summary>Model root</summary>
-      <description>Directory containing installed Wordpipe model profiles. Empty means the service default.</description>
+      <description>Directory containing installed NeMote model profiles. Empty means the service default.</description>
     </key>
     <key name="worker-path" type="s">
       <default>''</default>
       <summary>Worker path</summary>
-      <description>Path to the Wordpipe ASR worker binary. Empty means the service default.</description>
+      <description>Path to the NeMote ASR worker binary. Empty means the service default.</description>
     </key>
     <key name="model-installer-path" type="s">
       <default>''</default>
       <summary>Model installer path</summary>
-      <description>Path to the Wordpipe model installer wrapper. Empty means the service default.</description>
+      <description>Path to the NeMote model installer wrapper. Empty means the service default.</description>
     </key>
     <key name="num-threads" type="u">
       <default>2</default>

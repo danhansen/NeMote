@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from wordpipe import nemo_companions as companions
+from nemote import nemo_companions as companions
 
 
 class NemoCompanionTests(unittest.TestCase):

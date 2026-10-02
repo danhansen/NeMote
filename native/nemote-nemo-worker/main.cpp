@@ -1,4 +1,4 @@
-// Wordpipe's native NeMo backend. The process protocol is the backend interface;
+// NeMote's native NeMo backend. The process protocol is the backend interface;
 // audio, frontend, caches, decoder and EOF processing stay entirely in C++.
 #include <algorithm>
 #include <atomic>
@@ -63,7 +63,7 @@ struct Args {
 };
 static Args parse_args(int argc, char** argv) {
     Args args;
-    if (const char* device = std::getenv("WORDPIPE_NEMO_DEVICE")) args.device = device;
+    if (const char* device = std::getenv("NEMOTE_NEMO_DEVICE")) args.device = device;
     for (int i = 1; i < argc; ++i) {
         std::string key = argv[i];
         if (key == "--list-input-devices") { args.list_devices = true; continue; }
@@ -71,7 +71,7 @@ static Args parse_args(int argc, char** argv) {
         if (key == "--phrase-boosting") { args.phrase_boosting = true; continue; }
         if (key == "--vad-filtering") { args.vad_filtering = true; continue; }
         if (key == "--help") {
-            std::cout << "wordpipe-nemo-worker --model-dir DIR|GGUF [--wav WAV] "
+            std::cout << "nemote-nemo-worker --model-dir DIR|GGUF [--wav WAV] "
                          "[--chunk-samples 1280|2560|8960|17920] [--num-threads N] "
                          "[--language en-US|auto] [--input-device NAME|INDEX] "
                          "[--device auto|cpu] [--itn] [--phrase-boosting --boost-phrases TEXT [--boost-tokenizer MODEL]] "
@@ -123,12 +123,12 @@ static Args parse_args(int argc, char** argv) {
 }
 
 static void initialize_backends() {
-#ifdef WORDPIPE_NEMO_DYNAMIC_BACKENDS
+#ifdef NEMOTE_NEMO_DYNAMIC_BACKENDS
     // Relocated release libraries take precedence; the matching SDK path is
     // only a development-build fallback. Load modules before device discovery.
     auto executable = std::filesystem::canonical("/proc/self/exe");
     auto libraries = executable.parent_path().parent_path() / "lib/nemo";
-    if (!std::filesystem::is_directory(libraries)) libraries = WORDPIPE_NEMO_BUILD_LIBRARY_DIR;
+    if (!std::filesystem::is_directory(libraries)) libraries = NEMOTE_NEMO_BUILD_LIBRARY_DIR;
     ggml_backend_load_all_from_path(libraries.c_str());
 #endif
 }
@@ -376,7 +376,7 @@ static void prepare_companions(Args& args, const std::filesystem::path& model) {
     if (args.model_family != "english" && args.model_family != "multilingual")
         throw std::invalid_argument("Automatic companion downloads require --model-family english|multilingual");
     auto installer = args.companion_installer.empty()
-        ? std::filesystem::canonical("/proc/self/exe").parent_path() / "wordpipe-companion-install"
+        ? std::filesystem::canonical("/proc/self/exe").parent_path() / "nemote-companion-install"
         : std::filesystem::path(args.companion_installer);
     if (!std::filesystem::is_regular_file(installer))
         throw std::runtime_error("Companion download helper is missing: " + installer.string());
@@ -425,10 +425,10 @@ int main(int argc, char** argv) {
             config.vad.masker.mask_enable = true;
         }
         if (args.itn) {
-#ifdef WORDPIPE_NEMO_ITN
+#ifdef NEMOTE_NEMO_ITN
             auto executable = std::filesystem::canonical("/proc/self/exe");
-            auto grammars = executable.parent_path().parent_path() / "share/wordpipe/itn";
-            if (!std::filesystem::is_directory(grammars)) grammars = WORDPIPE_NEMO_ITN_GRAMMAR_DIR;
+            auto grammars = executable.parent_path().parent_path() / "share/nemote/itn";
+            if (!std::filesystem::is_directory(grammars)) grammars = NEMOTE_NEMO_ITN_GRAMMAR_DIR;
             auto language = args.language.substr(0, args.language.find('-'));
             if (language != "auto" && !std::filesystem::is_regular_file(grammars / language / "verbalize.far"))
                 throw std::invalid_argument("ITN grammars are unavailable for language " + args.language);
@@ -502,7 +502,7 @@ int main(int argc, char** argv) {
         join();
     } catch (const std::exception& error) {
         emit({{"event", "error"}, {"message", error.what()}});
-        std::cerr << "wordpipe-nemo-worker: " << error.what() << '\n';
+        std::cerr << "nemote-nemo-worker: " << error.what() << '\n';
         return 1;
     }
 }

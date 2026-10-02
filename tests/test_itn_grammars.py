@@ -13,6 +13,12 @@ spec.loader.exec_module(grammars)
 
 
 class ItnGrammarTests(unittest.TestCase):
+    def test_legacy_cache_marker_is_reused_without_download(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)
+            (destination / '.wordpipe-grammar-sha256').write_text(grammars.SHA256 + '\n')
+            self.assertEqual(grammars.install(destination, destination / 'missing-source'), destination)
+
     def archive(self, entries):
         output = io.BytesIO()
         with tarfile.open(fileobj=output, mode='w:bz2') as bundle:

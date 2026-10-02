@@ -1,10 +1,10 @@
 # Architecture
 
-Wordpipe is a GNOME Shell/Wayland dictation app with three small process boundaries:
+NeMote is a GNOME Shell/Wayland dictation app with three small process boundaries:
 
 ```text
 GNOME Shell extension (JavaScript)
-    │ D-Bus: dev.wordpipe.Service1
+    │ D-Bus: dev.nemote.Service1
 Native service (C++, GLib/GIO main loop)
     ├── Native NeMo worker (C++, newline-delimited JSON)
     │     └── miniaudio capture → NeMo features/recognizer → transcript snapshots
@@ -15,7 +15,7 @@ The service owns persisted settings, worker lifetime, model-install progress,
 session IDs, and signals. Subprocess output is read asynchronously on the GLib
 main loop; device enumeration and downloads do not block D-Bus dispatch.
 The service has no inference or audio dependencies. Its D-Bus contract is in
-`native/wordpipe-service/interface.xml` and is checked against both GNOME clients.
+`native/nemote-service/interface.xml` and is checked against both GNOME clients.
 
 The worker owns capture, its bounded audio queue, model state, and finalization.
 The recognizer stays loaded between dictations; each start creates a fresh stream.

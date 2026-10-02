@@ -17,6 +17,7 @@ from urllib.request import urlopen
 
 # Tokenizers from our existing exports of the matching NVIDIA checkpoints.
 TOKENIZERS = {
+    # Published tokenizer artifacts retain their legacy repository names and pins.
     "english": ("fractalyzer/wordpipe-nemotron-en-compact-dynamic-quint8",
                 "eaddc2b3b98d5ea7b66b58154466d9997be5c488", "tokenizer.model", 251056,
                 "07d4e5a63840a53ab2d4d106d2874768143fb3fbdd47938b3910d2da05bfb0a9"),

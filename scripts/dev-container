@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 ENGINE=${CONTAINER_ENGINE:-}
-IMAGE=${WORDPIPE_DEV_IMAGE:-wordpipe-dev:local}
+IMAGE=${NEMOTE_DEV_IMAGE:-nemote-dev:local}
 
 if [[ -z "$ENGINE" ]]; then
   if command -v podman >/dev/null 2>&1; then
@@ -46,19 +46,19 @@ case "$command" in
     build_image
     ;;
   shell)
-    if [[ "${WORDPIPE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
+    if [[ "${NEMOTE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
       build_image
     fi
     run_image bash "$@"
     ;;
   test|package|all)
-    if [[ "${WORDPIPE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
+    if [[ "${NEMOTE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
       build_image
     fi
     run_image scripts/run-build-pipeline "$command" "$@"
     ;;
   run)
-    if [[ "${WORDPIPE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
+    if [[ "${NEMOTE_CONTAINER_SKIP_BUILD:-0}" != "1" ]]; then
       build_image
     fi
     run_image "$@"

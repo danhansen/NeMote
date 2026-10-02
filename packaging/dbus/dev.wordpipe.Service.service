@@ -1,4 +1,0 @@
-[D-BUS Service]
-Name=dev.wordpipe.Service
-Exec=wordpipe-service
-SystemdService=wordpipe-service.service

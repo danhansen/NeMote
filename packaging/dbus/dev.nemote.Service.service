@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=dev.nemote.Service
+Exec=nemote-service
+SystemdService=nemote-service.service

@@ -15,7 +15,10 @@ SHA256 = '880c9365d1d52c17450bd930950b0e58eca294421b7be62eb71666fb21b8997f'
 
 def install(destination, source=None):
     destination = Path(destination)
-    marker = destination / '.wordpipe-grammar-sha256'
+    marker = destination / '.nemote-grammar-sha256'
+    legacy_marker = destination / '.wordpipe-grammar-sha256'
+    if not marker.exists() and legacy_marker.is_file():
+        marker = legacy_marker
     if marker.is_file() and marker.read_text().strip() == SHA256:
         return destination
     if destination.exists():

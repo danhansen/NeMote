@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       CONTAINER_ENGINE: docker
-      WORDPIPE_DEV_IMAGE: wordpipe-dev:${{ github.sha }}
+      NEMOTE_DEV_IMAGE: nemote-dev:${{ github.sha }}
 
     steps:
       - name: Check out repository
@@ -26,5 +26,19 @@ jobs:
 
       - name: Run build pipeline tests inside development image
         env:
-          WORDPIPE_CONTAINER_SKIP_BUILD: "1"
-        run: scripts/dev-container test
+          NEMOTE_CONTAINER_SKIP_BUILD: "1"
+        run: |
+          if scripts/dev-container test > build-pipeline.log 2>&1; then
+            tail -40 build-pipeline.log
+          else
+            tail -200 build-pipeline.log
+            exit 1
+          fi
+
+      - name: Preserve failed build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nemote-ci-build-log
+          path: build-pipeline.log
+          retention-days: 7

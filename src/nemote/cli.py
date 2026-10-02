@@ -8,14 +8,17 @@ from .models import MODEL_FAMILIES, STREAMING_LATENCIES, profile_runtime_dir
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="wordpipe")
+    parser = argparse.ArgumentParser(prog="nemote")
     commands = parser.add_subparsers(dest="command", required=True)
     install = commands.add_parser("model-install", help="Download the English or Multilingual Nemotron model")
     # Kept for compatibility with installed clients; there is only one profile.
     install.add_argument("--profile", choices=("nemo-q8",), default="nemo-q8", help=argparse.SUPPRESS)
     install.add_argument("--model-family", choices=(*MODEL_FAMILIES, "all"), default="english")
     data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
-    install.add_argument("--model-root", default=str(data_home / "wordpipe/models"))
+    model_root = data_home / "nemote/models"
+    if not model_root.exists() and (data_home / "wordpipe/models").is_dir():
+        model_root = data_home / "wordpipe/models"
+    install.add_argument("--model-root", default=str(model_root))
     install.add_argument("--source", help="Install a local official GGUF instead of downloading")
     install.add_argument("--force", action="store_true")
     install.add_argument("--force-source", action="store_true", help=argparse.SUPPRESS)
@@ -46,6 +49,6 @@ def main(argv=None):
         for family in families:
             _cmd_model_install_family(args, family)
     except (OSError, RuntimeError, ValueError) as error:
-        print(f"wordpipe: {error}", file=sys.stderr, flush=True)
+        print(f"nemote: {error}", file=sys.stderr, flush=True)
         return 1
     return 0

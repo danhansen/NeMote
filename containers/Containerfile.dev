@@ -33,21 +33,21 @@ RUN apt-get update \
         zip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m venv --system-site-packages /opt/wordpipe-venv
-COPY containers/requirements-dev.lock /tmp/wordpipe-requirements-dev.lock
-RUN /opt/wordpipe-venv/bin/python -m pip install --no-cache-dir \
-        -r /tmp/wordpipe-requirements-dev.lock \
-    && rm /tmp/wordpipe-requirements-dev.lock
+RUN python3 -m venv --system-site-packages /opt/nemote-venv
+COPY containers/requirements-dev.lock /tmp/nemote-requirements-dev.lock
+RUN /opt/nemote-venv/bin/python -m pip install --no-cache-dir \
+        -r /tmp/nemote-requirements-dev.lock \
+    && rm /tmp/nemote-requirements-dev.lock
 
-COPY containers/entrypoint.sh /usr/local/bin/wordpipe-container-entrypoint
-RUN chmod 0755 /usr/local/bin/wordpipe-container-entrypoint
+COPY containers/entrypoint.sh /usr/local/bin/nemote-container-entrypoint
+RUN chmod 0755 /usr/local/bin/nemote-container-entrypoint
 
-ENV PATH="/opt/wordpipe-venv/bin:${PATH}" \
+ENV PATH="/opt/nemote-venv/bin:${PATH}" \
     PYTHONPATH="/workspace/src" \
-    XDG_CONFIG_HOME="/tmp/wordpipe-config" \
-    XDG_DATA_HOME="/tmp/wordpipe-data" \
-    XDG_CACHE_HOME="/tmp/wordpipe-cache"
+    XDG_CONFIG_HOME="/tmp/nemote-config" \
+    XDG_DATA_HOME="/tmp/nemote-data" \
+    XDG_CACHE_HOME="/tmp/nemote-cache"
 
 WORKDIR /workspace
-ENTRYPOINT ["wordpipe-container-entrypoint"]
+ENTRYPOINT ["nemote-container-entrypoint"]
 CMD ["scripts/run-build-pipeline", "test"]

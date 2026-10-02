@@ -1,4 +1,4 @@
-# Wordpipe
+# NeMote
 
 Streaming dictation for GNOME Shell on Wayland, powered by Nemotron and
 NVIDIA's NeMo-Speech.cpp runtime. Recognition and the D-Bus service are C++;
@@ -7,7 +7,7 @@ models. There is no Rust, ONNX Runtime, local model export, or client compilatio
 
 ## Install
 
-Download a Linux release from [GitHub Releases](https://github.com/danhansen/wordpipe/releases),
+Download a Linux release from [GitHub Releases](https://github.com/danhansen/nemote/releases),
 extract it, and run `./install.sh`. Python 3.11 or newer is required; no pip
 packages or virtual environment are needed. Log out and back in after an
 extension upgrade so GNOME Shell loads the new code.
@@ -15,7 +15,7 @@ extension upgrade so GNOME Shell loads the new code.
 Open preferences with:
 
 ```sh
-gnome-extensions prefs wordpipe@dhansen.dev
+gnome-extensions prefs nemote@dhansen.dev
 ```
 
 Install either **English (lower WER)** or **Multilingual** in preferences.
@@ -46,14 +46,20 @@ CPU instruction-set plugins are selected at runtime; GPU execution is not enable
 ## Diagnostics
 
 ```sh
-journalctl --user -u wordpipe-service.service -f
-scripts/wordpipe-gnome-status
+journalctl --user -u nemote-service.service -f
+scripts/nemote-gnome-status
 ```
 
-Settings are saved in `~/.config/wordpipe/service.json`; models are under
-`~/.local/share/wordpipe/models`. XDG config/data directories are respected.
+Settings are saved in `~/.config/nemote/service.json`; models are under
+`~/.local/share/nemote/models`. XDG config/data directories are respected.
 Old Parakeet selections migrate to Nemotron, while unrelated settings and
 downloaded model files are preserved. Old CPAL microphone selectors are reset.
+
+NeMote was previously named Wordpipe. The installer disables the old extension
+and retires its service activation files with backups. Existing service settings
+and GNOME preferences are carried over; existing models are reused in place
+through a symlink, not copied or downloaded again. Log out and back in after this
+upgrade. Custom model directories are unchanged.
 
 ## Development
 
@@ -70,10 +76,11 @@ See [architecture](docs/architecture.md) and [runtime/protocol](docs/asr-backend
 ## Historical performance research
 
 The former Parakeet-RS/ORT implementation and its experiment tooling are preserved
-on [archive/parakeet-rs-v0.1.28](https://github.com/danhansen/wordpipe/tree/archive/parakeet-rs-v0.1.28).
+on [archive/parakeet-rs-v0.1.28](https://github.com/danhansen/nemote/tree/archive/parakeet-rs-v0.1.28).
 The following documents remain as historical evidence for future optimization
 work, **not current installation or implementation instructions**. Referenced
 retired scripts and source paths can be found on that archival branch.
+Historical command names and artifact paths retain their original spelling.
 
 - [Performance audit](docs/performance-audit.md)
 - [Optimization experiments](docs/optimization-experiments.md)

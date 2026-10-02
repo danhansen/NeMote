@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 
 const helperUrl = new URL(
-    '../extensions/gnome-shell/wordpipe@dhansen.dev/shortcutState.js',
+    '../extensions/gnome-shell/nemote@dhansen.dev/shortcutState.js',
     import.meta.url);
 const helperSource = readFileSync(helperUrl, 'utf8');
 const helperModule = await import(

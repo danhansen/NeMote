@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -u
 
-UUID="wordpipe@dhansen.dev"
-SERVICE_NAME="dev.wordpipe.Service"
-OBJECT_PATH="/dev/wordpipe/Service"
-INTERFACE="dev.wordpipe.Service1"
+UUID="nemote@dhansen.dev"
+SERVICE_NAME="dev.nemote.Service"
+OBJECT_PATH="/dev/nemote/Service"
+INTERFACE="dev.nemote.Service1"
 PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}"
 EXTENSION_DIR="$PREFIX/gnome-shell/extensions/$UUID"
 

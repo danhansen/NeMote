@@ -19,7 +19,10 @@ def sha(path):
 
 def export(source, destination):
     source, destination = Path(source), Path(destination)
-    manifest = destination / '.wordpipe-cased-itn.json'
+    manifest = destination / '.nemote-cased-itn.json'
+    legacy_manifest = destination / '.wordpipe-cased-itn.json'
+    if not manifest.exists() and legacy_manifest.is_file():
+        manifest = legacy_manifest
     if manifest.is_file():
         saved = json.loads(manifest.read_text())
         if (saved.get('revision') == REVISION and saved.get('input_case') == 'cased'

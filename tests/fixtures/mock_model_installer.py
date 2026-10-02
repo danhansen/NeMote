@@ -7,7 +7,7 @@ import sys
 import time
 
 child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
-print("wordpipe-progress " + json.dumps({
+print("nemote-progress " + json.dumps({
     "phase": "running", "fraction": 0.0,
     "installer_pid": os.getpid(), "child_pid": child.pid,
     "message": "lifecycle fixture",

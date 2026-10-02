@@ -8,7 +8,7 @@
 #include <sys/prctl.h>
 #include <unistd.h>
 
-using namespace wordpipe;
+using namespace nemote;
 
 static GVariant* to_variant(const Json& value, const std::string& key = "") {
     if (value.is_object()) {
@@ -108,7 +108,11 @@ public:
         auto base = defaults(home, prefix, g_get_user_data_dir());
         default_config = base;
         config = base;
-        if (fs::exists(path)) { std::ifstream input(path); Json saved; input >> saved; config = migrate(base, saved); }
+        auto saved_path = path;
+        auto canonical_path = fs::path(g_get_user_config_dir()) / "nemote/service.json";
+        auto legacy_path = fs::path(g_get_user_config_dir()) / "wordpipe/service.json";
+        if (path == canonical_path && !fs::exists(path) && fs::is_regular_file(legacy_path)) saved_path = legacy_path;
+        if (fs::exists(saved_path)) { std::ifstream input(saved_path); Json saved; input >> saved; config = migrate(base, saved); }
         if (!installed(config)) {
             auto other = config["model_family"] == "english" ? "multilingual" : "english";
             if (installed(config, other)) { config["model_family"] = other; config["language"] = "en-US"; }
@@ -128,7 +132,7 @@ public:
     void signal(const char* name, GVariant* args) {
         GError* error = nullptr;
         if (!g_dbus_connection_emit_signal(bus, nullptr, object_path, interface_name, name, args, &error)) {
-            std::cerr << "wordpipe-service: signal " << name << ": " << error->message << '\n'; g_error_free(error);
+            std::cerr << "nemote-service: signal " << name << ": " << error->message << '\n'; g_error_free(error);
         }
     }
     void changed() { signal("StateChanged", g_variant_new("(@a{sv})", to_variant(state()))); }
@@ -375,17 +379,17 @@ void Service::read_line(const std::shared_ptr<Child>& child, bool stderr_stream)
             try {
                 if (!service->shutting_down && !text.empty()) {
                     if (child->kind == Child::Worker && service->worker == child) {
-                        if (err_stream) std::cerr << "wordpipe-worker: " << text << '\n';
+                        if (err_stream) std::cerr << "nemote-worker: " << text << '\n';
                         else service->event(Json::parse(text));
                     } else if (child->kind == Child::Installer && service->installer == child) {
-                        std::cerr << "wordpipe-installer: " << text << '\n';
-                        if (text.rfind("wordpipe-progress ", 0) == 0) {
-                            auto event = Json::parse(text.substr(18));
+                        std::cerr << "nemote-installer: " << text << '\n';
+                        if (text.rfind("nemote-progress ", 0) == 0) {
+                            auto event = Json::parse(text.substr(std::string("nemote-progress ").size()));
                             if (event.value("phase", "") == "error") child->error = event.value("message", "Model installer failed");
                             service->install_progress(event, child->profile);
                         } else if (err_stream) child->error = text;
                     } else if (child->kind == Child::Devices) {
-                        if (err_stream) { child->error = text; std::cerr << "wordpipe-device: " << text << '\n'; }
+                        if (err_stream) { child->error = text; std::cerr << "nemote-device: " << text << '\n'; }
                         else { auto event = Json::parse(text); if (event.value("event", "") == "input_device") {
                             auto device = event.at("data");
                             device["selector"] = std::to_string(device.at("index").get<unsigned>());
@@ -422,13 +426,13 @@ void Service::finish_if_ready(const std::shared_ptr<Child>& child) {
 
 int main(int argc, char** argv) {
     try {
-        fs::path path = fs::path(g_get_user_config_dir()) / "wordpipe/service.json";
+        fs::path path = fs::path(g_get_user_config_dir()) / "nemote/service.json";
         bool replace = false;
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
             if (arg == "--config" && i + 1 < argc) path = argv[++i];
             else if (arg == "--replace") replace = true;
-            else if (arg == "--help") { std::cout << "wordpipe-service [--config PATH] [--replace]\n"; return 0; }
+            else if (arg == "--help") { std::cout << "nemote-service [--config PATH] [--replace]\n"; return 0; }
             else throw std::invalid_argument("Unknown argument: " + arg);
         }
         Service service(fs::absolute(path)); service.loop = g_main_loop_new(nullptr, false);
@@ -449,7 +453,7 @@ int main(int argc, char** argv) {
         if (!registration) { std::string message = error->message; g_error_free(error); throw std::runtime_error(message); }
         auto owner = g_bus_own_name_on_connection(service.bus, bus_name,
             GBusNameOwnerFlags(G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT | (replace ? G_BUS_NAME_OWNER_FLAGS_REPLACE : 0)),
-            [](GDBusConnection*, const gchar*, gpointer) { std::cerr << "wordpipe-service: listening on " << bus_name << " " << object_path << '\n'; },
+            [](GDBusConnection*, const gchar*, gpointer) { std::cerr << "nemote-service: listening on " << bus_name << " " << object_path << '\n'; },
             [](GDBusConnection*, const gchar*, gpointer data) { static_cast<Service*>(data)->shutdown(); }, &service, nullptr);
         auto subscription = g_dbus_connection_signal_subscribe(service.bus, "org.freedesktop.DBus", "org.freedesktop.DBus", "NameOwnerChanged", "/org/freedesktop/DBus", nullptr, G_DBUS_SIGNAL_FLAGS_NONE,
             [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params, gpointer data) {
@@ -471,5 +475,5 @@ int main(int argc, char** argv) {
         g_object_unref(service.bus); service.bus = nullptr;
         g_main_loop_unref(service.loop);
         return 0;
-    } catch (const std::exception& error) { std::cerr << "wordpipe-service: " << error.what() << '\n'; return 1; }
+    } catch (const std::exception& error) { std::cerr << "nemote-service: " << error.what() << '\n'; return 1; }
 }

@@ -1,13 +1,13 @@
 [Unit]
-Description=Wordpipe dictation service
-Documentation=https://github.com/danhansen/wordpipe
+Description=NeMote dictation service
+Documentation=https://github.com/danhansen/nemote
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=dbus
-BusName=dev.wordpipe.Service
-ExecStart=@WORDPIPE_LIBEXEC@/bin/wordpipe-service
+BusName=dev.nemote.Service
+ExecStart=@NEMOTE_LIBEXEC@/bin/nemote-service
 Restart=on-failure
 RestartSec=2
 KillMode=control-group

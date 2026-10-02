@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 
 const source = readFileSync(new URL(
-    '../extensions/gnome-shell/wordpipe@dhansen.dev/serviceLifecycle.js',
+    '../extensions/gnome-shell/nemote@dhansen.dev/serviceLifecycle.js',
     import.meta.url), 'utf8');
 const {ServiceLifecycle} = await import(
     `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);

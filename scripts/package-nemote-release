@@ -3,9 +3,9 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: scripts/package-wordpipe-release [--version VERSION] [--output-dir DIR] [--skip-build]
+Usage: scripts/package-nemote-release [--version VERSION] [--output-dir DIR] [--skip-build]
 
-Build the composed Wordpipe GitHub release archive and the source-only GNOME
+Build the composed NeMote GitHub release archive and the source-only GNOME
 Shell extension zip suitable for extensions.gnome.org review.
 EOF
 }
@@ -41,8 +41,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SERVICE_BUILD="${WORDPIPE_SERVICE_BUILD:-$ROOT/build/service}"
-UUID="wordpipe@dhansen.dev"
+SERVICE_BUILD="${NEMOTE_SERVICE_BUILD:-$ROOT/build/nemote-service}"
+UUID="nemote@dhansen.dev"
 ARCH="$(uname -m)"
 
 if [[ -z "$VERSION" ]]; then
@@ -60,10 +60,10 @@ mkdir -p "$OUTPUT_DIR"
 OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd)"
 
 WORK_DIR="$ROOT/build/release-work"
-STAGE_ROOT="$WORK_DIR/wordpipe-${VERSION}-linux-${ARCH}"
+STAGE_ROOT="$WORK_DIR/nemote-${VERSION}-linux-${ARCH}"
 EXTENSION_WORK="$WORK_DIR/${UUID}"
-COMPOSED_ARCHIVE="$OUTPUT_DIR/wordpipe-linux-${ARCH}.tar.gz"
-VERSIONED_ARCHIVE="$OUTPUT_DIR/wordpipe-${VERSION}-linux-${ARCH}.tar.gz"
+COMPOSED_ARCHIVE="$OUTPUT_DIR/nemote-linux-${ARCH}.tar.gz"
+VERSIONED_ARCHIVE="$OUTPUT_DIR/nemote-${VERSION}-linux-${ARCH}.tar.gz"
 EXTENSION_ZIP="$OUTPUT_DIR/${UUID}.shell-extension.zip"
 
 require_tool() {
@@ -95,30 +95,30 @@ rm -rf "$WORK_DIR"
 mkdir -p \
   "$STAGE_ROOT/bin" \
   "$STAGE_ROOT/lib/python" \
-  "$STAGE_ROOT/share/wordpipe/scripts" \
-  "$STAGE_ROOT/share/wordpipe" \
+  "$STAGE_ROOT/share/nemote/scripts" \
+  "$STAGE_ROOT/share/nemote" \
   "$STAGE_ROOT/share/dbus-1/services" \
   "$STAGE_ROOT/share/systemd/user" \
   "$STAGE_ROOT/share/gnome-shell/extensions"
 
 cmake --install "$SERVICE_BUILD" --prefix "$STAGE_ROOT"
-install -m 0755 "$ROOT/scripts/wordpipe-companion-install" "$STAGE_ROOT/bin/wordpipe-companion-install"
-NEMO_WORKER_BUILD="${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}"
-NEMO_SOURCE="${WORDPIPE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}"
-NEMO_BUILD="${WORDPIPE_NEMO_BUILD:-$NEMO_SOURCE/build/wordpipe-cpu}"
+install -m 0755 "$ROOT/scripts/nemote-companion-install" "$STAGE_ROOT/bin/nemote-companion-install"
+NEMO_WORKER_BUILD="${NEMOTE_NEMO_WORKER_BUILD:-$ROOT/build/nemote-worker}"
+NEMO_SOURCE="${NEMOTE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}"
+NEMO_BUILD="${NEMOTE_NEMO_BUILD:-$NEMO_SOURCE/build/nemote-cpu}"
 cmake --install "$NEMO_WORKER_BUILD" --prefix "$STAGE_ROOT"
-mkdir -p "$STAGE_ROOT/lib/nemo" "$STAGE_ROOT/share/wordpipe/licenses/nemo"
+mkdir -p "$STAGE_ROOT/lib/nemo" "$STAGE_ROOT/share/nemote/licenses/nemo"
 cp -a "$NEMO_BUILD/bin/"*.so* "$STAGE_ROOT/lib/nemo/"
-if [[ "${WORDPIPE_NEMO_ITN:-ON}" == ON ]]; then
+if [[ "${NEMOTE_NEMO_ITN:-ON}" == ON ]]; then
   require_tool patchelf
-  cp -a "$NEMO_BUILD/deps/itn_configs" "$STAGE_ROOT/share/wordpipe/itn"
-  install -m 0644 "$NEMO_BUILD/deps/text-processing/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/text-processing-LICENSE"
+  cp -a "$NEMO_BUILD/deps/itn_configs" "$STAGE_ROOT/share/nemote/itn"
+  install -m 0644 "$NEMO_BUILD/deps/text-processing/LICENSE" "$STAGE_ROOT/share/nemote/licenses/nemo/text-processing-LICENSE"
   cp -a "$NEMO_BUILD/deps/itn/lib/"*.so* "$STAGE_ROOT/lib/nemo/"
-  cp -a "$NEMO_BUILD/deps/itn/share/licenses/" "$STAGE_ROOT/share/wordpipe/licenses/nemo/itn"
-  cp -a "$NEMO_BUILD/deps/sentencepiece/share/licenses/" "$STAGE_ROOT/share/wordpipe/licenses/nemo/sentencepiece"
-  install -m 0644 /usr/share/doc/libprotobuf32/copyright "$STAGE_ROOT/share/wordpipe/licenses/nemo/protobuf-copyright"
-  install -m 0644 /usr/share/doc/libre2-9/copyright "$STAGE_ROOT/share/wordpipe/licenses/nemo/re2-copyright"
-  install -m 0644 /usr/share/doc/zlib1g/copyright "$STAGE_ROOT/share/wordpipe/licenses/nemo/zlib-copyright"
+  cp -a "$NEMO_BUILD/deps/itn/share/licenses/" "$STAGE_ROOT/share/nemote/licenses/nemo/itn"
+  cp -a "$NEMO_BUILD/deps/sentencepiece/share/licenses/" "$STAGE_ROOT/share/nemote/licenses/nemo/sentencepiece"
+  install -m 0644 /usr/share/doc/libprotobuf32/copyright "$STAGE_ROOT/share/nemote/licenses/nemo/protobuf-copyright"
+  install -m 0644 /usr/share/doc/libre2-9/copyright "$STAGE_ROOT/share/nemote/licenses/nemo/re2-copyright"
+  install -m 0644 /usr/share/doc/zlib1g/copyright "$STAGE_ROOT/share/nemote/licenses/nemo/zlib-copyright"
   # Bundle the normalizer's system dependencies as well. Their SONAMEs are
   # stable, and $ORIGIN keeps transitive dependencies inside the release.
   while read -r task_library; do
@@ -139,45 +139,45 @@ if [[ -n "$task_sentencepiece" ]]; then
   fi
   cp -L "$task_sentencepiece" "$STAGE_ROOT/lib/nemo/$(basename "$task_sentencepiece")"
   install -m 0644 /usr/share/doc/libsentencepiece0/copyright \
-    "$STAGE_ROOT/share/wordpipe/licenses/nemo/sentencepiece-copyright"
+    "$STAGE_ROOT/share/nemote/licenses/nemo/sentencepiece-copyright"
 fi
-install -m 0644 "$NEMO_SOURCE/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/LICENSE"
-install -m 0644 "$NEMO_SOURCE/NOTICE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/NOTICE"
-install -m 0644 "$NEMO_SOURCE/THIRD_PARTY_NOTICES.md" "$STAGE_ROOT/share/wordpipe/licenses/nemo/THIRD_PARTY_NOTICES.md"
-install -m 0644 "$NEMO_SOURCE/llama.cpp/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/llama-LICENSE"
-install -m 0644 "$NEMO_SOURCE/third_party/miniaudio/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/miniaudio-LICENSE"
-install -m 0644 "$NEMO_SOURCE/ggml/LICENSE" "$STAGE_ROOT/share/wordpipe/licenses/nemo/ggml-LICENSE"
-install -m 0644 "$NEMO_SOURCE/llama.cpp/licenses/LICENSE-jsonhpp" "$STAGE_ROOT/share/wordpipe/licenses/nemo/json-LICENSE"
-cp -a "$ROOT/src/wordpipe" "$STAGE_ROOT/lib/python/wordpipe"
-find "$STAGE_ROOT/lib/python/wordpipe" -type d -name __pycache__ -prune -exec rm -rf {} +
-find "$STAGE_ROOT/lib/python/wordpipe" -type f -name '*.pyc' -delete
-cat > "$STAGE_ROOT/bin/wordpipe-model-install" <<'EOF'
+install -m 0644 "$NEMO_SOURCE/LICENSE" "$STAGE_ROOT/share/nemote/licenses/nemo/LICENSE"
+install -m 0644 "$NEMO_SOURCE/NOTICE" "$STAGE_ROOT/share/nemote/licenses/nemo/NOTICE"
+install -m 0644 "$NEMO_SOURCE/THIRD_PARTY_NOTICES.md" "$STAGE_ROOT/share/nemote/licenses/nemo/THIRD_PARTY_NOTICES.md"
+install -m 0644 "$NEMO_SOURCE/llama.cpp/LICENSE" "$STAGE_ROOT/share/nemote/licenses/nemo/llama-LICENSE"
+install -m 0644 "$NEMO_SOURCE/third_party/miniaudio/LICENSE" "$STAGE_ROOT/share/nemote/licenses/nemo/miniaudio-LICENSE"
+install -m 0644 "$NEMO_SOURCE/ggml/LICENSE" "$STAGE_ROOT/share/nemote/licenses/nemo/ggml-LICENSE"
+install -m 0644 "$NEMO_SOURCE/llama.cpp/licenses/LICENSE-jsonhpp" "$STAGE_ROOT/share/nemote/licenses/nemo/json-LICENSE"
+cp -a "$ROOT/src/nemote" "$STAGE_ROOT/lib/python/nemote"
+find "$STAGE_ROOT/lib/python/nemote" -type d -name __pycache__ -prune -exec rm -rf {} +
+find "$STAGE_ROOT/lib/python/nemote" -type f -name '*.pyc' -delete
+cat > "$STAGE_ROOT/bin/nemote-model-install" <<'EOF'
 #!/usr/bin/env sh
 set -eu
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PREFIX=$(CDPATH= cd -- "$SELF_DIR/.." && pwd)
-PYTHON="${WORDPIPE_PYTHON:-python3}"
+PYTHON="${NEMOTE_PYTHON:-python3}"
 export PYTHONPATH="$PREFIX/lib/python${PYTHONPATH:+:$PYTHONPATH}"
-exec "$PYTHON" -m wordpipe model-install "$@"
+exec "$PYTHON" -m nemote model-install "$@"
 EOF
-chmod 0755 "$STAGE_ROOT/bin/wordpipe-model-install"
+chmod 0755 "$STAGE_ROOT/bin/nemote-model-install"
 
-cat > "$STAGE_ROOT/share/dbus-1/services/dev.wordpipe.Service.service" <<'EOF'
+cat > "$STAGE_ROOT/share/dbus-1/services/dev.nemote.Service.service" <<'EOF'
 [D-BUS Service]
-Name=dev.wordpipe.Service
-Exec=@WORDPIPE_LIBEXEC@/bin/wordpipe-service
-SystemdService=wordpipe-service.service
+Name=dev.nemote.Service
+Exec=@NEMOTE_LIBEXEC@/bin/nemote-service
+SystemdService=nemote-service.service
 EOF
 
-cat > "$STAGE_ROOT/share/systemd/user/wordpipe-service.service" <<'EOF'
+cat > "$STAGE_ROOT/share/systemd/user/nemote-service.service" <<'EOF'
 [Unit]
-Description=Wordpipe dictation service
-Documentation=https://github.com/danhansen/wordpipe
+Description=NeMote dictation service
+Documentation=https://github.com/danhansen/nemote
 
 [Service]
 Type=dbus
-BusName=dev.wordpipe.Service
-ExecStart=@WORDPIPE_LIBEXEC@/bin/wordpipe-service
+BusName=dev.nemote.Service
+ExecStart=@NEMOTE_LIBEXEC@/bin/nemote-service
 Restart=on-failure
 RestartSec=2
 
@@ -189,7 +189,7 @@ copy_extension "$STAGE_ROOT/share/gnome-shell/extensions/$UUID"
 glib-compile-schemas "$STAGE_ROOT/share/gnome-shell/extensions/$UUID/schemas"
 
 cat > "$STAGE_ROOT/README.release" <<EOF
-Wordpipe ${VERSION}
+NeMote ${VERSION}
 
 Run ./install.sh from this extracted directory to install the GNOME Shell
 extension, native D-Bus service, ASR worker, and model-download helper into your
@@ -200,12 +200,12 @@ cat > "$STAGE_ROOT/install.sh" <<'EOF'
 #!/usr/bin/env sh
 set -eu
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-exec "$SELF_DIR/share/wordpipe/install-wordpipe-release" --from-extracted "$SELF_DIR" "$@"
+exec "$SELF_DIR/share/nemote/install-nemote-release" --from-extracted "$SELF_DIR" "$@"
 EOF
 chmod 0755 "$STAGE_ROOT/install.sh"
 
-install -m 0755 "$ROOT/scripts/install-wordpipe-release" \
-  "$STAGE_ROOT/share/wordpipe/install-wordpipe-release"
+install -m 0755 "$ROOT/scripts/install-nemote-release" \
+  "$STAGE_ROOT/share/nemote/install-nemote-release"
 
 copy_extension "$EXTENSION_WORK"
 glib-compile-schemas "$EXTENSION_WORK/schemas"
@@ -213,7 +213,7 @@ rm -f "$EXTENSION_ZIP"
 (cd "$EXTENSION_WORK" && zip -qr "$EXTENSION_ZIP" .)
 
 rm -f "$COMPOSED_ARCHIVE" "$VERSIONED_ARCHIVE"
-(cd "$WORK_DIR" && tar -czf "$COMPOSED_ARCHIVE" "wordpipe-${VERSION}-linux-${ARCH}")
+(cd "$WORK_DIR" && tar -czf "$COMPOSED_ARCHIVE" "nemote-${VERSION}-linux-${ARCH}")
 cp "$COMPOSED_ARCHIVE" "$VERSIONED_ARCHIVE"
 
 if command -v sha256sum >/dev/null 2>&1; then

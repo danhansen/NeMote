@@ -1,6 +1,6 @@
 # Native runtime and protocol
 
-NeMo-Speech.cpp is Wordpipe's sole inference runtime. The SDK and headers are
+NeMo-Speech.cpp is NeMote's sole inference runtime. The SDK and headers are
 built together from pinned revision `4c101bc7113f49101a3e11d2c994c519f41939f6`
 and ggml revision `c03b4e2bcece5134827881af90242086daf75be5`. Our integration
 patches add runtime CPU plugins, strict boosting-tokenizer validation, and
@@ -10,13 +10,13 @@ pause-triggered preview normalization. Recognition stays in C++.
 
 Preferences show **English (lower WER)** and **Multilingual**. Both are NVIDIA's
 official Q8_0 GGUFs, with immutable revisions and SHA256 checks in
-`src/wordpipe/nemo_models.py`. Users need neither NeMo/PyTorch nor local export.
+`src/nemote/nemo_models.py`. Users need neither NeMo/PyTorch nor local export.
 The internal compatibility profile remains `nemo-q8`. Existing directories
 `nemotron-nemo-en-q8` and `nemotron-nemo-q8` are retained to reuse installations.
 
 ```sh
-wordpipe-model-install --model-family english
-wordpipe-model-install --model-family multilingual
+nemote-model-install --model-family english
+nemote-model-install --model-family multilingual
 ```
 
 One file supports 80, 160, 560, and 1120 ms chunks. Two CPU threads and 560 ms

@@ -1,5 +1,5 @@
 <node>
-  <interface name="dev.wordpipe.Service1">
+  <interface name="dev.nemote.Service1">
     <method name="Start"/>
     <method name="Stop"/>
     <method name="Toggle"/>

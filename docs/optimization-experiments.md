@@ -1,7 +1,7 @@
 # Optimization Experiments
 
 This log tracks ONNX/ORT optimization experiments ported from Sayboard's
-Parakeet EOU work onto Wordpipe's Nemotron/Parakeet runtime.
+Parakeet EOU work onto NeMote's Nemotron/Parakeet runtime.
 
 See [sayboard-optimization-harvest.md](sayboard-optimization-harvest.md) for
 the source-level Sayboard optimization inventory and harvest results.
@@ -167,7 +167,7 @@ Next candidates:
 ## 2026-06-22: Fixed-Shape MatMul Dequantization Ablation
 
 Sayboard's Parakeet EOU ablation suite tested selective dynamic-int8 MatMul/Gemm
-quantization. For Wordpipe's already-quantized Nemotron export, the analogous
+quantization. For NeMote's already-quantized Nemotron export, the analogous
 experiment is to rewrite selected static-RHS `MatMulInteger` blocks back to
 float `MatMul`/`Gemm`, then serialize the final graph through ORT extended.
 
@@ -386,7 +386,7 @@ Slice observations:
 
 ## 2026-06-22: Conv Dequantization Ablation
 
-Sayboard rejected conv quantization for its Parakeet EOU export. Wordpipe's
+Sayboard rejected conv quantization for its Parakeet EOU export. NeMote's
 Nemotron export still contains quantized `ConvInteger` blocks after fixed-shape
 specialization, so `scripts/dequantize_nemotron_conv_blocks.py` tests the
 analogous rewrite: replace selected dynamic-quantized conv blocks with float
@@ -502,7 +502,7 @@ Thread observations:
 ## 2026-06-22: Live Audio Buffer Reuse
 
 Sayboard's native bridge work emphasized avoiding avoidable allocation in the
-hot recognition path. Wordpipe's CPAL live-input path still allocated a fresh
+hot recognition path. NeMote's CPAL live-input path still allocated a fresh
 `Vec<f32>` in every audio callback before sending samples to the recognition
 thread.
 
@@ -703,7 +703,7 @@ resource-constrained CPU devices.
 Applicable learnings:
 
 - Their selected streaming configuration is the same `(7, 10, 7)` chunk/history
-  setting used by Wordpipe's c56 export: 560 ms chunks with 5.6 s history. This
+  setting used by NeMote's c56 export: 560 ms chunks with 5.6 s history. This
   supports keeping the projected-cache rewrite aligned with that left context
   rather than shrinking cache length only for speed.
 - Their quantization boundary matches our empirical direction: the encoder is
@@ -714,7 +714,7 @@ Applicable learnings:
   dynamic activation quantization path (`DynamicQuantizeLinear` plus
   `MatMulInteger`, often fused to `DynamicQuantizeMatMul`).
 - Their `ConvInteger`/`MatMulInteger` result is a useful caution. It improves
-  throughput but worsens WER, matching Wordpipe's all-conv FP32 ablation in the
+  throughput but worsens WER, matching NeMote's all-conv FP32 ablation in the
   other direction: conv/integer arithmetic changes can be speed-positive while
   still being accuracy-risky.
 
@@ -893,7 +893,7 @@ Observations:
 - This rejects the FFN-only `MatMulNBits` path for the current Ivy Bridge CPU
   and ORT 1.27 CPU EP. The paper's full encoder-wide export may still behave
   differently on newer CPUs or with a different ORT build, but the practical
-  Wordpipe path remains `ffn_fp32`.
+  NeMote path remains `ffn_fp32`.
 
 ## 2026-06-22: FP32 NeMo Export With Projected Cache
 
@@ -1381,7 +1381,7 @@ Sayboard's model startup work suggested two distinct approaches:
 2. convert the model to native ORT format and load it with
    `session.use_ort_model_bytes_directly`.
 
-Wordpipe now supports both paths experimentally. The Rust worker accepts
+NeMote now supports both paths experimentally. The Rust worker accepts
 `--ort-optimized-model-cache-dir` for the first approach, but this is not
 enabled by default because the smoke results were mixed:
 
@@ -1625,7 +1625,7 @@ Conclusion:
 ### Per-Channel Dynamic Quantization
 
 Sayboard's ablation matrix included `*_pc` variants using ONNX Runtime dynamic
-quantization with `per_channel=True`. Wordpipe now exposes the same switch on
+quantization with `per_channel=True`. NeMote now exposes the same switch on
 the clean FP32 transform path:
 
 ```sh
@@ -1711,7 +1711,7 @@ Interpretation:
   prompt selection, preprocessor metadata, or decoder/joint ABI differences.
 - The likely remaining parity issue is encoder graph structure after ORT
   quantization/fusion: the sherpa-derived/current-best path exposes scalar-scale
-  FFN quantization tails that Wordpipe can dequantize back to FP32 and retains
+  FFN quantization tails that NeMote can dequantize back to FP32 and retains
   `FusedMatMul` nodes after ORT optimization, while the clean FP32 export path
   produces a different fused graph.
 - Further parity work should focus on reproducing the current-best encoder
@@ -1752,7 +1752,7 @@ MPLCONFIGDIR=build/matplotlib-cache \
   --force
 ```
 
-It preserves the Wordpipe model directory layout and writes
+It preserves the NeMote model directory layout and writes
 `olive_pass_summary.json` with before/after graph counts. Supported experiment
 passes are `peephole`, `quant-preprocess`, `dynamic-quant`, and
 `ort-transformers`.

@@ -7,25 +7,26 @@ cd "$ROOT"
 run_tests() {
   bash scripts/build-nemo-worker
   bash scripts/build-service
-  ctest --test-dir "${WORDPIPE_SERVICE_BUILD:-$ROOT/build/service}" --output-on-failure
-  ctest --test-dir "${WORDPIPE_NEMO_WORKER_BUILD:-$ROOT/build/nemo-worker}" --output-on-failure
-  dbus-run-session -- env WORDPIPE_TEST_BUS=1 python3 scripts/check_service_lifecycle.py --service "${WORDPIPE_SERVICE_BUILD:-$ROOT/build/service}/wordpipe-service"
+  ctest --test-dir "${NEMOTE_SERVICE_BUILD:-$ROOT/build/nemote-service}" --output-on-failure
+  ctest --test-dir "${NEMOTE_NEMO_WORKER_BUILD:-$ROOT/build/nemote-worker}" --output-on-failure
+  dbus-run-session -- env NEMOTE_TEST_BUS=1 python3 scripts/check_service_lifecycle.py --service "${NEMOTE_SERVICE_BUILD:-$ROOT/build/nemote-service}/nemote-service"
+  dbus-run-session -- env NEMOTE_TEST_BUS=1 python3 scripts/check_service_lifecycle.py --legacy-config --service "${NEMOTE_SERVICE_BUILD:-$ROOT/build/nemote-service}/nemote-service"
   PYTHONPATH=src python3 -m unittest discover -s tests
   python3 scripts/check_gnome_dbus_xml.py
-  sh -n scripts/install-wordpipe-release
+  sh -n scripts/install-nemote-release
   node --input-type=module --check \
-    < extensions/gnome-shell/wordpipe@dhansen.dev/extension.js
+    < extensions/gnome-shell/nemote@dhansen.dev/extension.js
   node --input-type=module --check \
-    < extensions/gnome-shell/wordpipe@dhansen.dev/prefs.js
+    < extensions/gnome-shell/nemote@dhansen.dev/prefs.js
   node --test tests/test_shortcut_state.mjs tests/test_model_state.mjs tests/test_service_lifecycle.mjs tests/test_preferences_refresh.mjs tests/test_text_insertion.mjs
   glib-compile-schemas --strict --dry-run \
-    extensions/gnome-shell/wordpipe@dhansen.dev/schemas
+    extensions/gnome-shell/nemote@dhansen.dev/schemas
 }
 
 package_release() {
   local version=${1:?package requires a version}
   local output_dir=${2:-dist}
-  scripts/package-wordpipe-release --version "$version" --output-dir "$output_dir"
+  scripts/package-nemote-release --version "$version" --output-dir "$output_dir"
 }
 
 case "${1:-test}" in

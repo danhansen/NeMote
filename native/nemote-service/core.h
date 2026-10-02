@@ -8,23 +8,27 @@
 #include <string>
 #include <vector>
 
-namespace wordpipe {
+namespace nemote {
 using Json = nlohmann::json;
 namespace fs = std::filesystem;
-inline constexpr const char* bus_name = "dev.wordpipe.Service";
-inline constexpr const char* object_path = "/dev/wordpipe/Service";
-inline constexpr const char* interface_name = "dev.wordpipe.Service1";
+inline constexpr const char* bus_name = "dev.nemote.Service";
+inline constexpr const char* object_path = "/dev/nemote/Service";
+inline constexpr const char* interface_name = "dev.nemote.Service1";
 inline Json latencies() { return Json::array({80, 160, 560, 1120}); }
 inline std::string trim(std::string text) {
     auto start = text.find_first_not_of(" \t\r\n");
     return start == std::string::npos ? "" : text.substr(start, text.find_last_not_of(" \t\r\n") - start + 1);
 }
 inline Json defaults(const fs::path&, const fs::path& prefix, const fs::path& data_home) {
+    // Reuse existing downloads in place: no copies of large models on upgrade.
+    auto models = data_home / "nemote/models";
+    if (!fs::exists(models) && fs::is_directory(data_home / "wordpipe/models"))
+        models = data_home / "wordpipe/models";
     return {{"backend", "nemo-speech"}, {"model_profile", "nemo-q8"}, {"model_family", "english"},
         {"streaming_latency_ms", 560u}, {"input_device", ""}, {"language", "en-US"},
-        {"shortcut", "<Control><Alt>space"}, {"model_root", (data_home / "wordpipe/models").string()},
-        {"worker_path", (prefix / "bin/wordpipe-nemo-worker").string()},
-        {"model_installer_path", (prefix / "bin/wordpipe-model-install").string()},
+        {"shortcut", "<Control><Alt>space"}, {"model_root", models.string()},
+        {"worker_path", (prefix / "bin/nemote-nemo-worker").string()},
+        {"model_installer_path", (prefix / "bin/nemote-model-install").string()},
         {"sample_rate", 16000u}, {"num_threads", 2u}, {"spoken_punctuation", true}, {"itn", false},
         {"phrase_boosting", false}, {"boost_phrases", ""}, {"boost_tokenizer_path", ""},
         {"vad_filtering", false}, {"vad_model_path", ""}, {"endpoint_mode", "disabled"},
@@ -80,6 +84,8 @@ inline void validate(const Json& config) {
 }
 inline Json migrate(Json config, const Json& saved) {
     if (!saved.is_object()) throw std::invalid_argument("Service config must be a JSON object");
+    auto worker_default = config.at("worker_path");
+    auto installer_default = config.at("model_installer_path");
     for (auto item = config.begin(); item != config.end(); ++item) {
         if (!saved.contains(item.key()) || saved[item.key()].is_null()) continue;
         const auto& value = saved[item.key()];
@@ -94,8 +100,11 @@ inline Json migrate(Json config, const Json& saved) {
     config["model_profile"] = "nemo-q8";
     config["sample_rate"] = 16000u;
     if (old) config["input_device"] = "";
-    if (fs::path(config["worker_path"].get<std::string>()).filename() == "wordpipe-parakeet-worker")
-        config["worker_path"] = (fs::path(config["worker_path"].get<std::string>()).parent_path() / "wordpipe-nemo-worker").string();
+    auto worker_name = fs::path(config["worker_path"].get<std::string>()).filename();
+    if (worker_name == "wordpipe-parakeet-worker" || worker_name == "wordpipe-nemo-worker" || worker_name == "nemote-parakeet-worker")
+        config["worker_path"] = worker_default;
+    if (fs::path(config["model_installer_path"].get<std::string>()).filename() == "wordpipe-model-install")
+        config["model_installer_path"] = installer_default;
     if (old && config["model_family"] == "english" && config["language"] != "auto" &&
         config["language"].get<std::string>().rfind("en-", 0) != 0) config["language"] = "en-US";
     validate(config);
@@ -115,7 +124,7 @@ inline std::vector<std::string> worker_command(const Json& config) {
         add("boost_tokenizer_path", "--boost-tokenizer");
     }
     if (config.at("vad_filtering")) { command.push_back("--vad-filtering"); add("vad_model_path", "--vad-model"); }
-    auto helper = fs::path(config.at("model_installer_path").get<std::string>()).parent_path() / "wordpipe-companion-install";
+    auto helper = fs::path(config.at("model_installer_path").get<std::string>()).parent_path() / "nemote-companion-install";
     if (fs::is_regular_file(helper)) command.insert(command.end(), {"--companion-installer", helper.string()});
     return command;
 }
@@ -148,4 +157,4 @@ inline std::string punctuation(const std::string& text, bool partial) {
     while (!output.empty() && output.back() == ' ') output.pop_back();
     return output;
 }
-} // namespace wordpipe
+} // namespace nemote

@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 set -eu
 
-mkdir -p /tmp/wordpipe-config /tmp/wordpipe-data /tmp/wordpipe-cache
+mkdir -p /tmp/nemote-config /tmp/nemote-data /tmp/nemote-cache
 exec "$@"

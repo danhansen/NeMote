@@ -1,4 +1,4 @@
-"""Optional real-SDK checks. Set WORDPIPE_NEMO_TEST_WORKER and WORDPIPE_NEMO_TEST_MODEL."""
+"""Optional real-SDK checks. Set NEMOTE_NEMO_TEST_WORKER and NEMOTE_NEMO_TEST_MODEL."""
 import json
 import os
 import selectors
@@ -7,14 +7,14 @@ import time
 import unittest
 
 
-@unittest.skipUnless(os.environ.get("WORDPIPE_NEMO_TEST_WORKER") and os.environ.get("WORDPIPE_NEMO_TEST_MODEL"),
+@unittest.skipUnless(os.environ.get("NEMOTE_NEMO_TEST_WORKER") and os.environ.get("NEMOTE_NEMO_TEST_MODEL"),
                      "native SDK/model integration fixtures not configured")
 class NemoWorkerProtocolTests(unittest.TestCase):
     def setUp(self):
         self.process = subprocess.Popen([
-            os.environ["WORDPIPE_NEMO_TEST_WORKER"], "--model-dir", os.environ["WORDPIPE_NEMO_TEST_MODEL"],
+            os.environ["NEMOTE_NEMO_TEST_WORKER"], "--model-dir", os.environ["NEMOTE_NEMO_TEST_MODEL"],
             "--device", "cpu",
-            "--input-device", "wordpipe-nonexistent-test-input-device"],
+            "--input-device", "nemote-nonexistent-test-input-device"],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         self.selector = selectors.DefaultSelector()
         self.selector.register(self.process.stdout, selectors.EVENT_READ)
@@ -80,14 +80,14 @@ class NemoWorkerProtocolTests(unittest.TestCase):
 
     def test_invalid_compute_backend_is_rejected(self):
         result = subprocess.run([
-            os.environ["WORDPIPE_NEMO_TEST_WORKER"], "--model-dir", os.environ["WORDPIPE_NEMO_TEST_MODEL"],
+            os.environ["NEMOTE_NEMO_TEST_WORKER"], "--model-dir", os.environ["NEMOTE_NEMO_TEST_MODEL"],
             "--device", "npu"], capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 1)
         self.assertIn("--device must be", json.loads(result.stdout)["message"])
 
     def test_auto_selection_reports_actual_backend_and_cpu_features(self):
         result = subprocess.run([
-            os.environ["WORDPIPE_NEMO_TEST_WORKER"], "--model-dir", os.environ["WORDPIPE_NEMO_TEST_MODEL"],
+            os.environ["NEMOTE_NEMO_TEST_WORKER"], "--model-dir", os.environ["NEMOTE_NEMO_TEST_MODEL"],
             "--device", "auto"], input='{"command":"shutdown"}\n',
             capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -96,10 +96,10 @@ class NemoWorkerProtocolTests(unittest.TestCase):
         self.assertEqual(loaded["data"]["compute_backend"], "cpu")
         self.assertIsInstance(loaded["data"]["cpu_features"], dict)
 
-    @unittest.skipUnless(os.environ.get("WORDPIPE_NEMO_TEST_ITN"), "ITN SDK fixtures not configured")
+    @unittest.skipUnless(os.environ.get("NEMOTE_NEMO_TEST_ITN"), "ITN SDK fixtures not configured")
     def test_itn_can_be_enabled_without_changing_the_asr_model(self):
         result = subprocess.run([
-            os.environ["WORDPIPE_NEMO_TEST_WORKER"], "--model-dir", os.environ["WORDPIPE_NEMO_TEST_MODEL"],
+            os.environ["NEMOTE_NEMO_TEST_WORKER"], "--model-dir", os.environ["NEMOTE_NEMO_TEST_MODEL"],
             "--itn"], input='{"command":"shutdown"}\n', capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stderr)
         loaded = next(json.loads(line) for line in result.stdout.splitlines()

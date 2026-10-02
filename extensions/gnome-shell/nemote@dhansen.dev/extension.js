@@ -14,12 +14,12 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {requiredModifiersHeld} from './shortcutState.js';
 import {ServiceLifecycle} from './serviceLifecycle.js';
 
-const BUS_NAME = 'dev.wordpipe.Service';
-const OBJECT_PATH = '/dev/wordpipe/Service';
+const BUS_NAME = 'dev.nemote.Service';
+const OBJECT_PATH = '/dev/nemote/Service';
 
 const SERVICE_XML = `
 <node>
-  <interface name="dev.wordpipe.Service1">
+  <interface name="dev.nemote.Service1">
     <method name="Start"/>
     <method name="Stop"/>
     <method name="Toggle"/>
@@ -50,12 +50,12 @@ const SERVICE_XML = `
   </interface>
 </node>`;
 
-const WordpipeProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
+const NeMoteProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
 
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     constructor(extension) {
-        super(0.0, _('Wordpipe'));
+        super(0.0, _('NeMote'));
         this._extension = extension;
         this._listening = false;
         this._lastVoiceLevel = 0.0;
@@ -63,25 +63,25 @@ class Indicator extends PanelMenu.Button {
         this._animationSourceId = 0;
 
         this._box = new St.BoxLayout({
-            style_class: 'wordpipe-panel-status',
+            style_class: 'nemote-panel-status',
             y_align: Clutter.ActorAlign.CENTER,
         });
         this._icon = new St.Icon({
             icon_name: 'audio-input-microphone-symbolic',
-            style_class: 'system-status-icon wordpipe-panel-icon',
+            style_class: 'system-status-icon nemote-panel-icon',
         });
         this._icon.set_pivot_point(0.5, 0.5);
         this._box.add_child(this._icon);
 
         this._levelBars = [];
         this._levelBox = new St.BoxLayout({
-            style_class: 'wordpipe-level-bars',
+            style_class: 'nemote-level-bars',
             y_align: Clutter.ActorAlign.CENTER,
             opacity: 0,
         });
         for (let i = 0; i < 4; i++) {
             const bar = new St.Widget({
-                style_class: 'wordpipe-level-bar',
+                style_class: 'nemote-level-bar',
                 width: 2,
                 height: 10,
                 y_align: Clutter.ActorAlign.CENTER,
@@ -219,15 +219,15 @@ class Indicator extends PanelMenu.Button {
         row.titleLabel.text = profile.title;
         row.titleLabel.style_class = profile.installed
             ? ''
-            : 'wordpipe-model-title-missing';
+            : 'nemote-model-title-missing';
         row.item.reactive = profile.installed;
         row.item.can_focus = profile.installed;
         row.installButton.visible = !profile.installed && !installing;
         row.installButton.reactive = installEnabled;
         row.installButton.can_focus = installEnabled;
         row.installButton.style_class = installEnabled
-            ? 'wordpipe-model-download-button'
-            : 'wordpipe-model-download-button wordpipe-model-download-disabled';
+            ? 'nemote-model-download-button'
+            : 'nemote-model-download-button nemote-model-download-disabled';
         row.progress.box.visible = !profile.installed && installing;
         row.progress.fill.style =
             `width: ${Math.round(Math.max(0.0, Math.min(1.0, fraction ?? 0.0)) * 64)}px;`;
@@ -405,7 +405,7 @@ class TextInjector {
             return;
         this._lastSeq = Number(seq);
         if (!text.startsWith(this._committedText)) {
-            log('Wordpipe partial changed already committed text; cancelling insertion');
+            log('NeMote partial changed already committed text; cancelling insertion');
             this.cancel();
             return;
         }
@@ -445,7 +445,7 @@ class TextInjector {
         this._clearPreedit();
         const inputMethod = this._getInputMethod();
         if (!text.startsWith(this._committedText)) {
-            log('Wordpipe final changed already committed text; cancelling insertion');
+            log('NeMote final changed already committed text; cancelling insertion');
             this.cancel();
             return;
         }
@@ -473,7 +473,7 @@ class TextInjector {
     }
 }
 
-export default class WordpipeExtension extends Extension {
+export default class NeMoteExtension extends Extension {
     enable() {
         this._enabled = true;
         this._lifecycle = Symbol('enabled');
@@ -490,7 +490,7 @@ export default class WordpipeExtension extends Extension {
             error: error => {
                 if (this._enabled)
                     this._setAvailable(false);
-                logError(error, 'Wordpipe service lifecycle failed');
+                logError(error, 'NeMote service lifecycle failed');
             },
         });
         this._settings = this.getSettings();
@@ -670,7 +670,7 @@ export default class WordpipeExtension extends Extension {
 
     _connectProxy() {
         const lifecycle = this._lifecycle;
-        this._proxy = new WordpipeProxy(
+        this._proxy = new NeMoteProxy(
             Gio.DBus.session,
             BUS_NAME,
             OBJECT_PATH,
@@ -679,7 +679,7 @@ export default class WordpipeExtension extends Extension {
                     return;
                 if (error) {
                     this._setAvailable(false);
-                    logError(error, 'Wordpipe could not connect to service');
+                    logError(error, 'NeMote could not connect to service');
                     return;
                 }
                 this._proxyReady = true;
@@ -735,7 +735,7 @@ export default class WordpipeExtension extends Extension {
                 throw error;
             }
             try {
-                await this._busCall(owner, OBJECT_PATH, 'dev.wordpipe.Service1',
+                await this._busCall(owner, OBJECT_PATH, 'dev.nemote.Service1',
                     'RegisterShellClient', null, Gio.DBusCallFlags.NO_AUTO_START);
             } catch (error) {
                 if (/UnknownMethod|Unknown method/.test(error.message))
@@ -753,7 +753,7 @@ export default class WordpipeExtension extends Extension {
             }
             return owner;
         }
-        throw new Error('Wordpipe service failed to activate');
+        throw new Error('NeMote service failed to activate');
     }
 
     _watchServiceExit(owner) {
@@ -771,7 +771,7 @@ export default class WordpipeExtension extends Extension {
                 () => resolve());
             timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10000, () => {
                 timeoutId = 0;
-                reject(new Error('Wordpipe service did not exit after shutdown'));
+                reject(new Error('NeMote service did not exit after shutdown'));
                 return GLib.SOURCE_REMOVE;
             });
         });
@@ -794,7 +794,7 @@ export default class WordpipeExtension extends Extension {
         const pending = this._watchServiceExit(owner);
         try {
             try {
-                await this._busCall(owner, OBJECT_PATH, 'dev.wordpipe.Service1',
+                await this._busCall(owner, OBJECT_PATH, 'dev.nemote.Service1',
                     'Shutdown', null, Gio.DBusCallFlags.NO_AUTO_START);
             } catch (error) {
                 if (/NameHasNoOwner|ServiceUnknown/.test(error.message))
@@ -881,7 +881,7 @@ export default class WordpipeExtension extends Extension {
         this._signalIds.push(this._connectServiceSignal('Error',
             (_proxy, _sender, [message]) => {
                 this._indicator?.setStatusMessage(message);
-                log(`Wordpipe service error: ${message}`);
+                log(`NeMote service error: ${message}`);
             }));
     }
 
@@ -1098,7 +1098,7 @@ export default class WordpipeExtension extends Extension {
                 this._setAvailable(true);
                 const message = formatError(error);
                 this._indicator?.setStatusMessage(message);
-                logError(error, `Wordpipe ${method} failed`);
+                logError(error, `NeMote ${method} failed`);
                 if (method === 'SetModelProfile')
                     this._refreshConfigFromService();
                 return;
@@ -1211,19 +1211,19 @@ function installProgressLabel(fraction) {
 
 function createInstallButton(onClicked) {
     const content = new St.BoxLayout({
-        style_class: 'wordpipe-model-download-content',
+        style_class: 'nemote-model-download-content',
         y_align: Clutter.ActorAlign.CENTER,
     });
     content.add_child(new St.Icon({
         icon_name: 'folder-download-symbolic',
-        style_class: 'wordpipe-model-download-icon',
+        style_class: 'nemote-model-download-icon',
     }));
     content.add_child(new St.Label({
         text: _('Install'),
         y_align: Clutter.ActorAlign.CENTER,
     }));
     const button = new St.Button({
-        style_class: 'wordpipe-model-download-button',
+        style_class: 'nemote-model-download-button',
         child: content,
         reactive: true,
         can_focus: true,
@@ -1235,15 +1235,15 @@ function createInstallButton(onClicked) {
 
 function createInstallProgress() {
     const box = new St.BoxLayout({
-        style_class: 'wordpipe-model-progress',
+        style_class: 'nemote-model-progress',
         y_align: Clutter.ActorAlign.CENTER,
     });
     const track = new St.Bin({
-        style_class: 'wordpipe-model-progress-track',
+        style_class: 'nemote-model-progress-track',
         y_align: Clutter.ActorAlign.CENTER,
     });
     const fill = new St.Bin({
-        style_class: 'wordpipe-model-progress-fill',
+        style_class: 'nemote-model-progress-fill',
         style: 'width: 0px;',
         x_align: Clutter.ActorAlign.START,
     });
@@ -1251,7 +1251,7 @@ function createInstallProgress() {
     box.add_child(track);
     const label = new St.Label({
         text: installProgressLabel(null),
-        style_class: 'wordpipe-model-progress-label',
+        style_class: 'nemote-model-progress-label',
         y_align: Clutter.ActorAlign.CENTER,
     });
     box.add_child(label);

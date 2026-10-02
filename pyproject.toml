@@ -3,15 +3,15 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "wordpipe"
-version = "0.1.29"
+name = "nemote"
+version = "0.1.30"
 description = "GNOME dictation with native Nemotron streaming ASR"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
-wordpipe = "wordpipe.cli:main"
+nemote = "nemote.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

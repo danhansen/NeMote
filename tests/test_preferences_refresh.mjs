@@ -4,7 +4,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL(
-    '../extensions/gnome-shell/wordpipe@dhansen.dev/prefs.js', import.meta.url), 'utf8');
+    '../extensions/gnome-shell/nemote@dhansen.dev/prefs.js', import.meta.url), 'utf8');
 
 // Exercise the production callbacks without requiring a GNOME display. The
 // StringList/ComboRow double emits selection changes synchronously on removal

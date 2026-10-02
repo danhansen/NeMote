@@ -2,7 +2,7 @@
 
 The NVIDIA runtime is useful both as a benchmark candidate and as an independent
 implementation to compare against NeMo. The comparison has already identified
-two feature-alignment discrepancies in Wordpipe's parakeet-rs frontend. These
+two feature-alignment discrepancies in NeMote's parakeet-rs frontend. These
 should be resolved through feature parity tests and accuracy ablations before
 attributing a backend's recognition differences solely to quantization.
 
@@ -96,7 +96,7 @@ to replicate, regardless of whether we adopt its backend.
 
 ## Pipeline differences relevant to performance
 
-| Area | Current Wordpipe path | NVIDIA path | What remains to measure |
+| Area | Current NeMote path | NVIDIA path | What remains to measure |
 | --- | --- | --- | --- |
 | Feature extraction | Recompute a bounded overlapping audio buffer and rebuild its FFT plan | Produce new feature frames incrementally using global positions | Frontend stage share and end-to-end gain after parity is established |
 | Predictor | Combined predictor and joint graph runs for each visited encoder frame or emitted label | Cache predictor output and candidate state across blanks | Decoder stage share and a split-graph implementation's overhead |

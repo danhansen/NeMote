@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       CONTAINER_ENGINE: docker
-      WORDPIPE_DEV_IMAGE: wordpipe-dev:${{ github.sha }}
+      NEMOTE_DEV_IMAGE: nemote-dev:${{ github.sha }}
 
     steps:
       - name: Check out repository
@@ -25,18 +25,31 @@ jobs:
 
       - name: Test and package inside development image
         env:
-          WORDPIPE_CONTAINER_SKIP_BUILD: "1"
+          NEMOTE_CONTAINER_SKIP_BUILD: "1"
         run: |
           version="${GITHUB_REF_NAME#v}"
           if [ "$GITHUB_REF_TYPE" != "tag" ]; then
             version="dev-${GITHUB_SHA::12}"
           fi
-          scripts/dev-container all "$version" dist
+          if scripts/dev-container all "$version" dist > build-pipeline.log 2>&1; then
+            tail -40 build-pipeline.log
+          else
+            tail -200 build-pipeline.log
+            exit 1
+          fi
+
+      - name: Preserve failed build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nemote-release-build-log
+          path: build-pipeline.log
+          retention-days: 7
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wordpipe-release-assets
+          name: nemote-release-assets
           path: dist/*
 
       - name: Publish GitHub Release

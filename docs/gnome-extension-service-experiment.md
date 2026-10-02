@@ -1,6 +1,6 @@
 # GNOME Extension Service Experiment
 
-This branch is the primary Wordpipe runtime: a GNOME Shell extension backed by
+This branch is the primary NeMote runtime: a GNOME Shell extension backed by
 a long-lived Rust service. The ASR/model work stays reusable for KDE and other
 Wayland desktops by putting the dictation engine behind a session D-Bus API.
 

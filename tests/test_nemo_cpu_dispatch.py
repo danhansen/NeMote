@@ -12,11 +12,11 @@ class NemoCpuBuildOptionTests(unittest.TestCase):
     def test_rejects_invalid_options_before_touching_sdk(self):
         script = Path(__file__).resolve().parents[1] / "scripts/build-nemo-worker"
         cases = (
-            ({"WORDPIPE_NEMO_NATIVE": "invalid", "WORDPIPE_NEMO_CPU_VARIANTS": "OFF"},
-             "WORDPIPE_NEMO_NATIVE must be"),
-            ({"WORDPIPE_NEMO_NATIVE": "OFF", "WORDPIPE_NEMO_CPU_VARIANTS": "invalid"},
-             "WORDPIPE_NEMO_CPU_VARIANTS must be"),
-            ({"WORDPIPE_NEMO_NATIVE": "ON", "WORDPIPE_NEMO_CPU_VARIANTS": "ON"},
+            ({"NEMOTE_NEMO_NATIVE": "invalid", "NEMOTE_NEMO_CPU_VARIANTS": "OFF"},
+             "NEMOTE_NEMO_NATIVE must be"),
+            ({"NEMOTE_NEMO_NATIVE": "OFF", "NEMOTE_NEMO_CPU_VARIANTS": "invalid"},
+             "NEMOTE_NEMO_CPU_VARIANTS must be"),
+            ({"NEMOTE_NEMO_NATIVE": "ON", "NEMOTE_NEMO_CPU_VARIANTS": "ON"},
              "mutually exclusive"),
         )
         for options, message in cases:
@@ -28,14 +28,14 @@ class NemoCpuBuildOptionTests(unittest.TestCase):
 
 
 @unittest.skipUnless(all(os.environ.get(key) for key in (
-    "WORDPIPE_NEMO_DISPATCH_BUILD", "WORDPIPE_NEMO_DISPATCH_LIBRARIES",
-    "WORDPIPE_NEMO_TEST_MODEL")), "dynamic CPU SDK/model fixtures not configured")
+    "NEMOTE_NEMO_DISPATCH_BUILD", "NEMOTE_NEMO_DISPATCH_LIBRARIES",
+    "NEMOTE_NEMO_TEST_MODEL")), "dynamic CPU SDK/model fixtures not configured")
 class NemoCpuDispatchTests(unittest.TestCase):
     def test_relocated_plugins_and_baseline_fallback(self):
-        source = Path(os.environ["WORDPIPE_NEMO_DISPATCH_LIBRARIES"])
-        with tempfile.TemporaryDirectory(prefix="wordpipe-cpu-dispatch-") as directory:
+        source = Path(os.environ["NEMOTE_NEMO_DISPATCH_LIBRARIES"])
+        with tempfile.TemporaryDirectory(prefix="nemote-cpu-dispatch-") as directory:
             prefix = Path(directory)
-            subprocess.run(["cmake", "--install", os.environ["WORDPIPE_NEMO_DISPATCH_BUILD"],
+            subprocess.run(["cmake", "--install", os.environ["NEMOTE_NEMO_DISPATCH_BUILD"],
                             "--prefix", str(prefix)], check=True, capture_output=True)
             libraries = prefix / "lib/nemo"
             libraries.mkdir(parents=True)
@@ -53,9 +53,9 @@ class NemoCpuDispatchTests(unittest.TestCase):
                         shutil.copy2(library, libraries / library.name)
                 for library in libraries.glob('*.so*'):
                     subprocess.run(['patchelf', '--set-rpath', '$ORIGIN', str(library)], check=True)
-            command = [str(prefix / "bin/wordpipe-nemo-worker"), "--model-dir",
-                       os.environ["WORDPIPE_NEMO_TEST_MODEL"], "--device", "cpu"]
-            wav = os.environ.get("WORDPIPE_NEMO_TEST_WAV")
+            command = [str(prefix / "bin/nemote-nemo-worker"), "--model-dir",
+                       os.environ["NEMOTE_NEMO_TEST_MODEL"], "--device", "cpu"]
+            wav = os.environ.get("NEMOTE_NEMO_TEST_WAV")
             if wav:
                 command.extend(["--wav", wav])
             environment = dict(os.environ, LD_DEBUG="libs")

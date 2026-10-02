@@ -13,12 +13,13 @@ from gi.repository import Gio, GLib
 
 
 def main():
-    if os.environ.get("WORDPIPE_TEST_BUS") != "1":
-        raise SystemExit("Run with dbus-run-session -- env WORDPIPE_TEST_BUS=1; never use the desktop bus")
+    if os.environ.get("NEMOTE_TEST_BUS") != "1":
+        raise SystemExit("Run with dbus-run-session -- env NEMOTE_TEST_BUS=1; never use the desktop bus")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--service", type=Path, required=True)
+    parser.add_argument("--legacy-config", action="store_true", help="Exercise automatic Wordpipe settings migration")
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="wordpipe-service-test-") as directory:
+    with tempfile.TemporaryDirectory(prefix="nemote-service-test-") as directory:
         root = Path(directory)
         models = root / "models"
         for family, size in (("en-", 699872960), ("", 742090464)):
@@ -34,16 +35,23 @@ def main():
         installer = root / "installer"
         shutil.copy2(fixture_root / "mock_model_installer.py", installer)
         installer.chmod(0o755)
-        config = root / "service.json"
-        config.write_text(json.dumps({"backend": "parakeet", "model_profile": "fast", "model_family": "english",
+        config = root / "config/nemote/service.json" if args.legacy_config else root / "service.json"
+        saved_config = root / "config/wordpipe/service.json" if args.legacy_config else config
+        saved_config.parent.mkdir(parents=True, exist_ok=True)
+        original = json.dumps({"backend": "parakeet", "model_profile": "fast", "model_family": "english",
             "model_root": str(models), "worker_path": str(worker), "model_installer_path": str(installer),
-            "input_device": "old-cpal-index", "insert_partials": True}))
+            "input_device": "old-cpal-index", "insert_partials": True})
+        saved_config.write_text(original)
         log = (root / "service.log").open("w+")
-        process = subprocess.Popen([str(args.service.resolve()), "--config", str(config)], stderr=log)
+        command = [str(args.service.resolve())]
+        if not args.legacy_config:
+            command += ["--config", str(config)]
+        env = dict(os.environ, XDG_CONFIG_HOME=str(root / "config"), XDG_DATA_HOME=str(root / "data"))
+        process = subprocess.Popen(command, env=env, stderr=log)
         connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
         signals = []
-        subscription = connection.signal_subscribe("dev.wordpipe.Service", "dev.wordpipe.Service1", None,
-            "/dev/wordpipe/Service", None, Gio.DBusSignalFlags.NONE,
+        subscription = connection.signal_subscribe("dev.nemote.Service", "dev.nemote.Service1", None,
+            "/dev/nemote/Service", None, Gio.DBusSignalFlags.NONE,
             lambda bus, sender, path, interface, name, values: signals.append((name, values.unpack())))
 
         def pump():
@@ -52,7 +60,7 @@ def main():
                 context.iteration(False)
 
         def call(name, params=None):
-            return connection.call_sync("dev.wordpipe.Service", "/dev/wordpipe/Service", "dev.wordpipe.Service1",
+            return connection.call_sync("dev.nemote.Service", "/dev/nemote/Service", "dev.nemote.Service1",
                 name, params, None, Gio.DBusCallFlags.NO_AUTO_START, 2000, None).unpack()
 
         def wait(predicate):
@@ -118,6 +126,8 @@ def main():
                 assert call("GetConfig")[0] == before
             runtime({"itn": GLib.Variant("b", True), "endpoint_mode": GLib.Variant("s", "preview")})
             assert json.loads(config.read_text())["itn"] is True
+            if args.legacy_config:
+                assert saved_config.read_text() == original, "Legacy settings were overwritten"
             call("SetModelProfile", GLib.Variant("(s)", ("nemo-q8",)))
             assert call("GetConfig")[0]["model_family"] == "multilingual"
             call("SetModelProfile", GLib.Variant("(s)", ("nemo-q8-english",)))
@@ -139,7 +149,7 @@ def main():
             # Only a registered Shell connection owns the service lifetime.
             shell = Gio.DBusConnection.new_for_address_sync(os.environ["DBUS_SESSION_BUS_ADDRESS"],
                 Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION, None, None)
-            shell.call_sync("dev.wordpipe.Service", "/dev/wordpipe/Service", "dev.wordpipe.Service1", "RegisterShellClient",
+            shell.call_sync("dev.nemote.Service", "/dev/nemote/Service", "dev.nemote.Service1", "RegisterShellClient",
                 None, None, Gio.DBusCallFlags.NO_AUTO_START, 2000, None)
             shell.close_sync(None)
             assert process.wait(timeout=5) == 0

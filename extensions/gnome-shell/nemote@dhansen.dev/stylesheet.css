@@ -1,68 +1,68 @@
-.wordpipe-panel-status {
+.nemote-panel-status {
   spacing: 3px;
 }
 
-.wordpipe-panel-icon {
+.nemote-panel-icon {
   icon-size: 16px;
 }
 
-.wordpipe-level-bars {
+.nemote-level-bars {
   spacing: 1px;
   min-width: 11px;
 }
 
-.wordpipe-level-bar {
+.nemote-level-bar {
   background-color: rgba(255, 255, 255, 0.86);
   border-radius: 1px;
   height: 10px;
   width: 2px;
 }
 
-.wordpipe-model-title-missing {
+.nemote-model-title-missing {
   color: rgba(255, 255, 255, 0.48);
 }
 
-.wordpipe-model-download-button {
+.nemote-model-download-button {
   padding: 3px 8px;
   border-radius: 6px;
   background-color: rgba(255, 255, 255, 0.14);
 }
 
-.wordpipe-model-download-button:hover {
+.nemote-model-download-button:hover {
   background-color: rgba(255, 255, 255, 0.22);
 }
 
-.wordpipe-model-download-content {
+.nemote-model-download-content {
   spacing: 5px;
 }
 
-.wordpipe-model-download-disabled {
+.nemote-model-download-disabled {
   color: rgba(255, 255, 255, 0.42);
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.wordpipe-model-download-icon {
+.nemote-model-download-icon {
   icon-size: 14px;
 }
 
-.wordpipe-model-progress {
+.nemote-model-progress {
   spacing: 6px;
 }
 
-.wordpipe-model-progress-track {
+.nemote-model-progress-track {
   width: 64px;
   height: 4px;
   border-radius: 2px;
   background-color: rgba(255, 255, 255, 0.20);
 }
 
-.wordpipe-model-progress-fill {
+.nemote-model-progress-fill {
   height: 4px;
   border-radius: 2px;
   background-color: rgba(255, 255, 255, 0.88);
 }
 
-.wordpipe-model-progress-label {
+.nemote-model-progress-label {
   min-width: 32px;
   text-align: right;
 }

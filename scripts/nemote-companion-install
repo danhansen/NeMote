@@ -2,9 +2,9 @@
 set -eu
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PREFIX=$(CDPATH= cd -- "$SELF_DIR/.." && pwd)
-if [ -d "$PREFIX/lib/python/wordpipe" ]; then
+if [ -d "$PREFIX/lib/python/nemote" ]; then
   export PYTHONPATH="$PREFIX/lib/python${PYTHONPATH:+:$PYTHONPATH}"
 else
   export PYTHONPATH="$PREFIX/src${PYTHONPATH:+:$PYTHONPATH}"
 fi
-exec "${WORDPIPE_PYTHON:-python3}" -m wordpipe.nemo_companions "$@"
+exec "${NEMOTE_PYTHON:-python3}" -m nemote.nemo_companions "$@"

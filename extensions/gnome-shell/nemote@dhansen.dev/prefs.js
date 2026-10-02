@@ -9,12 +9,12 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 
 import {installedModelProfiles, streamingChunkChoices} from './modelState.js';
 
-const BUS_NAME = 'dev.wordpipe.Service';
-const OBJECT_PATH = '/dev/wordpipe/Service';
+const BUS_NAME = 'dev.nemote.Service';
+const OBJECT_PATH = '/dev/nemote/Service';
 
 const SERVICE_XML = `
 <node>
-  <interface name="dev.wordpipe.Service1">
+  <interface name="dev.nemote.Service1">
     <method name="Start"/>
     <method name="Stop"/>
     <method name="Toggle"/>
@@ -45,7 +45,7 @@ const SERVICE_XML = `
   </interface>
 </node>`;
 
-const WordpipeProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
+const NeMoteProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
 
 const PROFILES = [
     ['nemo-q8-english', 'English (lower WER)', 'Dedicated English Nemotron model.', 'nemo-q8', 'english'],
@@ -292,8 +292,8 @@ const ShortcutSettingButton = GObject.registerClass({
     }
 });
 
-const WordpipePage = GObject.registerClass(
-class WordpipePage extends Adw.PreferencesPage {
+const NeMotePage = GObject.registerClass(
+class NeMotePage extends Adw.PreferencesPage {
     constructor(settings) {
         super({
             title: _('General'),
@@ -757,7 +757,7 @@ class WordpipePage extends Adw.PreferencesPage {
     }
 
     _connectProxy() {
-        this._proxy = new WordpipeProxy(
+        this._proxy = new NeMoteProxy(
             Gio.DBus.session,
             BUS_NAME,
             OBJECT_PATH,
@@ -1228,7 +1228,7 @@ class WordpipePage extends Adw.PreferencesPage {
         remote.call(this._proxy, ...args, (result, error) => {
             if (error) {
                 this._statusRow.subtitle = formatError(error);
-                logError(error, `Wordpipe ${method} failed`);
+                logError(error, `NeMote ${method} failed`);
                 if (method === 'SetModelProfile' || method === 'SetRuntimeOptions' || method === 'SetInsertionOptions')
                     this._refreshConfig();
                 return;
@@ -1239,9 +1239,9 @@ class WordpipePage extends Adw.PreferencesPage {
     }
 });
 
-export default class WordpipePreferences extends ExtensionPreferences {
+export default class NeMotePreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        const generalPage = new WordpipePage(this.getSettings());
+        const generalPage = new NeMotePage(this.getSettings());
         window.add(generalPage);
         window.add(generalPage.advancedPage);
     }

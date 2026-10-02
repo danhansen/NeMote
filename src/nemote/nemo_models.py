@@ -51,7 +51,7 @@ def install_nemo_model(model_root: Path, family: str, *, source: Path | None = N
 
 
 def _report(progress, phase, message, *, count=0, size=0):
-    progress("wordpipe-progress " + json.dumps({
+    progress("nemote-progress " + json.dumps({
         "phase": phase, "message": message, "completed_bytes": count,
         "total_bytes": size, "fraction": count / size if size else 0.0,
     }))

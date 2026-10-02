@@ -3,8 +3,8 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const source = readFileSync(new URL('../extensions/gnome-shell/wordpipe@dhansen.dev/extension.js', import.meta.url), 'utf8');
-const injectorSource = source.slice(source.indexOf('class TextInjector {'), source.indexOf('export default class WordpipeExtension'));
+const source = readFileSync(new URL('../extensions/gnome-shell/nemote@dhansen.dev/extension.js', import.meta.url), 'utf8');
+const injectorSource = source.slice(source.indexOf('class TextInjector {'), source.indexOf('export default class NeMoteExtension'));
 
 function fixture({preedit = true} = {}) {
     const calls = [];

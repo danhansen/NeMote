@@ -8,15 +8,15 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SERVICE_PROTOCOL = ROOT / "native/wordpipe-service/interface.xml"
+SERVICE_PROTOCOL = ROOT / "native/nemote-service/interface.xml"
 GNOME_CLIENTS = [
-    ROOT / "extensions/gnome-shell/wordpipe@dhansen.dev/extension.js",
-    ROOT / "extensions/gnome-shell/wordpipe@dhansen.dev/prefs.js",
+    ROOT / "extensions/gnome-shell/nemote@dhansen.dev/extension.js",
+    ROOT / "extensions/gnome-shell/nemote@dhansen.dev/prefs.js",
 ]
 GNOME_SCHEMA = (
     ROOT
-    / "extensions/gnome-shell/wordpipe@dhansen.dev/schemas"
-    / "org.gnome.shell.extensions.wordpipe.gschema.xml"
+    / "extensions/gnome-shell/nemote@dhansen.dev/schemas"
+    / "org.gnome.shell.extensions.nemote.gschema.xml"
 )
 EXPECTED_SETTINGS_KEYS = {
     "toggle-shortcut": "as",

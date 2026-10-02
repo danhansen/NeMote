@@ -8,9 +8,9 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.error import URLError
 
-from wordpipe.cli import build_parser, _cmd_model_install_family
-from wordpipe import nemo_models
-from wordpipe.models import profile_installed, profile_runtime_dir, profile_supports_streaming_latency
+from nemote.cli import build_parser, _cmd_model_install_family
+from nemote import nemo_models
+from nemote.models import profile_installed, profile_runtime_dir, profile_supports_streaming_latency
 
 
 class NemoModelTests(unittest.TestCase):
@@ -49,7 +49,7 @@ class NemoModelTests(unittest.TestCase):
             self.assertEqual(download.call_args.args[0].get_header("Range"), "bytes=4-")
             self.assertEqual((runtime / "model.gguf").read_bytes(), content)
             self.assertFalse(partial.exists())
-            events = [json.loads(message.removeprefix("wordpipe-progress ")) for message in messages]
+            events = [json.loads(message.removeprefix("nemote-progress ")) for message in messages]
             self.assertTrue(any(event["phase"] == "retrying" for event in events))
             self.assertTrue(any(0 < event["fraction"] < 1 for event in events))
             self.assertEqual(events[-1]["phase"], "complete")

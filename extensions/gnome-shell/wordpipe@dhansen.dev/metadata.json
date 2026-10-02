@@ -1,8 +1,0 @@
-{
-  "uuid": "wordpipe@dhansen.dev",
-  "name": "Wordpipe",
-  "description": "GNOME voice keyboard backed by the Wordpipe ASR service",
-  "shell-version": ["50"],
-  "settings-schema": "org.gnome.shell.extensions.wordpipe",
-  "url": "https://github.com/danhansen/wordpipe"
-}
