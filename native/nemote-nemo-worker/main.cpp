@@ -231,36 +231,36 @@ class Session {
     asr::Recognizer& model_;
     Clock::time_point started_ = Clock::now();
     Transcript transcript_;
+    PreviewTranscript preview_;
     size_t accepted_ = 0, calls_ = 0, dropped_ = 0;
     double decode_seconds_ = 0, rms_ = 0, peak_ = 0;
     bool english_model_ = false;
-    std::string preview_raw_, preview_formatted_;
     size_t preview_endpoints_ = 0, utterance_commits_ = 0;
-    void update(const asr::Result& result) {
+    void update(const asr::Result& result, bool end_of_stream = false) {
         std::string text = result.alternatives.empty() ? "" : result.alternatives.front().transcript;
         auto language = args_.language;
         if (language == "auto" && !result.alternatives.empty()) {
             const auto& codes = result.alternatives.front().language_codes;
             language = codes.empty() ? (english_model_ ? "en" : "") : codes.front();
         }
-        if (result.pause_endpoint) {
-            ++preview_endpoints_;
-            preview_raw_ = text;
-            preview_formatted_ = args_.itn ? model_.postproc().apply(text, stream_->options(), nullptr, language) : text;
-            if (args_.itn && language.substr(0, language.find('-')) == "en")
-                preview_formatted_ = format_english_itn(preview_formatted_);
+        auto normalize = [&](const std::string& raw) {
+            if (!args_.itn || raw.empty()) return raw;
+            auto options = stream_->options();
+            options.verbatim_transcripts = false;
+            auto formatted = model_.postproc().apply(raw, options, nullptr, language);
+            return language.substr(0, language.find('-')) == "en"
+                ? format_english_itn(formatted) : formatted;
+        };
+        if (args_.endpoint_mode == "preview") {
+            preview_.update(text, result.is_final, result.late_punctuation, normalize);
+            if (result.is_final && !end_of_stream) ++preview_endpoints_;
+            return;
         }
-        if (result.is_final) {
-            preview_raw_.clear(); preview_formatted_.clear();
-        } else if (!preview_raw_.empty() && text == preview_raw_) {
-            text = preview_formatted_;
-        } else {
-            preview_raw_.clear(); preview_formatted_.clear();
-        }
-        if (args_.itn && result.is_final && !result.alternatives.empty()) {
-            if (language.substr(0, language.find('-')) == "en") text = format_english_itn(text);
-        }
+        if (result.is_final) text = normalize(text);
         transcript_.update(text, result.is_final, result.late_punctuation);
+    }
+    const std::string& display_text() const {
+        return args_.endpoint_mode == "preview" ? preview_.text() : transcript_.text();
     }
 public:
     Session(asr::Recognizer& model, const Args& args) : args_(args), model_(model) {
@@ -284,7 +284,8 @@ public:
             language = *match;
         }
         asr::AsrRequestOptions options;
-        options.verbatim_transcripts = !args.itn;
+        // Recognition returns raw text; our adapter schedules upstream ITN.
+        options.verbatim_transcripts = true;
         if (args.phrase_boosting) {
             asr::AsrRequestOptions::Boost context;
             context.boost = 1.0f; // Upstream's nominal RNNT shallow-fusion weight.
@@ -299,7 +300,7 @@ public:
         }
         options.enable_automatic_punctuation = true; // Preserve model-native formatting in finals too.
         stream_ = model.streaming_recognize(options, language, false);
-        if (args.endpoint_mode == "preview") stream_->set_interim_words(true); // Detected language, not word offsets.
+        if (args.language == "auto") stream_->set_interim_words(true); // Detected language, not word offsets.
     }
     Json metrics() const {
         auto audio = double(accepted_) / 16000;
@@ -311,7 +312,7 @@ public:
             {"dropped_audio_chunks", dropped_}, {"last_rms", rms_}, {"peak_rms", peak_},
             {"preview_endpoints", preview_endpoints_}, {"utterance_commits", utterance_commits_}};
     }
-    void stats() { emit({{"event", "stats"}, {"text", transcript_.text()}, {"data", metrics()}}); }
+    void stats() { emit({{"event", "stats"}, {"text", display_text()}, {"data", metrics()}}); }
     void push(const float* audio, size_t n, size_t dropped = 0) {
         if (!n) return;
         double power = 0;
@@ -320,7 +321,7 @@ public:
         accepted_ += n; dropped_ = dropped;
         auto start = Clock::now();
         stream_->push(audio, n, 16000);
-        auto previous = transcript_.text();
+        auto previous = display_text();
         std::vector<std::string> commits;
         while (auto result = stream_->next()) {
             update(*result);
@@ -332,14 +333,14 @@ public:
         decode_seconds_ += seconds(start); ++calls_;
         for (const auto& text : commits)
             emit({{"event", "commit"}, {"text", text}, {"data", metrics()}});
-        if (transcript_.text() != previous && !transcript_.text().empty())
-            emit({{"event", "partial"}, {"text", transcript_.text()}, {"data", metrics()}});
+        if (display_text() != previous && !display_text().empty())
+            emit({{"event", "partial"}, {"text", display_text()}, {"data", metrics()}});
     }
     void finish() {
         auto start = Clock::now();
-        update(stream_->finish());
+        update(stream_->finish(), true);
         decode_seconds_ += seconds(start); ++calls_;
-        if (!transcript_.text().empty()) emit({{"event", "commit"}, {"text", transcript_.text()}, {"data", metrics()}});
+        if (!display_text().empty()) emit({{"event", "commit"}, {"text", display_text()}, {"data", metrics()}});
     }
 };
 
@@ -440,7 +441,6 @@ int main(int argc, char** argv) {
         }
         config.streaming.rnnt_right_context = args.chunk_samples / 1280 - 1;
         config.endpointing.enable = args.endpoint_mode != "disabled";
-        config.endpointing.preview_only = args.endpoint_mode == "preview";
         config.batching.enabled = false;
         // Dictation owns one active stream; disabling batching alone leaves
         // upstream's 16-slot encoder, decoder and VAD state arenas allocated.

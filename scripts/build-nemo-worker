@@ -49,11 +49,6 @@ if ! git -C "$SOURCE" apply --reverse --check "$task_tokenizer_patch" 2>/dev/nul
   git -C "$SOURCE" apply --check "$task_tokenizer_patch"
   git -C "$SOURCE" apply "$task_tokenizer_patch"
 fi
-task_endpoint_patch="$ROOT/native/nemote-nemo-worker/upstream-endpoint-preview.patch"
-if ! git -C "$SOURCE" apply --reverse --check "$task_endpoint_patch" 2>/dev/null; then
-  git -C "$SOURCE" apply --check "$task_endpoint_patch"
-  git -C "$SOURCE" apply "$task_endpoint_patch"
-fi
 sentencepiece_cmake=(-DSENTENCEPIECE_STATIC_LIB=OFF -USENTENCEPIECE_INCLUDE_DIR)
 if [[ "$ITN" == ON ]]; then
   task_sentencepiece_prefix="$UPSTREAM_BUILD/deps/sentencepiece"

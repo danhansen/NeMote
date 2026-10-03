@@ -3,8 +3,9 @@
 NeMo-Speech.cpp is NeMote's sole inference runtime. The SDK and headers are
 built together from pinned revision `4c101bc7113f49101a3e11d2c994c519f41939f6`
 and ggml revision `c03b4e2bcece5134827881af90242086daf75be5`. Our integration
-patches add runtime CPU plugins, strict boosting-tokenizer validation, and
-pause-triggered preview normalization. Recognition stays in C++.
+patches add runtime CPU plugins and strict boosting-tokenizer validation.
+Recognition and ITN use the SDK's exposed C++ interfaces; pause preview does not
+patch the recognition runner.
 
 ## Models
 
@@ -39,9 +40,15 @@ Stop closes capture, drains real queued audio, and calls upstream `finish()`.
 There are no synthetic silence-flush chunks. With endpoint commit mode, multiple
 cumulative commits can occur within one dictation session.
 
-ITN, VAD, and boosting are optional. Preview endpoint mode normalizes the current
-full utterance on pauses without resetting recognition; following speech can
-replace that provisional formatting. EOF normalizes the full final utterance.
+ITN, VAD, and boosting are optional. Recognition requests verbatim output and
+the adapter invokes the SDK postprocessor with ITN enabled separately.
+Preview endpoint mode uses ordinary SDK utterance endpoints but does not commit
+GNOME text. At each endpoint the adapter normalizes the accumulated raw session
+text, retaining the normalized prefix while subsequent raw partials arrive.
+EOF normalizes the whole session again. Recognition context may reset at SDK
+endpoints; this is distinct from the client-controlled GNOME commit boundary.
+Commit endpoint mode normalizes each segment separately, preserving prior client
+commits. Disabled endpoint mode normalizes only on Stop.
 VAD masks features and does not itself imply endpointing. Tokenizer and VAD
 companions download automatically unless explicit path overrides are configured.
 

@@ -486,7 +486,7 @@ class NeMotePage extends Adw.PreferencesPage {
         this._endpointModeRow = new Adw.ComboRow({
             title: _('Pause Endpointing'),
             subtitle: _('Uses about 800 ms of decoded token silence. ITN switch controls normalization. Preview mode needs partial insertion to show text before Stop.'),
-            model: Gtk.StringList.new([_('Disabled'), _('ITN Preview — Do Not Finalize'), _('ITN + Finalize / Commit')]),
+            model: Gtk.StringList.new([_('Disabled'), _('ITN Preview — Do Not Commit'), _('ITN + Commit')]),
             selected: Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode'))),
         });
         this._endpointModeRow.connect('notify::selected', widget => {

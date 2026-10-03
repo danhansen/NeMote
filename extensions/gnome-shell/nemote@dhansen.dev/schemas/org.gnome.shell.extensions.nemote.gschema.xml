@@ -102,7 +102,7 @@
         <choice value="commit"/>
       </choices>
       <summary>NeMo pause endpoint behavior</summary>
-      <description>Disabled: finalize on Stop only. Preview: normalize a provisional snapshot at pauses without finalizing recognition. Commit: normalize and commit each utterance at pauses. The ITN switch controls normalization.</description>
+      <description>Disabled: finalize on Stop only. Preview: SDK endpoints normalize the accumulated session text at pauses without committing it to the application. Commit: normalize and commit each utterance at pauses. The ITN switch controls normalization.</description>
     </key>
     <key name="phrase-boosting" type="b">
       <default>false</default>
