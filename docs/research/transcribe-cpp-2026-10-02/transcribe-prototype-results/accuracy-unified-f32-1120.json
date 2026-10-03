@@ -1,0 +1,1840 @@
+{
+  "config": {
+    "engine": "transcribe",
+    "executable": "/tmp/nemote-transcribe-prototype.YTZkeq/prototype-build/nemote-transcribe-prototype",
+    "model": "/tmp/nemote-transcribe-prototype.YTZkeq/unified-F32.gguf",
+    "backend_dir": "/tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin",
+    "manifest": "local-research-archive-2026-10-02/performance-audit/accuracy-manifest.json",
+    "audio_dir": "local-research-archive-2026-10-02/performance-audit/accuracy-audio",
+    "wav": null,
+    "output": "/tmp/nemote-transcribe-prototype.YTZkeq/results/accuracy-unified-f32-1120.json",
+    "label": "unified-f32-accuracy-1120",
+    "threads": 2,
+    "feed_ms": 560,
+    "right_context": 6,
+    "buffered": true,
+    "buffered_chunk_ms": 560,
+    "buffered_right_ms": 560,
+    "repeat": 1,
+    "warmup": 0
+  },
+  "clips": [
+    {
+      "utt_id": "84-121550-0030",
+      "speaker": "84",
+      "audio": "build/performance-audit/accuracy-audio/84-121550-0030.wav",
+      "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+      "duration_seconds": 8.925,
+      "sha256": "2a0041d3aa1334ed368f73162887f2d70e3589a58893e8494d1a20583995c3c1",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/84-121550-0030.wav"
+    },
+    {
+      "utt_id": "174-50561-0002",
+      "speaker": "174",
+      "audio": "build/performance-audit/accuracy-audio/174-50561-0002.wav",
+      "reference": "BUT THIS IS A FALLACY",
+      "duration_seconds": 2.145,
+      "sha256": "0d2968287a801d513aefa93561e33304e5a40a3d063882610b4c64bc5caf6c4a",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/174-50561-0002.wav"
+    },
+    {
+      "utt_id": "251-136532-0004",
+      "speaker": "251",
+      "audio": "build/performance-audit/accuracy-audio/251-136532-0004.wav",
+      "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+      "duration_seconds": 24.8,
+      "sha256": "4f1192df7c3ecc8a39c6b9ace6ba34e6b2a77b908d7bc85b246b2ec15d758349",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/251-136532-0004.wav"
+    },
+    {
+      "utt_id": "422-122949-0019",
+      "speaker": "422",
+      "audio": "build/performance-audit/accuracy-audio/422-122949-0019.wav",
+      "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+      "duration_seconds": 19.115,
+      "sha256": "b1c385a90994a8561b10fc7de507b1f5b988c5233f0b8c824ae3b7e9e33b9569",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/422-122949-0019.wav"
+    },
+    {
+      "utt_id": "652-130737-0007",
+      "speaker": "652",
+      "audio": "build/performance-audit/accuracy-audio/652-130737-0007.wav",
+      "reference": "HOCHHEIMER A LIGHT PLEASING AND WHOLESOME WINE",
+      "duration_seconds": 4.05,
+      "sha256": "43d00fd99f5747344b7247e9bf1a2e16d512788c842cfdb6d08c460f0ed0e828",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/652-130737-0007.wav"
+    },
+    {
+      "utt_id": "777-126732-0053",
+      "speaker": "777",
+      "audio": "build/performance-audit/accuracy-audio/777-126732-0053.wav",
+      "reference": "HE STOOD STILL IN THE MIDDLE OF THE PARLOUR AND LOOKED INTO THE KITCHEN IN SILENCE",
+      "duration_seconds": 4.66,
+      "sha256": "4e198c244f8dc349b03dd772c92bbfc57d3d4d37fb5b6c87ad0db26d46c9f624",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/777-126732-0053.wav"
+    },
+    {
+      "utt_id": "1272-128104-0002",
+      "speaker": "1272",
+      "audio": "build/performance-audit/accuracy-audio/1272-128104-0002.wav",
+      "reference": "HE TELLS US THAT AT THIS FESTIVE SEASON OF THE YEAR WITH CHRISTMAS AND ROAST BEEF LOOMING BEFORE US SIMILES DRAWN FROM EATING AND ITS RESULTS OCCUR MOST READILY TO THE MIND",
+      "duration_seconds": 12.485,
+      "sha256": "026cd8419b13ee911714d3c146d17a33d79ecd93171afe2af20ce36425d43d90",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/1272-128104-0002.wav"
+    },
+    {
+      "utt_id": "1462-170138-0006",
+      "speaker": "1462",
+      "audio": "build/performance-audit/accuracy-audio/1462-170138-0006.wav",
+      "reference": "WHEN THEY ENTERED THE STAGE BOX ON THE LEFT THE FIRST ACT WAS WELL UNDER WAY THE SCENE BEING THE INTERIOR OF A CABIN IN THE SOUTH OF IRELAND",
+      "duration_seconds": 8.58,
+      "sha256": "b96b6808a290f63581d5bacad5c1b974df1dcf65bfab43780d4f033a0e52cc32",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/1462-170138-0006.wav"
+    },
+    {
+      "utt_id": "1673-143397-0015",
+      "speaker": "1673",
+      "audio": "build/performance-audit/accuracy-audio/1673-143397-0015.wav",
+      "reference": "RETURN TO YOUR PROVINCES AND MAY YOUR PRIVATE VIRTUES REPAIR THE MISCHIEF AND SCANDAL OF YOUR MEETING",
+      "duration_seconds": 6.345,
+      "sha256": "05f7dae62eca23fe88f5d5ee293c79c39ec87c916e26e529a3fa4bcdd3ed1a78",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/1673-143397-0015.wav"
+    },
+    {
+      "utt_id": "1919-142785-0035",
+      "speaker": "1919",
+      "audio": "build/performance-audit/accuracy-audio/1919-142785-0035.wav",
+      "reference": "SUFFICIENT TO SERVE WITH FIVE OR SIX MACKEREL",
+      "duration_seconds": 3.61,
+      "sha256": "ec6b276c015f035268827c04b77dcf36e7147dcd9f9d022e6848e6db525bc483",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/1919-142785-0035.wav"
+    },
+    {
+      "utt_id": "1988-24833-0013",
+      "speaker": "1988",
+      "audio": "build/performance-audit/accuracy-audio/1988-24833-0013.wav",
+      "reference": "I GET THE PILLOWS COMFORTABLY ARRANGED ON THE FLOOR WITH A BIG BOTTLE OF SODA AND A BAG OF POPCORN WITHIN EASY REACH",
+      "duration_seconds": 5.535,
+      "sha256": "94a9888fd99d3bba1af5811bf9a9f3fa756b5b4e6ed6d5217e7189f42938eb72",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/1988-24833-0013.wav"
+    },
+    {
+      "utt_id": "1993-147966-0004",
+      "speaker": "1993",
+      "audio": "build/performance-audit/accuracy-audio/1993-147966-0004.wav",
+      "reference": "BUT YOU SEE A BODY NEVER KNOWS WHAT TRAITS POVERTY MIGHT BRING OUT IN EM",
+      "duration_seconds": 4.865,
+      "sha256": "ea010daf90b52d9493e6c306f2abcd513a76c5961dfdb7d90e572e08013e4e74",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/1993-147966-0004.wav"
+    },
+    {
+      "utt_id": "2035-152373-0016",
+      "speaker": "2035",
+      "audio": "build/performance-audit/accuracy-audio/2035-152373-0016.wav",
+      "reference": "THE TRIBUTE WAS AT THIS PERIOD ENORMOUS FIFTEEN THOUSAND HEAD OF CATTLE ANNUALLY",
+      "duration_seconds": 6.59,
+      "sha256": "4a25e34454ef534b4402a4b1d7ce957cf7620e32a92e17933d5a9950d418aa19",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/2035-152373-0016.wav"
+    },
+    {
+      "utt_id": "2078-142845-0027",
+      "speaker": "2078",
+      "audio": "build/performance-audit/accuracy-audio/2078-142845-0027.wav",
+      "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+      "duration_seconds": 8.73,
+      "sha256": "201280e3e05e43685bdef6795a6db1580c4590eef2a56e65d8c2045cd2483c27",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/2078-142845-0027.wav"
+    },
+    {
+      "utt_id": "2086-149214-0001",
+      "speaker": "2086",
+      "audio": "build/performance-audit/accuracy-audio/2086-149214-0001.wav",
+      "reference": "IN GOOD FAITH HOWEVER HE IS NOT SUFFICIENTLY IMAGINATIVE TO FLATTER HIMSELF WITH THE SLIGHTEST HOPE OF THIS KIND",
+      "duration_seconds": 6.97,
+      "sha256": "4ceed7761600f54b1d02bb824d7ae014074b67ef82cdbad7e1209c644273c593",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/2086-149214-0001.wav"
+    },
+    {
+      "utt_id": "2277-149874-0005",
+      "speaker": "2277",
+      "audio": "build/performance-audit/accuracy-audio/2277-149874-0005.wav",
+      "reference": "SHE HAD SOME SLIGHT GIFT OF OBSERVATION AND THAT SENSE SO RICH IN EVERY WOMAN INTUITION",
+      "duration_seconds": 6.37,
+      "sha256": "8b5bcd8b0b80b69b561c5a02cddfbe2ef0d8afa095bd595d7acb94a9f99ecb4d",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/2277-149874-0005.wav"
+    },
+    {
+      "utt_id": "2412-153948-0014",
+      "speaker": "2412",
+      "audio": "build/performance-audit/accuracy-audio/2412-153948-0014.wav",
+      "reference": "THERE WAS NO ONE IN THE WHOLE WORLD WHO HAD THE SMALLEST IDEA SAVE THOSE WHO WERE THEMSELVES ON THE OTHER SIDE OF IT IF INDEED THERE WAS ANY ONE AT ALL COULD I HOPE TO CROSS IT",
+      "duration_seconds": 9.705,
+      "sha256": "75faa19985456d46e77fcb9eb9cc83c3ed67b6221c69dc2e3045a7856e9bc5f0",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/2412-153948-0014.wav"
+    },
+    {
+      "utt_id": "2428-83699-0010",
+      "speaker": "2428",
+      "audio": "build/performance-audit/accuracy-audio/2428-83699-0010.wav",
+      "reference": "I DID NOT EXPECT A PRINCELY ENTERTAINMENT",
+      "duration_seconds": 3.12,
+      "sha256": "c05f2cc1890355c0f5b58f85867e8bfaaf7fe4d45849e8438ea8f4c73eb44f0a",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/2428-83699-0010.wav"
+    },
+    {
+      "utt_id": "2803-154320-0011",
+      "speaker": "2803",
+      "audio": "build/performance-audit/accuracy-audio/2803-154320-0011.wav",
+      "reference": "THINK OF LADY GLENARVAN THINK OF MARY GRANT",
+      "duration_seconds": 4.28,
+      "sha256": "581d7617707049bb2b9012f5c2b6b18bf52d2b24a7d6fe8a46273f9594b0d037",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/2803-154320-0011.wav"
+    },
+    {
+      "utt_id": "2902-9008-0013",
+      "speaker": "2902",
+      "audio": "build/performance-audit/accuracy-audio/2902-9008-0013.wav",
+      "reference": "NOT THAT SUCH A CREATURE AS THAT DISTURBS ME NO CREATED THING I HOPE CAN MOVE MY EQUANIMITY BUT IF I COULD STOOP TO HATE I SHOULD HATE HER HATE HER",
+      "duration_seconds": 11.775,
+      "sha256": "9a2cd997273f2d61f87d36de40346b6063cab586ccff9c6f4be0289ee1a0c2b2",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/2902-9008-0013.wav"
+    },
+    {
+      "utt_id": "3000-15664-0022",
+      "speaker": "3000",
+      "audio": "build/performance-audit/accuracy-audio/3000-15664-0022.wav",
+      "reference": "HERE YOU STRIKE THE OLD EMIGRANT ROAD WHICH LEADS OVER THE LOW DIVIDE TO THE EASTERN SLOPES OF THE MOUNTAIN",
+      "duration_seconds": 6.47,
+      "sha256": "0e1a2361cc837d0e7505123db6cdc81e7c9ba704bba0913b806f3b7551a786aa",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/3000-15664-0022.wav"
+    },
+    {
+      "utt_id": "3081-166546-0009",
+      "speaker": "3081",
+      "audio": "build/performance-audit/accuracy-audio/3081-166546-0009.wav",
+      "reference": "HAVE YOU EVER THOUGHT THAT SHE MIGHT HAVE BEEN A SUICIDE",
+      "duration_seconds": 3.78,
+      "sha256": "fa4f2c6f4a7e7ac976d68ad618d366930dc699622c642f90a64b02a534bea923",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/3081-166546-0009.wav"
+    },
+    {
+      "utt_id": "3170-137482-0024",
+      "speaker": "3170",
+      "audio": "build/performance-audit/accuracy-audio/3170-137482-0024.wav",
+      "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+      "duration_seconds": 6.76,
+      "sha256": "37002bdfa785751b382037553637fe11600366bf5de6b92b6a59ce2d5135c9ff",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/3170-137482-0024.wav"
+    },
+    {
+      "utt_id": "3536-8226-0010",
+      "speaker": "3536",
+      "audio": "build/performance-audit/accuracy-audio/3536-8226-0010.wav",
+      "reference": "WHEN A MARRIED WOMAN HAS FOLLOWERS AND THE HUSBAND DON'T GO THE WRONG SIDE OF THE POST TOO OR IT AIN'T PROVED AGAIN HIM THAT HE DO THEY'LL NEVER LET HER HAVE NOTHING TO DO WITH THE CHILDREN",
+      "duration_seconds": 9.5,
+      "sha256": "34b207252ab11276912e7ae089a7c407022062269d9ec60bd7eb301033888ee1",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/3536-8226-0010.wav"
+    },
+    {
+      "utt_id": "3576-138058-0004",
+      "speaker": "3576",
+      "audio": "build/performance-audit/accuracy-audio/3576-138058-0004.wav",
+      "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+      "duration_seconds": 16.56,
+      "sha256": "57515ecdf9612b74d02754b9443b8ee42302232491a4dfa90f71ae4ad89f7e4e",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/3576-138058-0004.wav"
+    },
+    {
+      "utt_id": "3752-4944-0069",
+      "speaker": "3752",
+      "audio": "build/performance-audit/accuracy-audio/3752-4944-0069.wav",
+      "reference": "IN THE MIDST OF HIS ARGUMENTS HE FOUND HIMSELF AT THE CUPBOARD WITH THE BOTTLE AT HIS LIPS IN AN ATTITUDE THAT WAS AT ONCE LUDICROUS AND HORRIBLE",
+      "duration_seconds": 10.21,
+      "sha256": "f88978ad4d272b928ec598f8658f7974bfe21e95ab6e7da882e75dfa5fff92fd",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/3752-4944-0069.wav"
+    },
+    {
+      "utt_id": "3853-163249-0056",
+      "speaker": "3853",
+      "audio": "build/performance-audit/accuracy-audio/3853-163249-0056.wav",
+      "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+      "duration_seconds": 4.155,
+      "sha256": "f324d7f15588bd483c0b89b255f724b693c08da58d8cdba09ce15a57d586ddc9",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/3853-163249-0056.wav"
+    },
+    {
+      "utt_id": "5338-284437-0000",
+      "speaker": "5338",
+      "audio": "build/performance-audit/accuracy-audio/5338-284437-0000.wav",
+      "reference": "IT HAD NO ORNAMENTATION BEING EXCEEDINGLY PLAIN IN APPEARANCE",
+      "duration_seconds": 4.55,
+      "sha256": "f794e7e93951c945048ba4ef8695cda002eca2919b7eafe4ac846d0baa8b7c21",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/5338-284437-0000.wav"
+    },
+    {
+      "utt_id": "5536-43363-0018",
+      "speaker": "5536",
+      "audio": "build/performance-audit/accuracy-audio/5536-43363-0018.wav",
+      "reference": "MANY OF THE INDIANS BELIEVED THAT ONE MAY BE BORN MORE THAN ONCE AND THERE WERE SOME WHO CLAIMED TO HAVE FULL KNOWLEDGE OF A FORMER INCARNATION",
+      "duration_seconds": 7.89,
+      "sha256": "652c8e73616477ba1629bdc3a91b0c6a2e6013d6c0ad0cf1461caa81f386cc73",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/5536-43363-0018.wav"
+    },
+    {
+      "utt_id": "5694-64025-0005",
+      "speaker": "5694",
+      "audio": "build/performance-audit/accuracy-audio/5694-64025-0005.wav",
+      "reference": "ON SUNDAY MORNING A CLEAR BEAUTIFUL AND STILL DAY THE ORDER WAS GIVEN FOR THE WHOLE ARMY TO ADVANCE AND TO ATTACK IMMEDIATELY",
+      "duration_seconds": 8.170063,
+      "sha256": "ee06197183fb8f28e9eb3e59818d70eeb0a0eae16cad8b2028a78c69e4531d0b",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/5694-64025-0005.wav"
+    },
+    {
+      "utt_id": "5895-34622-0009",
+      "speaker": "5895",
+      "audio": "build/performance-audit/accuracy-audio/5895-34622-0009.wav",
+      "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+      "duration_seconds": 10.89,
+      "sha256": "505788b75b8b520778b4ba73c52e542ca3535d8171316dbf9968898e5fe1d3f2",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/5895-34622-0009.wav"
+    },
+    {
+      "utt_id": "6241-61943-0000",
+      "speaker": "6241",
+      "audio": "build/performance-audit/accuracy-audio/6241-61943-0000.wav",
+      "reference": "ON THE SECOND OF THE MONTH AT TWO IN THE MORNING OUR PRECIOUS CARGO OF LUGGAGE WAS TAKEN ON BOARD THE GOOD SHIP VALKYRIE",
+      "duration_seconds": 6.95,
+      "sha256": "62f241ff56a96b0b2411df136a5d6e227fc65bb053dd2120275b3d1e73d97839",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/6241-61943-0000.wav"
+    },
+    {
+      "utt_id": "6295-64301-0023",
+      "speaker": "6295",
+      "audio": "build/performance-audit/accuracy-audio/6295-64301-0023.wav",
+      "reference": "WHEN THOU LOVEST MAN OR WOMAN OR CHILD YEA OR EVEN DOG ARIGHT THEN WILT THOU NO LONGER NEED THAT I TELL THEE HOW GOD AND HIS CHRIST WOULD NOT BE CONTENT WITH EACH OTHER ALONE IN THE GLORIES EVEN OF THE ETERNAL ORIGINAL LOVE BECAUSE THEY COULD CREATE MORE LOVE",
+      "duration_seconds": 20.82,
+      "sha256": "98e5da2f9e05bec26e6d841a4c9ed08929c144932b9d68440442c7dc220c0f66",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/6295-64301-0023.wav"
+    },
+    {
+      "utt_id": "6313-66129-0007",
+      "speaker": "6313",
+      "audio": "build/performance-audit/accuracy-audio/6313-66129-0007.wav",
+      "reference": "I AM FREE TO ADMIT THAT I AM HUNGRY TOO",
+      "duration_seconds": 2.455,
+      "sha256": "15b498eb7348da0d9f04fcab518fecf21c63fd2fd416c641f2f3a5d381ed28d8",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/6313-66129-0007.wav"
+    },
+    {
+      "utt_id": "6319-57405-0007",
+      "speaker": "6319",
+      "audio": "build/performance-audit/accuracy-audio/6319-57405-0007.wav",
+      "reference": "IS THERE ANYTHING THAT YOU WISH HE ASKED",
+      "duration_seconds": 3.505,
+      "sha256": "a367ad1178bddeb1a985b0fab0aef370447031c15e3e8115422fb2c151e7b5ab",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/6319-57405-0007.wav"
+    },
+    {
+      "utt_id": "6345-93306-0014",
+      "speaker": "6345",
+      "audio": "build/performance-audit/accuracy-audio/6345-93306-0014.wav",
+      "reference": "SHE SAID AGAIN YOU ARE KIND",
+      "duration_seconds": 2.24,
+      "sha256": "69ed47180c8d0ae425a714ed49d6d5ffdc771011ea74265058f8dd3788573cab",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/6345-93306-0014.wav"
+    },
+    {
+      "utt_id": "7850-73752-0017",
+      "speaker": "7850",
+      "audio": "build/performance-audit/accuracy-audio/7850-73752-0017.wav",
+      "reference": "IN THE PRESENT UNSETTLED THOUGH HOPEFUL STATE OF AFFAIRS FERDINAND WOULD NOT GO HOME",
+      "duration_seconds": 5.97,
+      "sha256": "7844b77a1077272923f2df01bc0b9f43c5f45b16c78f12a100db0773052aa042",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/7850-73752-0017.wav"
+    },
+    {
+      "utt_id": "7976-105575-0012",
+      "speaker": "7976",
+      "audio": "build/performance-audit/accuracy-audio/7976-105575-0012.wav",
+      "reference": "HE SURVIVED THE WAR ONLY TO BE MURDERED LATER ON A PLANTATION IN MISSISSIPPI",
+      "duration_seconds": 5.155,
+      "sha256": "4713d450576436772bfd532e90a758309afa81a67ab9bfcab824b5e8de327207",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/7976-105575-0012.wav"
+    },
+    {
+      "utt_id": "8297-275154-0025",
+      "speaker": "8297",
+      "audio": "build/performance-audit/accuracy-audio/8297-275154-0025.wav",
+      "reference": "SHE SHALL HAVE YOUR MESSAGE ALL THAT I CAN DO TO PERSUADE HER SHALL BE DONE",
+      "duration_seconds": 4.88,
+      "sha256": "e6145f3bad6701f2ec8862cd1d4c39f566422e063492a8352bf0fe4a7614bd76",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/8297-275154-0025.wav"
+    },
+    {
+      "utt_id": "8842-304647-0006",
+      "speaker": "8842",
+      "audio": "build/performance-audit/accuracy-audio/8842-304647-0006.wav",
+      "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+      "duration_seconds": 22.96,
+      "sha256": "f9b6683b30b56dbb88910e2dc4beaedfbdb4c3718888b2f9bc73de678ad3a39a",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/8842-304647-0006.wav"
+    }
+  ],
+  "processes": [
+    {
+      "command": [
+        "/tmp/nemote-transcribe-prototype.YTZkeq/prototype-build/nemote-transcribe-prototype",
+        "--model",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/unified-F32.gguf",
+        "--wav-list",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/results/accuracy-unified-f32-1120.tsv",
+        "--threads",
+        "2",
+        "--feed-ms",
+        "560",
+        "--right-context",
+        "6",
+        "--repeat",
+        "1",
+        "--warmup",
+        "0",
+        "--backend-dir",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin",
+        "--buffered",
+        "--left-ms",
+        "5600",
+        "--buffered-chunk-ms",
+        "560",
+        "--buffered-right-ms",
+        "560"
+      ],
+      "diagnostics": "load_backend: loaded CPU backend from /tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin/libggml-cpu.so\nparakeet: using cpu backend (strict)\n",
+      "events": [
+        {
+          "event": "model_loaded",
+          "data": {
+            "load_seconds": 1.286886988,
+            "version": "0.2.4",
+            "revision": "1da90df",
+            "backend": "CPU",
+            "threads": 2
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "84-121550-0030",
+          "iteration": 0,
+          "warmup": false,
+          "text": "but by the largesse of celestial graces which have such lofty vapours for their rain that near to them our sight approaches not",
+          "before_final": "but by the largesse of celestial graces which have such lofty vapours for their rain that near to them our sight",
+          "data": {
+            "audio_seconds": 8.925,
+            "elapsed_seconds": 7.032777061,
+            "decode_calls": 17,
+            "finish_seconds": 0.696099191,
+            "peak_rss_kb": 2550024,
+            "first_partial_seconds": 0.395225913,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "174-50561-0002",
+          "iteration": 0,
+          "warmup": false,
+          "text": "But this is a fallacy",
+          "before_final": "But",
+          "data": {
+            "audio_seconds": 2.145,
+            "elapsed_seconds": 0.640245385,
+            "decode_calls": 5,
+            "finish_seconds": 0.296384594,
+            "peak_rss_kb": 2550024,
+            "first_partial_seconds": 0.343856417,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "251-136532-0004",
+          "iteration": 0,
+          "warmup": false,
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+          "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+          "data": {
+            "audio_seconds": 24.8,
+            "elapsed_seconds": 25.46293845,
+            "decode_calls": 46,
+            "finish_seconds": 0.678907588,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.359179682,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "422-122949-0019",
+          "iteration": 0,
+          "warmup": false,
+          "text": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say, it is justice itself",
+          "before_final": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say, it is justice itself",
+          "data": {
+            "audio_seconds": 19.115,
+            "elapsed_seconds": 21.14560762,
+            "decode_calls": 36,
+            "finish_seconds": 0.745622342,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.345809598,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "652-130737-0007",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Hochheimer a light, pleasing, and wholesome wine",
+          "before_final": "Hochheimer a light, pleasing, and wholesome",
+          "data": {
+            "audio_seconds": 4.05,
+            "elapsed_seconds": 2.136559413,
+            "decode_calls": 9,
+            "finish_seconds": 0.464937592,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.36598956,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "777-126732-0053",
+          "iteration": 0,
+          "warmup": false,
+          "text": "He stood still in the middle of the parlor and looked into the kitchen in silence",
+          "before_final": "He stood still in the middle of the parlor and looked into the kitchen in",
+          "data": {
+            "audio_seconds": 4.66,
+            "elapsed_seconds": 2.783549932,
+            "decode_calls": 10,
+            "finish_seconds": 0.580484224,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.362916482,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1272-128104-0002",
+          "iteration": 0,
+          "warmup": false,
+          "text": "He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind",
+          "before_final": "He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the",
+          "data": {
+            "audio_seconds": 12.485,
+            "elapsed_seconds": 12.47567104,
+            "decode_calls": 24,
+            "finish_seconds": 0.746249899,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.365889816,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1462-170138-0006",
+          "iteration": 0,
+          "warmup": false,
+          "text": "When they entered the stage box on the left the first act was well under way, the scene being the interior of a cabin in the south of Ireland",
+          "before_final": "When they entered the stage box on the left the first act was well under way, the scene being the interior of a cabin in the south of I",
+          "data": {
+            "audio_seconds": 8.58,
+            "elapsed_seconds": 7.449088519,
+            "decode_calls": 17,
+            "finish_seconds": 0.763968655,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.363437951,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1673-143397-0015",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Return to your provinces, and may your private virtues repair the mischief and scandal of your meeting",
+          "before_final": "Return to your provinces, and may your private virtues repair the mischief and scandal of your",
+          "data": {
+            "audio_seconds": 6.345,
+            "elapsed_seconds": 4.646421434,
+            "decode_calls": 13,
+            "finish_seconds": 0.721518926,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.35763687,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1919-142785-0035",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Sufficient to serve with five or six mackerel",
+          "before_final": "Sufficient to serve with five or six",
+          "data": {
+            "audio_seconds": 3.61,
+            "elapsed_seconds": 1.715586754,
+            "decode_calls": 8,
+            "finish_seconds": 0.441445934,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.357783803,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1988-24833-0013",
+          "iteration": 0,
+          "warmup": false,
+          "text": "I get the pillows comfortably arranged on the floor with a big bottle of soda and a bag of popcorn within easy reach",
+          "before_final": "I get the pillows comfortably arranged on the floor with a big bottle of soda and a bag of popc",
+          "data": {
+            "audio_seconds": 5.535,
+            "elapsed_seconds": 3.339815341,
+            "decode_calls": 11,
+            "finish_seconds": 0.635197013,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.367017726,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1993-147966-0004",
+          "iteration": 0,
+          "warmup": false,
+          "text": "But you see a body never knows what traits poverty might bring out in 'em",
+          "before_final": "But you see a body never knows what traits poverty",
+          "data": {
+            "audio_seconds": 4.865,
+            "elapsed_seconds": 2.69579255,
+            "decode_calls": 10,
+            "finish_seconds": 0.553488263,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.353506274,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "2035-152373-0016",
+          "iteration": 0,
+          "warmup": false,
+          "text": "The tribute was at this period enormous fifteen thousand head of cattle annually",
+          "before_final": "The tribute was at this period enormous fifteen thousand head of cattle",
+          "data": {
+            "audio_seconds": 6.59,
+            "elapsed_seconds": 4.622879012,
+            "decode_calls": 13,
+            "finish_seconds": 0.74346951,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.354929387,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "2078-142845-0027",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Never use new bread for making any kind of toast, as it eats heavy, and besides, it is very extravagant",
+          "before_final": "Never use new bread for making any kind of toast, as it eats heavy, and besides, it is very extravagant",
+          "data": {
+            "audio_seconds": 8.73,
+            "elapsed_seconds": 7.444629083,
+            "decode_calls": 17,
+            "finish_seconds": 0.757899781,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.374943514,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "2086-149214-0001",
+          "iteration": 0,
+          "warmup": false,
+          "text": "In good faith, however, he is not sufficiently imaginative to flatter himself with the slightest hope of this kind",
+          "before_final": "In good faith, however, he is not sufficiently imaginative to flatter himself with the slightest hope of",
+          "data": {
+            "audio_seconds": 6.97,
+            "elapsed_seconds": 5.371843089,
+            "decode_calls": 14,
+            "finish_seconds": 0.744443834,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.354382978,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "2277-149874-0005",
+          "iteration": 0,
+          "warmup": false,
+          "text": "She had some slight gift of observation, and that sense so rich in every woman intuition",
+          "before_final": "She had some slight gift of observation, and that sense so rich in every woman int",
+          "data": {
+            "audio_seconds": 6.37,
+            "elapsed_seconds": 4.584800715,
+            "decode_calls": 13,
+            "finish_seconds": 0.702062833,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.351317865,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "2412-153948-0014",
+          "iteration": 0,
+          "warmup": false,
+          "text": "There was no one in the whole world who had the smallest idea, save those who were themselves on the other side of it. If indeed there was any one at all, could I hope to cross it",
+          "before_final": "There was no one in the whole world who had the smallest idea, save those who were themselves on the other side of it. If indeed there was any one at all, could I hope",
+          "data": {
+            "audio_seconds": 9.705,
+            "elapsed_seconds": 8.776691237,
+            "decode_calls": 19,
+            "finish_seconds": 0.747526817,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.357689042,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "2428-83699-0010",
+          "iteration": 0,
+          "warmup": false,
+          "text": "I did not expect a princely entertainment",
+          "before_final": "I did not expect a princely",
+          "data": {
+            "audio_seconds": 3.12,
+            "elapsed_seconds": 1.303091225,
+            "decode_calls": 7,
+            "finish_seconds": 0.399241691,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.356576626,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "2803-154320-0011",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Think of Lady Glenarvan think of Mary Grant",
+          "before_final": "Think of Lady Glenarvan think of Mary",
+          "data": {
+            "audio_seconds": 4.28,
+            "elapsed_seconds": 2.142727218,
+            "decode_calls": 9,
+            "finish_seconds": 0.490151572,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.352993183,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "2902-9008-0013",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Not that such a creature as that disturbs me no created thing, I hope, can move my equanimity. But if I could stoop to hate, I should hate her, hate her.",
+          "before_final": "Not that such a creature as that disturbs me no created thing, I hope, can move my equanimity. But if I could stoop to hate, I should hate her, hate her",
+          "data": {
+            "audio_seconds": 11.775,
+            "elapsed_seconds": 11.66770333,
+            "decode_calls": 23,
+            "finish_seconds": 0.743755376,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.360100575,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "3000-15664-0022",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Here you strike the old emigrant road, which leads over the low divide to the eastern slopes of the mountain",
+          "before_final": "Here you strike the old emigrant road, which leads over the low divide to the eastern slopes",
+          "data": {
+            "audio_seconds": 6.47,
+            "elapsed_seconds": 4.599559614,
+            "decode_calls": 13,
+            "finish_seconds": 0.722686204,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.370792143,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "3081-166546-0009",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Have you ever thought that she might have been a suicide?",
+          "before_final": "Have you ever thought that she might have been",
+          "data": {
+            "audio_seconds": 3.78,
+            "elapsed_seconds": 1.7196695,
+            "decode_calls": 8,
+            "finish_seconds": 0.448233448,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.607461586,
+            "first_partial_audio_ms": 2240
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "3170-137482-0024",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required",
+          "before_final": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required",
+          "data": {
+            "audio_seconds": 6.76,
+            "elapsed_seconds": 5.289975025,
+            "decode_calls": 14,
+            "finish_seconds": 0.740209221,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.362558049,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "3536-8226-0010",
+          "iteration": 0,
+          "warmup": false,
+          "text": "When a married woman has followers, and the husband don't go the wrong side of the post too, or it ain't proved again him that he do, they'll never let her have nothing to do with the children",
+          "before_final": "When a married woman has followers, and the husband don't go the wrong side of the post too, or it ain't proved again him that he do, they'll never let her have nothing",
+          "data": {
+            "audio_seconds": 9.5,
+            "elapsed_seconds": 8.079892021,
+            "decode_calls": 18,
+            "finish_seconds": 0.767511841,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.360409412,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "3576-138058-0004",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand lashes",
+          "before_final": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand",
+          "data": {
+            "audio_seconds": 16.56,
+            "elapsed_seconds": 17.21970723,
+            "decode_calls": 31,
+            "finish_seconds": 0.743635351,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.363765565,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "3752-4944-0069",
+          "iteration": 0,
+          "warmup": false,
+          "text": "In the midst of his arguments he found himself at the cupboard, with the bottle at his lips, in an attitude that was at once ludicrous and horrible",
+          "before_final": "In the midst of his arguments he found himself at the cupboard, with the bottle at his lips, in an attitude that was at once ludicrous and",
+          "data": {
+            "audio_seconds": 10.21,
+            "elapsed_seconds": 9.523725276,
+            "decode_calls": 20,
+            "finish_seconds": 0.748215666,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.353976759,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "3853-163249-0056",
+          "iteration": 0,
+          "warmup": false,
+          "text": "I could not love thee, dear, so much loved I not honour more",
+          "before_final": "I could not love thee, dear, so much loved I not",
+          "data": {
+            "audio_seconds": 4.155,
+            "elapsed_seconds": 2.176799509,
+            "decode_calls": 9,
+            "finish_seconds": 0.484572385,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.36485819,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "5338-284437-0000",
+          "iteration": 0,
+          "warmup": false,
+          "text": "It had no ornamentation, being exceedingly plain in appearance",
+          "before_final": "It had no ornamentation, being exceedingly plain",
+          "data": {
+            "audio_seconds": 4.55,
+            "elapsed_seconds": 2.702673502,
+            "decode_calls": 10,
+            "finish_seconds": 0.524641212,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.360886225,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "5536-43363-0018",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Many of the Indians believed that one may be born more than once, and there were some who claimed to have full knowledge of a former incarnation",
+          "before_final": "Many of the Indians believed that one may be born more than once, and there were some who claimed to have full knowledge of a former incarnation",
+          "data": {
+            "audio_seconds": 7.89,
+            "elapsed_seconds": 6.804391643,
+            "decode_calls": 16,
+            "finish_seconds": 0.770409657,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.602949447,
+            "first_partial_audio_ms": 2240
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "5694-64025-0005",
+          "iteration": 0,
+          "warmup": false,
+          "text": "On Sunday morning a clear, beautiful and still day, the order was given for the whole army to advance and to attack immediately",
+          "before_final": "On Sunday morning a clear, beautiful and still day, the order was given for the whole army to advance and to attack im",
+          "data": {
+            "audio_seconds": 8.1700625,
+            "elapsed_seconds": 6.743056699,
+            "decode_calls": 16,
+            "finish_seconds": 0.763657802,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.371564803,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "5895-34622-0009",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Unknown people had worked upon his face he, on the other hand, had worked on his mind. And behind this well-executed mask he had placed all that he could have thought",
+          "before_final": "Unknown people had worked upon his face he, on the other hand, had worked on his mind. And behind this well-executed mask he had placed all that he could",
+          "data": {
+            "audio_seconds": 10.89,
+            "elapsed_seconds": 10.23358762,
+            "decode_calls": 21,
+            "finish_seconds": 0.760308345,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.363440935,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "6241-61943-0000",
+          "iteration": 0,
+          "warmup": false,
+          "text": "On the second of the month, at two in the morning, our precious cargo of luggage was taken on board the good ship Valkyrie",
+          "before_final": "On the second of the month, at two in the morning, our precious cargo of luggage was taken on board the good ship",
+          "data": {
+            "audio_seconds": 6.95,
+            "elapsed_seconds": 5.36863588,
+            "decode_calls": 14,
+            "finish_seconds": 0.76883043,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.356845174,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "6295-64301-0023",
+          "iteration": 0,
+          "warmup": false,
+          "text": "When thou lovest man, or woman, or child, yea, or even dog aright, then wilt thou no longer need that I tell thee how God and his Christ would not be content with each other alone in the glories even of the eternal original love, because they could create more love",
+          "before_final": "When thou lovest man, or woman, or child, yea, or even dog aright, then wilt thou no longer need that I tell thee how God and his Christ would not be content with each other alone in the glories even of the eternal original love, because they could create more",
+          "data": {
+            "audio_seconds": 20.82,
+            "elapsed_seconds": 22.88215059,
+            "decode_calls": 39,
+            "finish_seconds": 0.768574422,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.367198559,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "6313-66129-0007",
+          "iteration": 0,
+          "warmup": false,
+          "text": "I am free to admit that I am hungry too",
+          "before_final": "I am free to admit that",
+          "data": {
+            "audio_seconds": 2.455,
+            "elapsed_seconds": 0.928334852,
+            "decode_calls": 6,
+            "finish_seconds": 0.322196178,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.355714129,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "6319-57405-0007",
+          "iteration": 0,
+          "warmup": false,
+          "text": "Is there anything that you wish? he asked",
+          "before_final": "Is there anything that you wish?",
+          "data": {
+            "audio_seconds": 3.505,
+            "elapsed_seconds": 1.706312416,
+            "decode_calls": 8,
+            "finish_seconds": 0.427379988,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.356102655,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "6345-93306-0014",
+          "iteration": 0,
+          "warmup": false,
+          "text": "She said again, You are kind",
+          "before_final": "She said again, You are",
+          "data": {
+            "audio_seconds": 2.24,
+            "elapsed_seconds": 0.927480796,
+            "decode_calls": 5,
+            "finish_seconds": 0.311435087,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.362956942,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "7850-73752-0017",
+          "iteration": 0,
+          "warmup": false,
+          "text": "In the present unsettled, though hopeful, state of affairs, Ferdinand would not go home",
+          "before_final": "In the present unsettled, though hopeful, state of affairs, Ferdinand would",
+          "data": {
+            "audio_seconds": 5.97,
+            "elapsed_seconds": 3.998385401,
+            "decode_calls": 12,
+            "finish_seconds": 0.738419505,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.360575979,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "7976-105575-0012",
+          "iteration": 0,
+          "warmup": false,
+          "text": "He survived the war only to be murdered later on a plantation in Mississippi",
+          "before_final": "He survived the war only to be murdered later on a plantation in Mississippi",
+          "data": {
+            "audio_seconds": 5.155,
+            "elapsed_seconds": 4.097972694,
+            "decode_calls": 11,
+            "finish_seconds": 0.802068644,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.393637716,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "8297-275154-0025",
+          "iteration": 0,
+          "warmup": false,
+          "text": "She shall have your message all that I can do to persuade her shall be done",
+          "before_final": "She shall have your message all that I can do to persuade her",
+          "data": {
+            "audio_seconds": 4.88,
+            "elapsed_seconds": 3.049209173,
+            "decode_calls": 10,
+            "finish_seconds": 0.580141741,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.457392565,
+            "first_partial_audio_ms": 1680
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "8842-304647-0006",
+          "iteration": 0,
+          "warmup": false,
+          "text": "The people is a beast of muddy brain, That knows not its own force and therefore stands Loaded with wood and stone, the powerless hands of a mere child guided with bit and rein would be enough to break the chain, but the beast fears, and what the child demands it does, nor its own terror understands, confused and stupefied by Bugbear's vein",
+          "before_final": "The people is a beast of muddy brain, That knows not its own force and therefore stands Loaded with wood and stone, the powerless hands of a mere child guided with bit and rein would be enough to break the chain, but the beast fears, and what the child demands it does, nor its own terror understands, confused and stupefied by Bugbear's ve",
+          "data": {
+            "audio_seconds": 22.96,
+            "elapsed_seconds": 30.27307553,
+            "decode_calls": 42,
+            "finish_seconds": 1.056080487,
+            "peak_rss_kb": 2550280,
+            "first_partial_seconds": 0.462463785,
+            "first_partial_audio_ms": 1680
+          }
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "clip": "84-121550-0030",
+      "iteration": 0,
+      "warmup": false,
+      "text": "but by the largesse of celestial graces which have such lofty vapours for their rain that near to them our sight approaches not",
+      "metrics": {
+        "audio_seconds": 8.925,
+        "elapsed_seconds": 7.032777061,
+        "decode_calls": 17,
+        "finish_seconds": 0.696099191,
+        "peak_rss_kb": 2550024,
+        "first_partial_seconds": 0.395225913,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "but by the largesse of celestial graces which have such lofty vapours for their rain that near to them our sight",
+      "edits": 1,
+      "words": 23
+    },
+    {
+      "clip": "174-50561-0002",
+      "iteration": 0,
+      "warmup": false,
+      "text": "But this is a fallacy",
+      "metrics": {
+        "audio_seconds": 2.145,
+        "elapsed_seconds": 0.640245385,
+        "decode_calls": 5,
+        "finish_seconds": 0.296384594,
+        "peak_rss_kb": 2550024,
+        "first_partial_seconds": 0.343856417,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "But",
+      "edits": 0,
+      "words": 5
+    },
+    {
+      "clip": "251-136532-0004",
+      "iteration": 0,
+      "warmup": false,
+      "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "elapsed_seconds": 25.46293845,
+        "decode_calls": 46,
+        "finish_seconds": 0.678907588,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.359179682,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+      "edits": 6,
+      "words": 64
+    },
+    {
+      "clip": "422-122949-0019",
+      "iteration": 0,
+      "warmup": false,
+      "text": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say, it is justice itself",
+      "metrics": {
+        "audio_seconds": 19.115,
+        "elapsed_seconds": 21.14560762,
+        "decode_calls": 36,
+        "finish_seconds": 0.745622342,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.345809598,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say, it is justice itself",
+      "edits": 1,
+      "words": 50
+    },
+    {
+      "clip": "652-130737-0007",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Hochheimer a light, pleasing, and wholesome wine",
+      "metrics": {
+        "audio_seconds": 4.05,
+        "elapsed_seconds": 2.136559413,
+        "decode_calls": 9,
+        "finish_seconds": 0.464937592,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.36598956,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Hochheimer a light, pleasing, and wholesome",
+      "edits": 0,
+      "words": 7
+    },
+    {
+      "clip": "777-126732-0053",
+      "iteration": 0,
+      "warmup": false,
+      "text": "He stood still in the middle of the parlor and looked into the kitchen in silence",
+      "metrics": {
+        "audio_seconds": 4.66,
+        "elapsed_seconds": 2.783549932,
+        "decode_calls": 10,
+        "finish_seconds": 0.580484224,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.362916482,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "He stood still in the middle of the parlor and looked into the kitchen in",
+      "edits": 1,
+      "words": 16
+    },
+    {
+      "clip": "1272-128104-0002",
+      "iteration": 0,
+      "warmup": false,
+      "text": "He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind",
+      "metrics": {
+        "audio_seconds": 12.485,
+        "elapsed_seconds": 12.47567104,
+        "decode_calls": 24,
+        "finish_seconds": 0.746249899,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.365889816,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the",
+      "edits": 0,
+      "words": 32
+    },
+    {
+      "clip": "1462-170138-0006",
+      "iteration": 0,
+      "warmup": false,
+      "text": "When they entered the stage box on the left the first act was well under way, the scene being the interior of a cabin in the south of Ireland",
+      "metrics": {
+        "audio_seconds": 8.58,
+        "elapsed_seconds": 7.449088519,
+        "decode_calls": 17,
+        "finish_seconds": 0.763968655,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.363437951,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "When they entered the stage box on the left the first act was well under way, the scene being the interior of a cabin in the south of I",
+      "edits": 0,
+      "words": 29
+    },
+    {
+      "clip": "1673-143397-0015",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Return to your provinces, and may your private virtues repair the mischief and scandal of your meeting",
+      "metrics": {
+        "audio_seconds": 6.345,
+        "elapsed_seconds": 4.646421434,
+        "decode_calls": 13,
+        "finish_seconds": 0.721518926,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.35763687,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Return to your provinces, and may your private virtues repair the mischief and scandal of your",
+      "edits": 0,
+      "words": 17
+    },
+    {
+      "clip": "1919-142785-0035",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Sufficient to serve with five or six mackerel",
+      "metrics": {
+        "audio_seconds": 3.61,
+        "elapsed_seconds": 1.715586754,
+        "decode_calls": 8,
+        "finish_seconds": 0.441445934,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.357783803,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Sufficient to serve with five or six",
+      "edits": 0,
+      "words": 8
+    },
+    {
+      "clip": "1988-24833-0013",
+      "iteration": 0,
+      "warmup": false,
+      "text": "I get the pillows comfortably arranged on the floor with a big bottle of soda and a bag of popcorn within easy reach",
+      "metrics": {
+        "audio_seconds": 5.535,
+        "elapsed_seconds": 3.339815341,
+        "decode_calls": 11,
+        "finish_seconds": 0.635197013,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.367017726,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "I get the pillows comfortably arranged on the floor with a big bottle of soda and a bag of popc",
+      "edits": 0,
+      "words": 23
+    },
+    {
+      "clip": "1993-147966-0004",
+      "iteration": 0,
+      "warmup": false,
+      "text": "But you see a body never knows what traits poverty might bring out in 'em",
+      "metrics": {
+        "audio_seconds": 4.865,
+        "elapsed_seconds": 2.69579255,
+        "decode_calls": 10,
+        "finish_seconds": 0.553488263,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.353506274,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "But you see a body never knows what traits poverty",
+      "edits": 0,
+      "words": 15
+    },
+    {
+      "clip": "2035-152373-0016",
+      "iteration": 0,
+      "warmup": false,
+      "text": "The tribute was at this period enormous fifteen thousand head of cattle annually",
+      "metrics": {
+        "audio_seconds": 6.59,
+        "elapsed_seconds": 4.622879012,
+        "decode_calls": 13,
+        "finish_seconds": 0.74346951,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.354929387,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "The tribute was at this period enormous fifteen thousand head of cattle",
+      "edits": 0,
+      "words": 13
+    },
+    {
+      "clip": "2078-142845-0027",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Never use new bread for making any kind of toast, as it eats heavy, and besides, it is very extravagant",
+      "metrics": {
+        "audio_seconds": 8.73,
+        "elapsed_seconds": 7.444629083,
+        "decode_calls": 17,
+        "finish_seconds": 0.757899781,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.374943514,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Never use new bread for making any kind of toast, as it eats heavy, and besides, it is very extravagant",
+      "edits": 1,
+      "words": 19
+    },
+    {
+      "clip": "2086-149214-0001",
+      "iteration": 0,
+      "warmup": false,
+      "text": "In good faith, however, he is not sufficiently imaginative to flatter himself with the slightest hope of this kind",
+      "metrics": {
+        "audio_seconds": 6.97,
+        "elapsed_seconds": 5.371843089,
+        "decode_calls": 14,
+        "finish_seconds": 0.744443834,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.354382978,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "In good faith, however, he is not sufficiently imaginative to flatter himself with the slightest hope of",
+      "edits": 0,
+      "words": 19
+    },
+    {
+      "clip": "2277-149874-0005",
+      "iteration": 0,
+      "warmup": false,
+      "text": "She had some slight gift of observation, and that sense so rich in every woman intuition",
+      "metrics": {
+        "audio_seconds": 6.37,
+        "elapsed_seconds": 4.584800715,
+        "decode_calls": 13,
+        "finish_seconds": 0.702062833,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.351317865,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "She had some slight gift of observation, and that sense so rich in every woman int",
+      "edits": 0,
+      "words": 16
+    },
+    {
+      "clip": "2412-153948-0014",
+      "iteration": 0,
+      "warmup": false,
+      "text": "There was no one in the whole world who had the smallest idea, save those who were themselves on the other side of it. If indeed there was any one at all, could I hope to cross it",
+      "metrics": {
+        "audio_seconds": 9.705,
+        "elapsed_seconds": 8.776691237,
+        "decode_calls": 19,
+        "finish_seconds": 0.747526817,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.357689042,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "There was no one in the whole world who had the smallest idea, save those who were themselves on the other side of it. If indeed there was any one at all, could I hope",
+      "edits": 0,
+      "words": 38
+    },
+    {
+      "clip": "2428-83699-0010",
+      "iteration": 0,
+      "warmup": false,
+      "text": "I did not expect a princely entertainment",
+      "metrics": {
+        "audio_seconds": 3.12,
+        "elapsed_seconds": 1.303091225,
+        "decode_calls": 7,
+        "finish_seconds": 0.399241691,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.356576626,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "I did not expect a princely",
+      "edits": 0,
+      "words": 7
+    },
+    {
+      "clip": "2803-154320-0011",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Think of Lady Glenarvan think of Mary Grant",
+      "metrics": {
+        "audio_seconds": 4.28,
+        "elapsed_seconds": 2.142727218,
+        "decode_calls": 9,
+        "finish_seconds": 0.490151572,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.352993183,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Think of Lady Glenarvan think of Mary",
+      "edits": 0,
+      "words": 8
+    },
+    {
+      "clip": "2902-9008-0013",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Not that such a creature as that disturbs me no created thing, I hope, can move my equanimity. But if I could stoop to hate, I should hate her, hate her.",
+      "metrics": {
+        "audio_seconds": 11.775,
+        "elapsed_seconds": 11.66770333,
+        "decode_calls": 23,
+        "finish_seconds": 0.743755376,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.360100575,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Not that such a creature as that disturbs me no created thing, I hope, can move my equanimity. But if I could stoop to hate, I should hate her, hate her",
+      "edits": 0,
+      "words": 31
+    },
+    {
+      "clip": "3000-15664-0022",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Here you strike the old emigrant road, which leads over the low divide to the eastern slopes of the mountain",
+      "metrics": {
+        "audio_seconds": 6.47,
+        "elapsed_seconds": 4.599559614,
+        "decode_calls": 13,
+        "finish_seconds": 0.722686204,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.370792143,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Here you strike the old emigrant road, which leads over the low divide to the eastern slopes",
+      "edits": 0,
+      "words": 20
+    },
+    {
+      "clip": "3081-166546-0009",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Have you ever thought that she might have been a suicide?",
+      "metrics": {
+        "audio_seconds": 3.78,
+        "elapsed_seconds": 1.7196695,
+        "decode_calls": 8,
+        "finish_seconds": 0.448233448,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.607461586,
+        "first_partial_audio_ms": 2240
+      },
+      "before_final": "Have you ever thought that she might have been",
+      "edits": 0,
+      "words": 11
+    },
+    {
+      "clip": "3170-137482-0024",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required",
+      "metrics": {
+        "audio_seconds": 6.76,
+        "elapsed_seconds": 5.289975025,
+        "decode_calls": 14,
+        "finish_seconds": 0.740209221,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.362558049,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required",
+      "edits": 1,
+      "words": 23
+    },
+    {
+      "clip": "3536-8226-0010",
+      "iteration": 0,
+      "warmup": false,
+      "text": "When a married woman has followers, and the husband don't go the wrong side of the post too, or it ain't proved again him that he do, they'll never let her have nothing to do with the children",
+      "metrics": {
+        "audio_seconds": 9.5,
+        "elapsed_seconds": 8.079892021,
+        "decode_calls": 18,
+        "finish_seconds": 0.767511841,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.360409412,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "When a married woman has followers, and the husband don't go the wrong side of the post too, or it ain't proved again him that he do, they'll never let her have nothing",
+      "edits": 0,
+      "words": 41
+    },
+    {
+      "clip": "3576-138058-0004",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand lashes",
+      "metrics": {
+        "audio_seconds": 16.56,
+        "elapsed_seconds": 17.21970723,
+        "decode_calls": 31,
+        "finish_seconds": 0.743635351,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.363765565,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand",
+      "edits": 2,
+      "words": 38
+    },
+    {
+      "clip": "3752-4944-0069",
+      "iteration": 0,
+      "warmup": false,
+      "text": "In the midst of his arguments he found himself at the cupboard, with the bottle at his lips, in an attitude that was at once ludicrous and horrible",
+      "metrics": {
+        "audio_seconds": 10.21,
+        "elapsed_seconds": 9.523725276,
+        "decode_calls": 20,
+        "finish_seconds": 0.748215666,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.353976759,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "In the midst of his arguments he found himself at the cupboard, with the bottle at his lips, in an attitude that was at once ludicrous and",
+      "edits": 0,
+      "words": 28
+    },
+    {
+      "clip": "3853-163249-0056",
+      "iteration": 0,
+      "warmup": false,
+      "text": "I could not love thee, dear, so much loved I not honour more",
+      "metrics": {
+        "audio_seconds": 4.155,
+        "elapsed_seconds": 2.176799509,
+        "decode_calls": 9,
+        "finish_seconds": 0.484572385,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.36485819,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "I could not love thee, dear, so much loved I not",
+      "edits": 1,
+      "words": 13
+    },
+    {
+      "clip": "5338-284437-0000",
+      "iteration": 0,
+      "warmup": false,
+      "text": "It had no ornamentation, being exceedingly plain in appearance",
+      "metrics": {
+        "audio_seconds": 4.55,
+        "elapsed_seconds": 2.702673502,
+        "decode_calls": 10,
+        "finish_seconds": 0.524641212,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.360886225,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "It had no ornamentation, being exceedingly plain",
+      "edits": 0,
+      "words": 9
+    },
+    {
+      "clip": "5536-43363-0018",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Many of the Indians believed that one may be born more than once, and there were some who claimed to have full knowledge of a former incarnation",
+      "metrics": {
+        "audio_seconds": 7.89,
+        "elapsed_seconds": 6.804391643,
+        "decode_calls": 16,
+        "finish_seconds": 0.770409657,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.602949447,
+        "first_partial_audio_ms": 2240
+      },
+      "before_final": "Many of the Indians believed that one may be born more than once, and there were some who claimed to have full knowledge of a former incarnation",
+      "edits": 0,
+      "words": 27
+    },
+    {
+      "clip": "5694-64025-0005",
+      "iteration": 0,
+      "warmup": false,
+      "text": "On Sunday morning a clear, beautiful and still day, the order was given for the whole army to advance and to attack immediately",
+      "metrics": {
+        "audio_seconds": 8.1700625,
+        "elapsed_seconds": 6.743056699,
+        "decode_calls": 16,
+        "finish_seconds": 0.763657802,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.371564803,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "On Sunday morning a clear, beautiful and still day, the order was given for the whole army to advance and to attack im",
+      "edits": 0,
+      "words": 23
+    },
+    {
+      "clip": "5895-34622-0009",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Unknown people had worked upon his face he, on the other hand, had worked on his mind. And behind this well-executed mask he had placed all that he could have thought",
+      "metrics": {
+        "audio_seconds": 10.89,
+        "elapsed_seconds": 10.23358762,
+        "decode_calls": 21,
+        "finish_seconds": 0.760308345,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.363440935,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Unknown people had worked upon his face he, on the other hand, had worked on his mind. And behind this well-executed mask he had placed all that he could",
+      "edits": 1,
+      "words": 32
+    },
+    {
+      "clip": "6241-61943-0000",
+      "iteration": 0,
+      "warmup": false,
+      "text": "On the second of the month, at two in the morning, our precious cargo of luggage was taken on board the good ship Valkyrie",
+      "metrics": {
+        "audio_seconds": 6.95,
+        "elapsed_seconds": 5.36863588,
+        "decode_calls": 14,
+        "finish_seconds": 0.76883043,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.356845174,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "On the second of the month, at two in the morning, our precious cargo of luggage was taken on board the good ship",
+      "edits": 0,
+      "words": 24
+    },
+    {
+      "clip": "6295-64301-0023",
+      "iteration": 0,
+      "warmup": false,
+      "text": "When thou lovest man, or woman, or child, yea, or even dog aright, then wilt thou no longer need that I tell thee how God and his Christ would not be content with each other alone in the glories even of the eternal original love, because they could create more love",
+      "metrics": {
+        "audio_seconds": 20.82,
+        "elapsed_seconds": 22.88215059,
+        "decode_calls": 39,
+        "finish_seconds": 0.768574422,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.367198559,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "When thou lovest man, or woman, or child, yea, or even dog aright, then wilt thou no longer need that I tell thee how God and his Christ would not be content with each other alone in the glories even of the eternal original love, because they could create more",
+      "edits": 0,
+      "words": 51
+    },
+    {
+      "clip": "6313-66129-0007",
+      "iteration": 0,
+      "warmup": false,
+      "text": "I am free to admit that I am hungry too",
+      "metrics": {
+        "audio_seconds": 2.455,
+        "elapsed_seconds": 0.928334852,
+        "decode_calls": 6,
+        "finish_seconds": 0.322196178,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.355714129,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "I am free to admit that",
+      "edits": 0,
+      "words": 10
+    },
+    {
+      "clip": "6319-57405-0007",
+      "iteration": 0,
+      "warmup": false,
+      "text": "Is there anything that you wish? he asked",
+      "metrics": {
+        "audio_seconds": 3.505,
+        "elapsed_seconds": 1.706312416,
+        "decode_calls": 8,
+        "finish_seconds": 0.427379988,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.356102655,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "Is there anything that you wish?",
+      "edits": 0,
+      "words": 8
+    },
+    {
+      "clip": "6345-93306-0014",
+      "iteration": 0,
+      "warmup": false,
+      "text": "She said again, You are kind",
+      "metrics": {
+        "audio_seconds": 2.24,
+        "elapsed_seconds": 0.927480796,
+        "decode_calls": 5,
+        "finish_seconds": 0.311435087,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.362956942,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "She said again, You are",
+      "edits": 0,
+      "words": 6
+    },
+    {
+      "clip": "7850-73752-0017",
+      "iteration": 0,
+      "warmup": false,
+      "text": "In the present unsettled, though hopeful, state of affairs, Ferdinand would not go home",
+      "metrics": {
+        "audio_seconds": 5.97,
+        "elapsed_seconds": 3.998385401,
+        "decode_calls": 12,
+        "finish_seconds": 0.738419505,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.360575979,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "In the present unsettled, though hopeful, state of affairs, Ferdinand would",
+      "edits": 0,
+      "words": 14
+    },
+    {
+      "clip": "7976-105575-0012",
+      "iteration": 0,
+      "warmup": false,
+      "text": "He survived the war only to be murdered later on a plantation in Mississippi",
+      "metrics": {
+        "audio_seconds": 5.155,
+        "elapsed_seconds": 4.097972694,
+        "decode_calls": 11,
+        "finish_seconds": 0.802068644,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.393637716,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "He survived the war only to be murdered later on a plantation in Mississippi",
+      "edits": 0,
+      "words": 14
+    },
+    {
+      "clip": "8297-275154-0025",
+      "iteration": 0,
+      "warmup": false,
+      "text": "She shall have your message all that I can do to persuade her shall be done",
+      "metrics": {
+        "audio_seconds": 4.88,
+        "elapsed_seconds": 3.049209173,
+        "decode_calls": 10,
+        "finish_seconds": 0.580141741,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.457392565,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "She shall have your message all that I can do to persuade her",
+      "edits": 0,
+      "words": 16
+    },
+    {
+      "clip": "8842-304647-0006",
+      "iteration": 0,
+      "warmup": false,
+      "text": "The people is a beast of muddy brain, That knows not its own force and therefore stands Loaded with wood and stone, the powerless hands of a mere child guided with bit and rein would be enough to break the chain, but the beast fears, and what the child demands it does, nor its own terror understands, confused and stupefied by Bugbear's vein",
+      "metrics": {
+        "audio_seconds": 22.96,
+        "elapsed_seconds": 30.27307553,
+        "decode_calls": 42,
+        "finish_seconds": 1.056080487,
+        "peak_rss_kb": 2550280,
+        "first_partial_seconds": 0.462463785,
+        "first_partial_audio_ms": 1680
+      },
+      "before_final": "The people is a beast of muddy brain, That knows not its own force and therefore stands Loaded with wood and stone, the powerless hands of a mere child guided with bit and rein would be enough to break the chain, but the beast fears, and what the child demands it does, nor its own terror understands, confused and stupefied by Bugbear's ve",
+      "edits": 7,
+      "words": 66
+    }
+  ],
+  "summary": {
+    "runs": 40,
+    "audio_seconds": 326.5250625,
+    "elapsed_seconds": 285.763013379,
+    "aggregate_rtf": 0.875164102844326,
+    "median_rtf": 0.7515028586397519,
+    "min_rtf": 0.2984826969696969,
+    "max_rtf": 1.3185137425958187,
+    "edits": 22,
+    "words": 914,
+    "wer": 0.024070021881838075
+  }
+}

@@ -1,0 +1,2612 @@
+{
+  "config": {
+    "engine": "nemo",
+    "executable": "/home/dhansen/.local/libexec/nemote/bin/nemote-nemo-worker",
+    "model": "/home/dhansen/.local/share/nemote/models/nemotron-nemo-en-q8/model.gguf",
+    "backend_dir": null,
+    "manifest": null,
+    "audio_dir": null,
+    "wav": "local-research-archive-2026-10-02/dynamic-chunk-validation/audio/1272-128104-0000.wav",
+    "output": "/tmp/nemote-transcribe-prototype.YTZkeq/results/perf-nemo-q8-160.json",
+    "label": "nemo-q8-160",
+    "threads": 2,
+    "feed_ms": 160,
+    "right_context": 6,
+    "buffered": false,
+    "buffered_chunk_ms": 560,
+    "buffered_right_ms": 560,
+    "repeat": 5,
+    "warmup": 1
+  },
+  "clips": [
+    {
+      "utt_id": "1272-128104-0000",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/dynamic-chunk-validation/audio/1272-128104-0000.wav"
+    }
+  ],
+  "processes": [
+    {
+      "command": [
+        "/home/dhansen/.local/libexec/nemote/bin/nemote-nemo-worker",
+        "--model-dir",
+        "/home/dhansen/.local/share/nemote/models/nemotron-nemo-en-q8/model.gguf",
+        "--wav",
+        "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/dynamic-chunk-validation/audio/1272-128104-0000.wav",
+        "--num-threads",
+        "2",
+        "--chunk-samples",
+        "2560",
+        "--wav-repeat",
+        "6",
+        "--endpoint-mode",
+        "disabled"
+      ],
+      "diagnostics": "load_backend: loaded CPU backend from /home/dhansen/.local/libexec/nemote/lib/nemo/libggml-cpu-alderlake.so\n",
+      "events": [
+        {
+          "data": {
+            "model_dir": "/home/dhansen/.local/share/nemote/models/nemotron-nemo-en-q8/model.gguf"
+          },
+          "event": "loading_model"
+        },
+        {
+          "data": {
+            "compute_backend": "cpu",
+            "cpu_features": {
+              "AVX": "1",
+              "AVX2": "1",
+              "AVX_VNNI": "1",
+              "BMI2": "1",
+              "F16C": "1",
+              "FMA": "1",
+              "LLAMAFILE": "1",
+              "OPENMP": "1",
+              "REPACK": "1",
+              "SSE3": "1",
+              "SSSE3": "1"
+            },
+            "endpoint_mode": "disabled",
+            "itn": false,
+            "load_seconds": 0.019534667,
+            "num_threads": 2,
+            "phrase_boosting": false,
+            "state_arena_slots": 1,
+            "vad_filtering": false
+          },
+          "event": "model_loaded"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.28,
+            "decode_calls": 8,
+            "decode_seconds": 0.7814015899999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.781511372,
+            "last_rms": 0.10924104174844053,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.28,
+            "real_audio_real_time_factor": 0.6104699921874999,
+            "real_time_factor": 0.6104699921874999,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.44,
+            "decode_calls": 9,
+            "decode_seconds": 0.8278765149999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.828019178,
+            "last_rms": 0.08252449257693754,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.44,
+            "real_audio_real_time_factor": 0.5749142465277777,
+            "real_time_factor": 0.5749142465277777,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quil"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.76,
+            "decode_calls": 11,
+            "decode_seconds": 0.9382176079999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.938407145,
+            "last_rms": 0.022573894606349044,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.76,
+            "real_audio_real_time_factor": 0.5330781863636362,
+            "real_time_factor": 0.5330781863636362,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.92,
+            "decode_calls": 12,
+            "decode_seconds": 1.0026681789999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.002895008,
+            "last_rms": 0.09255703094510777,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.92,
+            "real_audio_real_time_factor": 0.5222230098958333,
+            "real_time_factor": 0.5222230098958333,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.08,
+            "decode_calls": 13,
+            "decode_seconds": 1.0462123019999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.046476364,
+            "last_rms": 0.05626070600099753,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.08,
+            "real_audio_real_time_factor": 0.502986683653846,
+            "real_time_factor": 0.502986683653846,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.4,
+            "decode_calls": 15,
+            "decode_seconds": 1.1598350899999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.160140856,
+            "last_rms": 0.036288184953630925,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.4,
+            "real_audio_real_time_factor": 0.48326462083333327,
+            "real_time_factor": 0.48326462083333327,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.56,
+            "decode_calls": 16,
+            "decode_seconds": 1.206455428,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.206795588,
+            "last_rms": 0.07099553641825038,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.56,
+            "real_audio_real_time_factor": 0.47127165156249995,
+            "real_time_factor": 0.47127165156249995,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.72,
+            "decode_calls": 17,
+            "decode_seconds": 1.2787557969999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.279126789,
+            "last_rms": 0.03760876356044315,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.72,
+            "real_audio_real_time_factor": 0.47013080772058813,
+            "real_time_factor": 0.47013080772058813,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.04,
+            "decode_calls": 19,
+            "decode_seconds": 1.3814364209999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.381858459,
+            "last_rms": 0.05225042748943654,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.04,
+            "real_audio_real_time_factor": 0.45441987532894734,
+            "real_time_factor": 0.45441987532894734,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 21,
+            "decode_seconds": 1.4678654759999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.468338435,
+            "last_rms": 0.032894830719593184,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.43686472499999995,
+            "real_time_factor": 0.43686472499999995,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle class"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.52,
+            "decode_calls": 22,
+            "decode_seconds": 1.5244985759999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.525004457,
+            "last_rms": 0.0377291891609205,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.52,
+            "real_audio_real_time_factor": 0.43309618636363634,
+            "real_time_factor": 0.43309618636363634,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.0,
+            "decode_calls": 25,
+            "decode_seconds": 1.698910957,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.699487866,
+            "last_rms": 0.09102506703473466,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.0,
+            "real_audio_real_time_factor": 0.42472773925,
+            "real_time_factor": 0.42472773925,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.16,
+            "decode_calls": 26,
+            "decode_seconds": 1.769335495,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.769950478,
+            "last_rms": 0.024320158618943228,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.16,
+            "real_audio_real_time_factor": 0.42532103245192304,
+            "real_time_factor": 0.42532103245192304,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.32,
+            "decode_calls": 27,
+            "decode_seconds": 1.83028867,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.830944603,
+            "last_rms": 0.07473859036883441,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.32,
+            "real_audio_real_time_factor": 0.42367793287037037,
+            "real_time_factor": 0.42367793287037037,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 28,
+            "decode_seconds": 1.881200006,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.881892866,
+            "last_rms": 0.05455933624911981,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.419910715625,
+            "real_time_factor": 0.419910715625,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.8,
+            "decode_calls": 30,
+            "decode_seconds": 2.016160935,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.016902495,
+            "last_rms": 0.0637045157730363,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.8,
+            "real_audio_real_time_factor": 0.420033528125,
+            "real_time_factor": 0.420033528125,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welc"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.96,
+            "decode_calls": 31,
+            "decode_seconds": 2.0696196039999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.070394404,
+            "last_rms": 0.048326326600986964,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.96,
+            "real_audio_real_time_factor": 0.4172620169354838,
+            "real_time_factor": 0.4172620169354838,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.28,
+            "decode_calls": 33,
+            "decode_seconds": 2.20053991,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.201367701,
+            "last_rms": 0.03694490732813454,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.28,
+            "real_audio_real_time_factor": 0.4167689223484848,
+            "real_time_factor": 0.4167689223484848,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 35,
+            "decode_seconds": 2.3224071329999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.323284548,
+            "last_rms": 0.0008132926518649182,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.4147155594642857,
+            "real_time_factor": 0.4147155594642857,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gos"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.76,
+            "decode_calls": 36,
+            "decode_seconds": 2.3696585119999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.370575134,
+            "last_rms": 0.0006576550808958416,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.76,
+            "real_audio_real_time_factor": 0.41139904722222215,
+            "real_time_factor": 0.41139904722222215,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.855,
+            "decode_calls": 38,
+            "decode_seconds": 2.5689630849999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.569912024,
+            "last_rms": 0.0012054153632050258,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.855,
+            "real_audio_real_time_factor": 0.43876397694278385,
+            "real_time_factor": 0.43876397694278385,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.28,
+            "decode_calls": 8,
+            "decode_seconds": 0.382447994,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.382551169,
+            "last_rms": 0.10924104174844053,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.28,
+            "real_audio_real_time_factor": 0.2987874953125,
+            "real_time_factor": 0.2987874953125,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.44,
+            "decode_calls": 9,
+            "decode_seconds": 0.44540287300000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.445541029,
+            "last_rms": 0.08252449257693754,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.44,
+            "real_audio_real_time_factor": 0.3093075506944445,
+            "real_time_factor": 0.3093075506944445,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quil"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.76,
+            "decode_calls": 11,
+            "decode_seconds": 0.5564855360000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.55667206,
+            "last_rms": 0.022573894606349044,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.76,
+            "real_audio_real_time_factor": 0.31618496363636367,
+            "real_time_factor": 0.31618496363636367,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.92,
+            "decode_calls": 12,
+            "decode_seconds": 0.609671892,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.609896206,
+            "last_rms": 0.09255703094510777,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.92,
+            "real_audio_real_time_factor": 0.31753744375000004,
+            "real_time_factor": 0.31753744375000004,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.08,
+            "decode_calls": 13,
+            "decode_seconds": 0.65848012,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.658739877,
+            "last_rms": 0.05626070600099753,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.08,
+            "real_audio_real_time_factor": 0.31657698076923074,
+            "real_time_factor": 0.31657698076923074,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.4,
+            "decode_calls": 15,
+            "decode_seconds": 0.7714804120000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.771796148,
+            "last_rms": 0.036288184953630925,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.4,
+            "real_audio_real_time_factor": 0.32145017166666673,
+            "real_time_factor": 0.32145017166666673,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.56,
+            "decode_calls": 16,
+            "decode_seconds": 0.8255909410000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.825944014,
+            "last_rms": 0.07099553641825038,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.56,
+            "real_audio_real_time_factor": 0.32249646132812504,
+            "real_time_factor": 0.32249646132812504,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.72,
+            "decode_calls": 17,
+            "decode_seconds": 0.880302333,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.880690273,
+            "last_rms": 0.03760876356044315,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.72,
+            "real_audio_real_time_factor": 0.3236405636029412,
+            "real_time_factor": 0.3236405636029412,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.04,
+            "decode_calls": 19,
+            "decode_seconds": 0.992120868,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.992559091,
+            "last_rms": 0.05225042748943654,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.04,
+            "real_audio_real_time_factor": 0.3263555486842105,
+            "real_time_factor": 0.3263555486842105,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 21,
+            "decode_seconds": 1.0993246810000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.099817695,
+            "last_rms": 0.032894830719593184,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.32717996458333337,
+            "real_time_factor": 0.32717996458333337,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle class"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.52,
+            "decode_calls": 22,
+            "decode_seconds": 1.1486458010000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.149173971,
+            "last_rms": 0.0377291891609205,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.52,
+            "real_audio_real_time_factor": 0.32631982982954555,
+            "real_time_factor": 0.32631982982954555,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.0,
+            "decode_calls": 25,
+            "decode_seconds": 1.3138899030000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.314483377,
+            "last_rms": 0.09102506703473466,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.0,
+            "real_audio_real_time_factor": 0.32847247575000005,
+            "real_time_factor": 0.32847247575000005,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.16,
+            "decode_calls": 26,
+            "decode_seconds": 1.3700733390000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.370705003,
+            "last_rms": 0.024320158618943228,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.16,
+            "real_audio_real_time_factor": 0.3293445526442308,
+            "real_time_factor": 0.3293445526442308,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.32,
+            "decode_calls": 27,
+            "decode_seconds": 1.4336644930000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.434334813,
+            "last_rms": 0.07473859036883441,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.32,
+            "real_audio_real_time_factor": 0.3318667807870371,
+            "real_time_factor": 0.3318667807870371,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 28,
+            "decode_seconds": 1.4912163180000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.491926654,
+            "last_rms": 0.05455933624911981,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.3328607852678572,
+            "real_time_factor": 0.3328607852678572,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.8,
+            "decode_calls": 30,
+            "decode_seconds": 1.60398349,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.604743581,
+            "last_rms": 0.0637045157730363,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.8,
+            "real_audio_real_time_factor": 0.33416322708333335,
+            "real_time_factor": 0.33416322708333335,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welc"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.96,
+            "decode_calls": 31,
+            "decode_seconds": 1.660675302,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.661472932,
+            "last_rms": 0.048326326600986964,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.96,
+            "real_audio_real_time_factor": 0.3348135689516129,
+            "real_time_factor": 0.3348135689516129,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.28,
+            "decode_calls": 33,
+            "decode_seconds": 1.767134775,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.767982878,
+            "last_rms": 0.03694490732813454,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.28,
+            "real_audio_real_time_factor": 0.3346846164772727,
+            "real_time_factor": 0.3346846164772727,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 35,
+            "decode_seconds": 1.8661942249999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.867092517,
+            "last_rms": 0.0008132926518649182,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.33324896875,
+            "real_time_factor": 0.33324896875,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gos"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.76,
+            "decode_calls": 36,
+            "decode_seconds": 1.919269153,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.920203665,
+            "last_rms": 0.0006576550808958416,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.76,
+            "real_audio_real_time_factor": 0.3332064501736111,
+            "real_time_factor": 0.3332064501736111,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.855,
+            "decode_calls": 38,
+            "decode_seconds": 2.134675621,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.135645477,
+            "last_rms": 0.0012054153632050258,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.855,
+            "real_audio_real_time_factor": 0.3645902,
+            "real_time_factor": 0.3645902,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.28,
+            "decode_calls": 8,
+            "decode_seconds": 0.32470888899999995,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.32479457,
+            "last_rms": 0.10924104174844053,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.28,
+            "real_audio_real_time_factor": 0.25367881953124993,
+            "real_time_factor": 0.25367881953124993,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.44,
+            "decode_calls": 9,
+            "decode_seconds": 0.36869669699999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.368819314,
+            "last_rms": 0.08252449257693754,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.44,
+            "real_audio_real_time_factor": 0.2560393729166667,
+            "real_time_factor": 0.2560393729166667,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quil"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.76,
+            "decode_calls": 11,
+            "decode_seconds": 0.46919349399999993,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.469359569,
+            "last_rms": 0.022573894606349044,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.76,
+            "real_audio_real_time_factor": 0.26658721249999995,
+            "real_time_factor": 0.26658721249999995,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.92,
+            "decode_calls": 12,
+            "decode_seconds": 0.519175628,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.519380659,
+            "last_rms": 0.09255703094510777,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.92,
+            "real_audio_real_time_factor": 0.2704039729166666,
+            "real_time_factor": 0.2704039729166666,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.08,
+            "decode_calls": 13,
+            "decode_seconds": 0.5617211299999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.561956701,
+            "last_rms": 0.05626070600099753,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.08,
+            "real_audio_real_time_factor": 0.27005823557692304,
+            "real_time_factor": 0.27005823557692304,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.4,
+            "decode_calls": 15,
+            "decode_seconds": 0.6708196409999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.671103095,
+            "last_rms": 0.036288184953630925,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.4,
+            "real_audio_real_time_factor": 0.27950818374999997,
+            "real_time_factor": 0.27950818374999997,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.56,
+            "decode_calls": 16,
+            "decode_seconds": 0.7249217539999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.725241354,
+            "last_rms": 0.07099553641825038,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.56,
+            "real_audio_real_time_factor": 0.28317256015625,
+            "real_time_factor": 0.28317256015625,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.72,
+            "decode_calls": 17,
+            "decode_seconds": 0.7886625899999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.789018243,
+            "last_rms": 0.03760876356044315,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.72,
+            "real_audio_real_time_factor": 0.289949481617647,
+            "real_time_factor": 0.289949481617647,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.04,
+            "decode_calls": 19,
+            "decode_seconds": 0.8931263819999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.893531779,
+            "last_rms": 0.05225042748943654,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.04,
+            "real_audio_real_time_factor": 0.29379157302631576,
+            "real_time_factor": 0.29379157302631576,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 21,
+            "decode_seconds": 1.006427672,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.006884943,
+            "last_rms": 0.032894830719593184,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.2995320452380953,
+            "real_time_factor": 0.2995320452380953,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle class"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.52,
+            "decode_calls": 22,
+            "decode_seconds": 1.062036749,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.062530313,
+            "last_rms": 0.0377291891609205,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.52,
+            "real_audio_real_time_factor": 0.3017149855113636,
+            "real_time_factor": 0.3017149855113636,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.0,
+            "decode_calls": 25,
+            "decode_seconds": 1.22005651,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.220618203,
+            "last_rms": 0.09102506703473466,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.0,
+            "real_audio_real_time_factor": 0.3050141275,
+            "real_time_factor": 0.3050141275,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.16,
+            "decode_calls": 26,
+            "decode_seconds": 1.274514468,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.275112444,
+            "last_rms": 0.024320158618943228,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.16,
+            "real_audio_real_time_factor": 0.3063736701923077,
+            "real_time_factor": 0.3063736701923077,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.32,
+            "decode_calls": 27,
+            "decode_seconds": 1.331803712,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.33243833,
+            "last_rms": 0.07473859036883441,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.32,
+            "real_audio_real_time_factor": 0.30828789629629627,
+            "real_time_factor": 0.30828789629629627,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 28,
+            "decode_seconds": 1.399135502,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.39980438,
+            "last_rms": 0.05455933624911981,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.31230703169642854,
+            "real_time_factor": 0.31230703169642854,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.8,
+            "decode_calls": 30,
+            "decode_seconds": 1.519238406,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.519955331,
+            "last_rms": 0.0637045157730363,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.8,
+            "real_audio_real_time_factor": 0.31650800125,
+            "real_time_factor": 0.31650800125,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welc"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.96,
+            "decode_calls": 31,
+            "decode_seconds": 1.578751247,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.579505514,
+            "last_rms": 0.048326326600986964,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.96,
+            "real_audio_real_time_factor": 0.3182966223790323,
+            "real_time_factor": 0.3182966223790323,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.28,
+            "decode_calls": 33,
+            "decode_seconds": 1.687800043,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.688604177,
+            "last_rms": 0.03694490732813454,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.28,
+            "real_audio_real_time_factor": 0.3196590990530303,
+            "real_time_factor": 0.3196590990530303,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 35,
+            "decode_seconds": 1.8020093229999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.802864,
+            "last_rms": 0.0008132926518649182,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.32178737910714283,
+            "real_time_factor": 0.32178737910714283,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gos"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.76,
+            "decode_calls": 36,
+            "decode_seconds": 1.866609799,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.867503014,
+            "last_rms": 0.0006576550808958416,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.76,
+            "real_audio_real_time_factor": 0.3240642012152778,
+            "real_time_factor": 0.3240642012152778,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.855,
+            "decode_calls": 38,
+            "decode_seconds": 2.09860548,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.099529578,
+            "last_rms": 0.0012054153632050258,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.855,
+            "real_audio_real_time_factor": 0.3584296293766011,
+            "real_time_factor": 0.3584296293766011,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.28,
+            "decode_calls": 8,
+            "decode_seconds": 0.40141222899999995,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.401530948,
+            "last_rms": 0.10924104174844053,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.28,
+            "real_audio_real_time_factor": 0.31360330390624996,
+            "real_time_factor": 0.31360330390624996,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.44,
+            "decode_calls": 9,
+            "decode_seconds": 0.45658833599999993,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.456745238,
+            "last_rms": 0.08252449257693754,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.44,
+            "real_audio_real_time_factor": 0.3170752333333333,
+            "real_time_factor": 0.3170752333333333,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quil"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.76,
+            "decode_calls": 11,
+            "decode_seconds": 0.5674936749999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.567702217,
+            "last_rms": 0.022573894606349044,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.76,
+            "real_audio_real_time_factor": 0.3224395880681818,
+            "real_time_factor": 0.3224395880681818,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.92,
+            "decode_calls": 12,
+            "decode_seconds": 0.622901721,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.623148769,
+            "last_rms": 0.09255703094510777,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.92,
+            "real_audio_real_time_factor": 0.3244279796875,
+            "real_time_factor": 0.3244279796875,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.08,
+            "decode_calls": 13,
+            "decode_seconds": 0.6721975459999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.672478822,
+            "last_rms": 0.05626070600099753,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.08,
+            "real_audio_real_time_factor": 0.3231718971153846,
+            "real_time_factor": 0.3231718971153846,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.4,
+            "decode_calls": 15,
+            "decode_seconds": 0.7725561759999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.772888434,
+            "last_rms": 0.036288184953630925,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.4,
+            "real_audio_real_time_factor": 0.32189840666666664,
+            "real_time_factor": 0.32189840666666664,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.56,
+            "decode_calls": 16,
+            "decode_seconds": 0.823702285,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.824071371,
+            "last_rms": 0.07099553641825038,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.56,
+            "real_audio_real_time_factor": 0.321758705078125,
+            "real_time_factor": 0.321758705078125,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.72,
+            "decode_calls": 17,
+            "decode_seconds": 0.875741228,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.876150197,
+            "last_rms": 0.03760876356044315,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.72,
+            "real_audio_real_time_factor": 0.3219636867647058,
+            "real_time_factor": 0.3219636867647058,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.04,
+            "decode_calls": 19,
+            "decode_seconds": 0.976166752,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.976632117,
+            "last_rms": 0.05225042748943654,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.04,
+            "real_audio_real_time_factor": 0.3211074842105263,
+            "real_time_factor": 0.3211074842105263,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 21,
+            "decode_seconds": 1.0784237749999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.078939704,
+            "last_rms": 0.032894830719593184,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.3209594568452381,
+            "real_time_factor": 0.3209594568452381,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle class"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.52,
+            "decode_calls": 22,
+            "decode_seconds": 1.1308392749999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.131391181,
+            "last_rms": 0.0377291891609205,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.52,
+            "real_audio_real_time_factor": 0.3212611576704545,
+            "real_time_factor": 0.3212611576704545,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.0,
+            "decode_calls": 25,
+            "decode_seconds": 1.2942388829999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.294854338,
+            "last_rms": 0.09102506703473466,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.0,
+            "real_audio_real_time_factor": 0.3235597207499999,
+            "real_time_factor": 0.3235597207499999,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.16,
+            "decode_calls": 26,
+            "decode_seconds": 1.3546775679999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.355328015,
+            "last_rms": 0.024320158618943228,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.16,
+            "real_audio_real_time_factor": 0.32564364615384606,
+            "real_time_factor": 0.32564364615384606,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.32,
+            "decode_calls": 27,
+            "decode_seconds": 1.4035757109999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.404260359,
+            "last_rms": 0.07473859036883441,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.32,
+            "real_audio_real_time_factor": 0.3249017849537036,
+            "real_time_factor": 0.3249017849537036,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 28,
+            "decode_seconds": 1.4555453419999995,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.456267078,
+            "last_rms": 0.05455933624911981,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.3248985138392856,
+            "real_time_factor": 0.3248985138392856,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.8,
+            "decode_calls": 30,
+            "decode_seconds": 1.5637718499999995,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.564542513,
+            "last_rms": 0.0637045157730363,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.8,
+            "real_audio_real_time_factor": 0.32578580208333324,
+            "real_time_factor": 0.32578580208333324,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welc"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.96,
+            "decode_calls": 31,
+            "decode_seconds": 1.6176362219999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.618444333,
+            "last_rms": 0.048326326600986964,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.96,
+            "real_audio_real_time_factor": 0.3261363350806451,
+            "real_time_factor": 0.3261363350806451,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.28,
+            "decode_calls": 33,
+            "decode_seconds": 1.7263260439999994,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.727185673,
+            "last_rms": 0.03694490732813454,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.28,
+            "real_audio_real_time_factor": 0.32695569015151504,
+            "real_time_factor": 0.32695569015151504,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 35,
+            "decode_seconds": 1.8340310299999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.834940301,
+            "last_rms": 0.0008132926518649182,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.32750554107142854,
+            "real_time_factor": 0.32750554107142854,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gos"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.76,
+            "decode_calls": 36,
+            "decode_seconds": 1.8880477539999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.888994827,
+            "last_rms": 0.0006576550808958416,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.76,
+            "real_audio_real_time_factor": 0.32778606840277774,
+            "real_time_factor": 0.32778606840277774,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.855,
+            "decode_calls": 38,
+            "decode_seconds": 2.0951446669999996,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.096134257,
+            "last_rms": 0.0012054153632050258,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.855,
+            "real_audio_real_time_factor": 0.35783854261315107,
+            "real_time_factor": 0.35783854261315107,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.28,
+            "decode_calls": 8,
+            "decode_seconds": 0.35381399399999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.353942501,
+            "last_rms": 0.10924104174844053,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.28,
+            "real_audio_real_time_factor": 0.27641718281249994,
+            "real_time_factor": 0.27641718281249994,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.44,
+            "decode_calls": 9,
+            "decode_seconds": 0.408610775,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.408773117,
+            "last_rms": 0.08252449257693754,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.44,
+            "real_audio_real_time_factor": 0.2837574826388889,
+            "real_time_factor": 0.2837574826388889,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quil"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.76,
+            "decode_calls": 11,
+            "decode_seconds": 0.515380352,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.51559154,
+            "last_rms": 0.022573894606349044,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.76,
+            "real_audio_real_time_factor": 0.29282974545454543,
+            "real_time_factor": 0.29282974545454543,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.92,
+            "decode_calls": 12,
+            "decode_seconds": 0.582397527,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.582645263,
+            "last_rms": 0.09255703094510777,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.92,
+            "real_audio_real_time_factor": 0.3033320453125,
+            "real_time_factor": 0.3033320453125,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.08,
+            "decode_calls": 13,
+            "decode_seconds": 0.636574485,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.636859847,
+            "last_rms": 0.05626070600099753,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.08,
+            "real_audio_real_time_factor": 0.30604542548076924,
+            "real_time_factor": 0.30604542548076924,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.4,
+            "decode_calls": 15,
+            "decode_seconds": 0.756598141,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.756934553,
+            "last_rms": 0.036288184953630925,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.4,
+            "real_audio_real_time_factor": 0.31524922541666667,
+            "real_time_factor": 0.31524922541666667,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.56,
+            "decode_calls": 16,
+            "decode_seconds": 0.812822004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.813195713,
+            "last_rms": 0.07099553641825038,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.56,
+            "real_audio_real_time_factor": 0.31750859531250003,
+            "real_time_factor": 0.31750859531250003,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.72,
+            "decode_calls": 17,
+            "decode_seconds": 0.867198047,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.867607026,
+            "last_rms": 0.03760876356044315,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.72,
+            "real_audio_real_time_factor": 0.3188228113970588,
+            "real_time_factor": 0.3188228113970588,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.04,
+            "decode_calls": 19,
+            "decode_seconds": 0.99446835,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.994928087,
+            "last_rms": 0.05225042748943654,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.04,
+            "real_audio_real_time_factor": 0.3271277467105263,
+            "real_time_factor": 0.3271277467105263,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 21,
+            "decode_seconds": 1.104156229,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.104667259,
+            "last_rms": 0.032894830719593184,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.3286179252976191,
+            "real_time_factor": 0.3286179252976191,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle class"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.52,
+            "decode_calls": 22,
+            "decode_seconds": 1.165392698,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.165940694,
+            "last_rms": 0.0377291891609205,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.52,
+            "real_audio_real_time_factor": 0.3310774710227273,
+            "real_time_factor": 0.3310774710227273,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.0,
+            "decode_calls": 25,
+            "decode_seconds": 1.350800777,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.351424699,
+            "last_rms": 0.09102506703473466,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.0,
+            "real_audio_real_time_factor": 0.33770019425,
+            "real_time_factor": 0.33770019425,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.16,
+            "decode_calls": 26,
+            "decode_seconds": 1.4074372199999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.408097583,
+            "last_rms": 0.024320158618943228,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.16,
+            "real_audio_real_time_factor": 0.33832625480769224,
+            "real_time_factor": 0.33832625480769224,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.32,
+            "decode_calls": 27,
+            "decode_seconds": 1.4630632069999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.463761229,
+            "last_rms": 0.07473859036883441,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.32,
+            "real_audio_real_time_factor": 0.33867203865740736,
+            "real_time_factor": 0.33867203865740736,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 28,
+            "decode_seconds": 1.5130929489999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.513828675,
+            "last_rms": 0.05455933624911981,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.33774396183035704,
+            "real_time_factor": 0.33774396183035704,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.8,
+            "decode_calls": 30,
+            "decode_seconds": 1.6349029029999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.635698732,
+            "last_rms": 0.0637045157730363,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.8,
+            "real_audio_real_time_factor": 0.3406047714583333,
+            "real_time_factor": 0.3406047714583333,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welc"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.96,
+            "decode_calls": 31,
+            "decode_seconds": 1.6948029879999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.695636542,
+            "last_rms": 0.048326326600986964,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.96,
+            "real_audio_real_time_factor": 0.34169415080645155,
+            "real_time_factor": 0.34169415080645155,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.28,
+            "decode_calls": 33,
+            "decode_seconds": 1.8122613879999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.813162248,
+            "last_rms": 0.03694490732813454,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.28,
+            "real_audio_real_time_factor": 0.3432313234848484,
+            "real_time_factor": 0.3432313234848484,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 35,
+            "decode_seconds": 1.9328794719999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.933834524,
+            "last_rms": 0.0008132926518649182,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.34515704857142854,
+            "real_time_factor": 0.34515704857142854,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gos"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.76,
+            "decode_calls": 36,
+            "decode_seconds": 1.9806928569999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.981689858,
+            "last_rms": 0.0006576550808958416,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.76,
+            "real_audio_real_time_factor": 0.3438702876736111,
+            "real_time_factor": 0.3438702876736111,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.855,
+            "decode_calls": 38,
+            "decode_seconds": 2.224475128,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.225504111,
+            "last_rms": 0.0012054153632050258,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.855,
+            "real_audio_real_time_factor": 0.3799274343296328,
+            "real_time_factor": 0.3799274343296328,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.28,
+            "decode_calls": 8,
+            "decode_seconds": 0.389933363,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.390033836,
+            "last_rms": 0.10924104174844053,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.28,
+            "real_audio_real_time_factor": 0.30463543984374997,
+            "real_time_factor": 0.30463543984374997,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.44,
+            "decode_calls": 9,
+            "decode_seconds": 0.45889515999999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.459032178,
+            "last_rms": 0.08252449257693754,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.44,
+            "real_audio_real_time_factor": 0.3186771944444444,
+            "real_time_factor": 0.3186771944444444,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quil"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.76,
+            "decode_calls": 11,
+            "decode_seconds": 0.566980491,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.56716414,
+            "last_rms": 0.022573894606349044,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.76,
+            "real_audio_real_time_factor": 0.32214800625,
+            "real_time_factor": 0.32214800625,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter"
+        },
+        {
+          "data": {
+            "audio_seconds": 1.92,
+            "decode_calls": 12,
+            "decode_seconds": 0.622055758,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.622276255,
+            "last_rms": 0.09255703094510777,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 1.92,
+            "real_audio_real_time_factor": 0.3239873739583334,
+            "real_time_factor": 0.3239873739583334,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.08,
+            "decode_calls": 13,
+            "decode_seconds": 0.677747485,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.678002668,
+            "last_rms": 0.05626070600099753,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.08,
+            "real_audio_real_time_factor": 0.32584013701923076,
+            "real_time_factor": 0.32584013701923076,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.4,
+            "decode_calls": 15,
+            "decode_seconds": 0.7993769260000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.799682133,
+            "last_rms": 0.036288184953630925,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.4,
+            "real_audio_real_time_factor": 0.3330737191666667,
+            "real_time_factor": 0.3330737191666667,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.56,
+            "decode_calls": 16,
+            "decode_seconds": 0.8542198280000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.854561352,
+            "last_rms": 0.07099553641825038,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.56,
+            "real_audio_real_time_factor": 0.33367962031250004,
+            "real_time_factor": 0.33367962031250004,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.72,
+            "decode_calls": 17,
+            "decode_seconds": 0.91882105,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.919198625,
+            "last_rms": 0.03760876356044315,
+            "peak_rms": 0.383880615234375,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.72,
+            "real_audio_real_time_factor": 0.33780185661764706,
+            "real_time_factor": 0.33780185661764706,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.04,
+            "decode_calls": 19,
+            "decode_seconds": 1.043598541,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.044032813,
+            "last_rms": 0.05225042748943654,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.04,
+            "real_audio_real_time_factor": 0.34328899375,
+            "real_time_factor": 0.34328899375,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 21,
+            "decode_seconds": 1.157635237,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.158125265,
+            "last_rms": 0.032894830719593184,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.3445342967261905,
+            "real_time_factor": 0.3445342967261905,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle class"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.52,
+            "decode_calls": 22,
+            "decode_seconds": 1.210403348,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.210930953,
+            "last_rms": 0.0377291891609205,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.52,
+            "real_audio_real_time_factor": 0.3438645875,
+            "real_time_factor": 0.3438645875,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.0,
+            "decode_calls": 25,
+            "decode_seconds": 1.389990115,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.390583733,
+            "last_rms": 0.09102506703473466,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.0,
+            "real_audio_real_time_factor": 0.34749752875,
+            "real_time_factor": 0.34749752875,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.16,
+            "decode_calls": 26,
+            "decode_seconds": 1.444904876,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.445534319,
+            "last_rms": 0.024320158618943228,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.16,
+            "real_audio_real_time_factor": 0.3473329028846154,
+            "real_time_factor": 0.3473329028846154,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.32,
+            "decode_calls": 27,
+            "decode_seconds": 1.500947178,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.501611097,
+            "last_rms": 0.07473859036883441,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.32,
+            "real_audio_real_time_factor": 0.3474414763888889,
+            "real_time_factor": 0.3474414763888889,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 28,
+            "decode_seconds": 1.5562587730000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.556960696,
+            "last_rms": 0.05455933624911981,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.3473791904017857,
+            "real_time_factor": 0.3473791904017857,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.8,
+            "decode_calls": 30,
+            "decode_seconds": 1.6664186450000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.66716989,
+            "last_rms": 0.0637045157730363,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.8,
+            "real_audio_real_time_factor": 0.3471705510416667,
+            "real_time_factor": 0.3471705510416667,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welc"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.96,
+            "decode_calls": 31,
+            "decode_seconds": 1.7133150580000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.714100793,
+            "last_rms": 0.048326326600986964,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.96,
+            "real_audio_real_time_factor": 0.34542642298387105,
+            "real_time_factor": 0.34542642298387105,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.28,
+            "decode_calls": 33,
+            "decode_seconds": 1.8254039860000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.826239088,
+            "last_rms": 0.03694490732813454,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.28,
+            "real_audio_real_time_factor": 0.34572045189393946,
+            "real_time_factor": 0.34572045189393946,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 35,
+            "decode_seconds": 1.9366350190000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.937528239,
+            "last_rms": 0.0008132926518649182,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.3458276819642858,
+            "real_time_factor": 0.3458276819642858,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gos"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.76,
+            "decode_calls": 36,
+            "decode_seconds": 1.9830336000000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.983963716,
+            "last_rms": 0.0006576550808958416,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.76,
+            "real_audio_real_time_factor": 0.34427666666666673,
+            "real_time_factor": 0.34427666666666673,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.855,
+            "decode_calls": 38,
+            "decode_seconds": 2.1910821110000005,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.192046607,
+            "last_rms": 0.0012054153632050258,
+            "peak_rms": 0.387939453125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.855,
+            "real_audio_real_time_factor": 0.37422410093936814,
+            "real_time_factor": 0.37422410093936814,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel"
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 0,
+      "warmup": true,
+      "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "decode_calls": 38,
+        "decode_seconds": 2.5689630849999996,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 2.569912024,
+        "last_rms": 0.0012054153632050258,
+        "peak_rms": 0.387939453125,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 5.855,
+        "real_audio_real_time_factor": 0.43876397694278385,
+        "real_time_factor": 0.43876397694278385,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 1,
+      "warmup": false,
+      "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "decode_calls": 38,
+        "decode_seconds": 2.134675621,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 2.135645477,
+        "last_rms": 0.0012054153632050258,
+        "peak_rms": 0.387939453125,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 5.855,
+        "real_audio_real_time_factor": 0.3645902,
+        "real_time_factor": 0.3645902,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 2,
+      "warmup": false,
+      "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "decode_calls": 38,
+        "decode_seconds": 2.09860548,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 2.099529578,
+        "last_rms": 0.0012054153632050258,
+        "peak_rms": 0.387939453125,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 5.855,
+        "real_audio_real_time_factor": 0.3584296293766011,
+        "real_time_factor": 0.3584296293766011,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 3,
+      "warmup": false,
+      "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "decode_calls": 38,
+        "decode_seconds": 2.0951446669999996,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 2.096134257,
+        "last_rms": 0.0012054153632050258,
+        "peak_rms": 0.387939453125,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 5.855,
+        "real_audio_real_time_factor": 0.35783854261315107,
+        "real_time_factor": 0.35783854261315107,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 4,
+      "warmup": false,
+      "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "decode_calls": 38,
+        "decode_seconds": 2.224475128,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 2.225504111,
+        "last_rms": 0.0012054153632050258,
+        "peak_rms": 0.387939453125,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 5.855,
+        "real_audio_real_time_factor": 0.3799274343296328,
+        "real_time_factor": 0.3799274343296328,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 5,
+      "warmup": false,
+      "text": "Mister Quilter is the apostle of the middle classes and we are glad to welcome his gospel",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "decode_calls": 38,
+        "decode_seconds": 2.1910821110000005,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 2.192046607,
+        "last_rms": 0.0012054153632050258,
+        "peak_rms": 0.387939453125,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 5.855,
+        "real_audio_real_time_factor": 0.37422410093936814,
+        "real_time_factor": 0.37422410093936814,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    }
+  ],
+  "summary": {
+    "runs": 5,
+    "audio_seconds": 29.275000000000002,
+    "elapsed_seconds": 10.74886003,
+    "aggregate_rtf": 0.3671685748932536,
+    "median_rtf": 0.3647558457728437,
+    "min_rtf": 0.35800755883859947,
+    "max_rtf": 0.3801031786507258
+  }
+}

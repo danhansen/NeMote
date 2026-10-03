@@ -1,0 +1,165 @@
+transcribe.cpp WAV prototype: accuracy and CPU performance screen
+2026-10-02 (local date)
+
+ARCHIVED: alternative not adopted. The prototype, build/benchmark scripts and
+tests were removed from main at the user's request. Findings, provenance and raw
+measurements are retained; commands and temporary paths below are historical,
+not maintained or currently runnable. Production NeMo/Nemotron is unchanged.
+
+Scope
+-----
+Pure C++ WAV-driven prototype using the unmodified transcribe.cpp public C API.
+No GNOME integration, live capture, VAD, ITN, boosting, installation, release,
+version bump or push. The existing NeMo backend remains unchanged and default.
+No local model export is required: this uses published preconverted GGUF files.
+
+Primary conclusions
+-------------------
+Nemotron is not uniformly faster in either backend. At the default 560ms setting
+they are close; transcribe is slower at 80ms and faster at 1120ms on this host.
+These comparisons use different GGUF conversions, SDK builds and thread runtimes,
+so they are practical implementation comparisons, not isolated kernel ablations.
+
+Unified has a substantial CPU cost from buffered streaming. Its 1120ms setting
+does not sustain real-time processing on the longer test; 2080ms does. The initial
+short-clip result was optimistic. At 1120ms, Unified F32 and Q8 have identical
+normalized transcripts on all 40 accuracy clips, with no clear accuracy advantage
+over the existing Nemotron backend on this small sample.
+At the default 2080ms setting Unified scores 20/914 errors (both F32 and Q8),
+the same total as existing NeMo/Nemotron at 560ms. There is no demonstrated
+accuracy gain here to offset roughly 3.4x the compute and greater buffering latency.
+
+Nemotron performance (same nominal latency, Q8, concurrency=1)
+-------------------------------------------------------------
+Host: Intel Core i5-1235U (Alder Lake); two CPU threads; AVX2 + AVX_VNNI.
+NOT a Lunar Lake measurement. No concurrent build, download or other test inference
+during dedicated warmed performance runs. Existing desktop workloads were not
+disabled; no affinity pinning was imposed.
+
+24.8s WAV, one warmup plus three measured repetitions per case. Aggregate RTF is
+compute seconds / audio seconds; below 1 is real-time. Backend order alternates
+across chunk settings. Both backends produce stable repeated transcripts.
+
+Nominal chunk   NeMo RTF   transcribe RTF   transcribe elapsed-time change
+80ms           0.526      0.582            +10.7% (slower)
+160ms          0.348      0.359            +3.1%  (within 5% noise)
+560ms          0.211      0.199            -5.5%  (borderline)
+1120ms         0.156      0.142            -9.4%  (faster)
+
+Supporting 5.855s screen, one warmup plus five measured repetitions:
+80ms:   NeMo 0.546; transcribe 0.603.
+160ms:  NeMo 0.367; transcribe 0.374.
+560ms:  NeMo 0.223; transcribe 0.217.
+1120ms: NeMo 0.192; transcribe 0.164.
+
+At 560ms the shorter screen is only 2.4% faster, so do not treat the long screen's
+borderline result as a compelling backend win. The direction at 80ms and 1120ms
+is consistent across both clips. Additional machines remain unmeasured.
+
+The NeMo worker's elapsed timer includes streaming WAV reads and partial-event
+serialization; transcribe preloads the WAV and queries snapshots without emitting
+partials during measurement. NeMo also exposes decode_seconds: that difference
+is only about 0.45ms/run in the short 560ms screen, far below the observed backend
+differences. Model load and WAV initialization are excluded. EOF finalization is
+included, using the normal public SDK path in both cases.
+
+Unified performance (buffered streaming)
+---------------------------------------
+L=5600ms. Model buffering latency is C+R, NOT the PCM feed block size.
+
+Nominal latency   C/R             Quantization   Long-WAV RTF
+1120ms           560ms/560ms      Q8_0           1.210 (not real-time)
+1120ms           560ms/560ms      F32            1.118 (not real-time)
+2080ms           1040ms/1040ms    Q8_0           0.726 (real-time)
+
+The shorter 5.855s clip gave Q8 RTF 0.686 at 1120ms; sustained/full-context work
+is materially heavier. The 160ms configuration (C=R=80ms) gave RTF 4.389 even on
+the short clip and was not extended to a larger accuracy sweep.
+
+On the dedicated long test F32 is about 7.5% faster than Q8 at 1120ms. This is an
+observed result, not a diagnosed kernel cause or a general claim about quantization.
+Process peak RSS: Q8 approximately 1.07GiB; F32 approximately 2.43GiB. Peaks include
+mapped weights and working buffers, not just private allocations. Q8 is still the
+smaller-footprint choice. F32 speed at 2080ms was not separately benchmarked.
+
+The source explicitly implements Unified by re-running the offline encoder on a
+sliding [left|chunk|right] PCM window, without a per-layer encoder cache. Nemotron
+uses cache-aware streaming. This architectural difference explains why buffered
+streaming is more expensive and why larger chunks help; it does not quantify an
+isolated per-operation cost. Source: src/arch/parakeet/model.cpp, buffered streaming
+branch and emit_buffered_chunk, at pinned transcribe revision in provenance JSON.
+
+Accuracy
+--------
+40 utterances / 40 speakers; 326.525s; 914 normalized reference words, preserved
+LibriSpeech English corpus with every WAV checked against its manifest SHA-256.
+Score raw model text after lowercasing and separating punctuation, without ITN.
+
+Backend/model                       Latency   Errors / words   WER
+NeMo / Nemotron Q8                   560ms     20 / 914         2.19%
+transcribe / Nemotron Q8             560ms     21 / 914         2.30%
+NeMo / Nemotron Q8                   1120ms    25 / 914         2.74%
+transcribe / Nemotron Q8             1120ms    19 / 914         2.08%
+transcribe / Unified Q8              1120ms    22 / 914         2.41%
+transcribe / Unified F32 weights     1120ms    22 / 914         2.41%
+transcribe / Unified Q8              2080ms    20 / 914         2.19%
+transcribe / Unified F32 weights     2080ms    20 / 914         2.19%
+
+At both 1120ms and 2080ms Unified Q8 and F32 have identical normalized transcripts
+on all 40 clips at the respective setting;
+quantization is not concealing an aggregate accuracy gain here. This does not prove
+identical accuracy on a larger population. F32 describes unquantized model weights,
+not a guarantee that every runtime activation/cache uses FP32.
+
+At 1120ms Unified versus existing NeMo differs by only three errors; the exploratory
+paired 40-utterance bootstrap spans both improvement and regression. No claim of
+population-level superiority or noninferiority is warranted. This is read English,
+not noisy dictation, names, numbers, multilingual speech or punctuation evaluation.
+
+All tested accuracy configurations have zero final-reference-word deletions,
+one final-reference-word substitution and no trailing insertions under the saved
+edit alignment. That is not proof that EOF is universally reliable. The harness
+adds no synthetic silence; Unified's own SDK EOF padding is retained.
+
+Historical ORT FP32 Nemotron results are included as a labeled historical anchor,
+not a new same-runtime quantization ablation. Their frontend/EOF policy differs.
+New unquantized testing is focused on Unified; Nemotron is primarily a speed test.
+
+Reproduction and artifacts
+--------------------------
+Build: bash scripts/build_transcribe_prototype.sh /tmp/NEW_UNIQUE_SCRATCH_DIRECTORY
+This is an AVX_VNNI research build, not a portable binary for older machines.
+It downloads/clones code but never downloads models or installs the application.
+
+Model repository pins, expected hashes, verified executable/library hashes, build
+flags and caveats: transcribe-prototype-provenance.json alongside this report.
+Raw commands, JSON events, diagnostics, clip references and measurements:
+transcribe-prototype-results/*.json alongside this report.
+Combined summaries, paired accuracy comparisons, EOF alignment and repeat checks:
+transcribe-prototype-summary.json alongside this report.
+
+Runner: python3 scripts/benchmark_transcribe_prototype.py --help
+Specify executable, model, backend directory, WAV or corpus manifest, streaming
+configuration and output explicitly. Existing NeMo --wav serves as the baseline.
+No concurrent inference. Accuracy-run elapsed times are not the warmed performance
+comparison: NeMo starts a process per clip, and the initial accuracy phase overlapped
+a model download. Use dedicated perf/perf-long files for speed comparisons.
+
+Summary: python3 scripts/summarize_transcribe_prototype.py --results RESULT_DIRECTORY
+         --output SUMMARY_JSON [--historical-fp32 PRESERVED_JSON]
+
+Validation: standalone CMake build; two CTest harness checks; four Python harness
+checks; real public-API WAV inference, repeated-stream resets and corpus scoring.
+No SDK changes or patches were needed for this prototype.
+
+Temporary artifacts
+-------------------
+Only the task-created Unified F32 download was removed after validation, freeing
+about 2.3GiB of temporary storage/RAM. It can be re-downloaded from the pinned
+Hugging Face repository/revision/file in provenance JSON, without exporting.
+The remaining task-created scratch directory, including Q8 downloads, upstream
+checkout and compiled prototype, was removed when archiving the findings, freeing
+about another 1.6GiB. Small result files remain in the documentation archive; no
+prototype code was retained on main. Models can be re-downloaded and upstream
+code re-cloned using the recorded pins. No pre-existing user models or research
+artifacts were removed.

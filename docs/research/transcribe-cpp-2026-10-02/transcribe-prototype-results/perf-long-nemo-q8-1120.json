@@ -1,0 +1,1927 @@
+{
+  "config": {
+    "engine": "nemo",
+    "executable": "/home/dhansen/.local/libexec/nemote/bin/nemote-nemo-worker",
+    "model": "/home/dhansen/.local/share/nemote/models/nemotron-nemo-en-q8/model.gguf",
+    "backend_dir": null,
+    "manifest": null,
+    "audio_dir": null,
+    "wav": "local-research-archive-2026-10-02/performance-audit/accuracy-audio/251-136532-0004.wav",
+    "output": "/tmp/nemote-transcribe-prototype.YTZkeq/results/perf-long-nemo-q8-1120.json",
+    "label": "nemo-q8-long-1120",
+    "threads": 2,
+    "feed_ms": 1120,
+    "right_context": 6,
+    "buffered": false,
+    "buffered_chunk_ms": 560,
+    "buffered_right_ms": 560,
+    "repeat": 3,
+    "warmup": 1
+  },
+  "clips": [
+    {
+      "utt_id": "251-136532-0004",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/251-136532-0004.wav"
+    }
+  ],
+  "processes": [
+    {
+      "command": [
+        "/home/dhansen/.local/libexec/nemote/bin/nemote-nemo-worker",
+        "--model-dir",
+        "/home/dhansen/.local/share/nemote/models/nemotron-nemo-en-q8/model.gguf",
+        "--wav",
+        "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/251-136532-0004.wav",
+        "--device",
+        "cpu",
+        "--num-threads",
+        "2",
+        "--chunk-samples",
+        "17920",
+        "--wav-repeat",
+        "4",
+        "--endpoint-mode",
+        "disabled"
+      ],
+      "diagnostics": "load_backend: loaded CPU backend from /home/dhansen/.local/libexec/nemote/lib/nemo/libggml-cpu-alderlake.so\n",
+      "events": [
+        {
+          "data": {
+            "model_dir": "/home/dhansen/.local/share/nemote/models/nemotron-nemo-en-q8/model.gguf"
+          },
+          "event": "loading_model"
+        },
+        {
+          "data": {
+            "compute_backend": "cpu",
+            "cpu_features": {
+              "AVX": "1",
+              "AVX2": "1",
+              "AVX_VNNI": "1",
+              "BMI2": "1",
+              "F16C": "1",
+              "FMA": "1",
+              "LLAMAFILE": "1",
+              "OPENMP": "1",
+              "REPACK": "1",
+              "SSE3": "1",
+              "SSSE3": "1"
+            },
+            "endpoint_mode": "disabled",
+            "itn": false,
+            "load_seconds": 0.019380619,
+            "num_threads": 2,
+            "phrase_boosting": false,
+            "state_arena_slots": 1,
+            "vad_filtering": false
+          },
+          "event": "model_loaded"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.24,
+            "decode_calls": 2,
+            "decode_seconds": 0.556257104,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.556334986,
+            "last_rms": 0.05575073920508851,
+            "peak_rms": 0.33758544921875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.24,
+            "real_audio_real_time_factor": 0.24832906428571425,
+            "real_time_factor": 0.24832906428571425,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 3,
+            "decode_seconds": 0.719585826,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.719738837,
+            "last_rms": 0.05990052621462555,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.2141624482142857,
+            "real_time_factor": 0.2141624482142857,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 4,
+            "decode_seconds": 0.88108376,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.881310066,
+            "last_rms": 0.05988876762017332,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.19667048214285712,
+            "real_time_factor": 0.19667048214285712,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 5,
+            "decode_seconds": 1.043628719,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.043918928,
+            "last_rms": 0.04722520259365348,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.18636227125000002,
+            "real_time_factor": 0.18636227125000002,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds"
+        },
+        {
+          "data": {
+            "audio_seconds": 6.72,
+            "decode_calls": 6,
+            "decode_seconds": 1.201004233,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.201356864,
+            "last_rms": 0.05866868510268048,
+            "peak_rms": 0.400177001953125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 6.72,
+            "real_audio_real_time_factor": 0.17872086800595238,
+            "real_time_factor": 0.17872086800595238,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that"
+        },
+        {
+          "data": {
+            "audio_seconds": 7.84,
+            "decode_calls": 7,
+            "decode_seconds": 1.369935854,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.370349742,
+            "last_rms": 0.05379343072526497,
+            "peak_rms": 0.400177001953125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 7.84,
+            "real_audio_real_time_factor": 0.17473671607142857,
+            "real_time_factor": 0.17473671607142857,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be"
+        },
+        {
+          "data": {
+            "audio_seconds": 8.96,
+            "decode_calls": 8,
+            "decode_seconds": 1.523683714,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.524157613,
+            "last_rms": 0.055281320102674614,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 8.96,
+            "real_audio_real_time_factor": 0.17005398593749999,
+            "real_time_factor": 0.17005398593749999,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a rept"
+        },
+        {
+          "data": {
+            "audio_seconds": 10.08,
+            "decode_calls": 9,
+            "decode_seconds": 1.680493926,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.681029764,
+            "last_rms": 0.06617376778654938,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 10.08,
+            "real_audio_real_time_factor": 0.16671566726190476,
+            "real_time_factor": 0.16671566726190476,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a"
+        },
+        {
+          "data": {
+            "audio_seconds": 11.2,
+            "decode_calls": 10,
+            "decode_seconds": 1.850143869,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.850740326,
+            "last_rms": 0.04202535449310619,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 11.2,
+            "real_audio_real_time_factor": 0.16519141687500002,
+            "real_time_factor": 0.16519141687500002,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal"
+        },
+        {
+          "data": {
+            "audio_seconds": 12.32,
+            "decode_calls": 11,
+            "decode_seconds": 2.019268969,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.019928922,
+            "last_rms": 0.0662665037886662,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 12.32,
+            "real_audio_real_time_factor": 0.16390170202922077,
+            "real_time_factor": 0.16390170202922077,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat"
+        },
+        {
+          "data": {
+            "audio_seconds": 13.44,
+            "decode_calls": 12,
+            "decode_seconds": 2.202189397,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.202912528,
+            "last_rms": 0.058458822072368334,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 13.44,
+            "real_audio_real_time_factor": 0.1638533777529762,
+            "real_time_factor": 0.1638533777529762,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like"
+        },
+        {
+          "data": {
+            "audio_seconds": 14.56,
+            "decode_calls": 13,
+            "decode_seconds": 2.3638089950000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.364596537,
+            "last_rms": 0.0668339493005818,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 14.56,
+            "real_audio_real_time_factor": 0.16234951888736265,
+            "real_time_factor": 0.16234951888736265,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws"
+        },
+        {
+          "data": {
+            "audio_seconds": 15.68,
+            "decode_calls": 14,
+            "decode_seconds": 2.5199565520000005,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.520811548,
+            "last_rms": 0.06616602592914422,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 15.68,
+            "real_audio_real_time_factor": 0.1607115147959184,
+            "real_time_factor": 0.1607115147959184,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore"
+        },
+        {
+          "data": {
+            "audio_seconds": 16.8,
+            "decode_calls": 15,
+            "decode_seconds": 2.6833985940000007,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.684315931,
+            "last_rms": 0.05396174015628435,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 16.8,
+            "real_audio_real_time_factor": 0.15972610678571433,
+            "real_time_factor": 0.15972610678571433,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical"
+        },
+        {
+          "data": {
+            "audio_seconds": 17.92,
+            "decode_calls": 16,
+            "decode_seconds": 2.8385162790000007,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.839498463,
+            "last_rms": 0.07417817248594498,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 17.92,
+            "real_audio_real_time_factor": 0.1583993459263393,
+            "real_time_factor": 0.1583993459263393,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like"
+        },
+        {
+          "data": {
+            "audio_seconds": 19.04,
+            "decode_calls": 17,
+            "decode_seconds": 2.9885714210000005,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.989612732,
+            "last_rms": 0.047001580633331555,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 19.04,
+            "real_audio_real_time_factor": 0.15696278471638658,
+            "real_time_factor": 0.15696278471638658,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big"
+        },
+        {
+          "data": {
+            "audio_seconds": 20.16,
+            "decode_calls": 18,
+            "decode_seconds": 3.1431127190000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.144219569,
+            "last_rms": 0.057238417177969805,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 20.16,
+            "real_audio_real_time_factor": 0.15590836899801588,
+            "real_time_factor": 0.15590836899801588,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural."
+        },
+        {
+          "data": {
+            "audio_seconds": 21.28,
+            "decode_calls": 19,
+            "decode_seconds": 3.2922852920000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.293471782,
+            "last_rms": 0.06316892645519197,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 21.28,
+            "real_audio_real_time_factor": 0.15471265469924814,
+            "real_time_factor": 0.15471265469924814,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another"
+        },
+        {
+          "data": {
+            "audio_seconds": 22.4,
+            "decode_calls": 20,
+            "decode_seconds": 3.4432564520000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.444504068,
+            "last_rms": 0.05779591284101893,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 22.4,
+            "real_audio_real_time_factor": 0.15371680589285716,
+            "real_time_factor": 0.15371680589285716,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazell"
+        },
+        {
+          "data": {
+            "audio_seconds": 23.52,
+            "decode_calls": 21,
+            "decode_seconds": 3.598288398,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.599599468,
+            "last_rms": 0.06767503242633709,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 23.52,
+            "real_audio_real_time_factor": 0.15298845229591837,
+            "real_time_factor": 0.15298845229591837,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.64,
+            "decode_calls": 22,
+            "decode_seconds": 3.7524477820000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.753821799,
+            "last_rms": 0.042089122948434636,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.64,
+            "real_audio_real_time_factor": 0.1522909002435065,
+            "real_time_factor": 0.1522909002435065,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.8,
+            "decode_calls": 23,
+            "decode_seconds": 3.9125784950000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.913990617,
+            "last_rms": 0.00023323996203422482,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.8,
+            "real_audio_real_time_factor": 0.1577652618951613,
+            "real_time_factor": 0.1577652618951613,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.8,
+            "decode_calls": 24,
+            "decode_seconds": 4.219798636,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 4.221244109,
+            "last_rms": 0.00023323996203422482,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.8,
+            "real_audio_real_time_factor": 0.17015317080645162,
+            "real_time_factor": 0.17015317080645162,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.24,
+            "decode_calls": 2,
+            "decode_seconds": 0.16095033,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.161013633,
+            "last_rms": 0.05575073920508851,
+            "peak_rms": 0.33758544921875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.24,
+            "real_audio_real_time_factor": 0.07185282589285713,
+            "real_time_factor": 0.07185282589285713,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 3,
+            "decode_seconds": 0.31790163800000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.318028442,
+            "last_rms": 0.05990052621462555,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.09461358273809525,
+            "real_time_factor": 0.09461358273809525,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 4,
+            "decode_seconds": 0.482606811,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.482796263,
+            "last_rms": 0.05988876762017332,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.10772473459821429,
+            "real_time_factor": 0.10772473459821429,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 5,
+            "decode_seconds": 0.644304813,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.644556968,
+            "last_rms": 0.04722520259365348,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.11505443089285715,
+            "real_time_factor": 0.11505443089285715,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds"
+        },
+        {
+          "data": {
+            "audio_seconds": 6.72,
+            "decode_calls": 6,
+            "decode_seconds": 0.7985333619999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.79884659,
+            "last_rms": 0.05866868510268048,
+            "peak_rms": 0.400177001953125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 6.72,
+            "real_audio_real_time_factor": 0.11882936934523809,
+            "real_time_factor": 0.11882936934523809,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that"
+        },
+        {
+          "data": {
+            "audio_seconds": 7.84,
+            "decode_calls": 7,
+            "decode_seconds": 0.9687186379999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.969094849,
+            "last_rms": 0.05379343072526497,
+            "peak_rms": 0.400177001953125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 7.84,
+            "real_audio_real_time_factor": 0.12356105076530612,
+            "real_time_factor": 0.12356105076530612,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be"
+        },
+        {
+          "data": {
+            "audio_seconds": 8.96,
+            "decode_calls": 8,
+            "decode_seconds": 1.1209752739999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.121413812,
+            "last_rms": 0.055281320102674614,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 8.96,
+            "real_audio_real_time_factor": 0.12510884754464283,
+            "real_time_factor": 0.12510884754464283,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a rept"
+        },
+        {
+          "data": {
+            "audio_seconds": 10.08,
+            "decode_calls": 9,
+            "decode_seconds": 1.269627696,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.270130136,
+            "last_rms": 0.06617376778654938,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 10.08,
+            "real_audio_real_time_factor": 0.12595512857142857,
+            "real_time_factor": 0.12595512857142857,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a"
+        },
+        {
+          "data": {
+            "audio_seconds": 11.2,
+            "decode_calls": 10,
+            "decode_seconds": 1.4226323269999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.423195019,
+            "last_rms": 0.04202535449310619,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 11.2,
+            "real_audio_real_time_factor": 0.12702074348214284,
+            "real_time_factor": 0.12702074348214284,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal"
+        },
+        {
+          "data": {
+            "audio_seconds": 12.32,
+            "decode_calls": 11,
+            "decode_seconds": 1.576651082,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.577276279,
+            "last_rms": 0.0662665037886662,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 12.32,
+            "real_audio_real_time_factor": 0.12797492548701297,
+            "real_time_factor": 0.12797492548701297,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat"
+        },
+        {
+          "data": {
+            "audio_seconds": 13.44,
+            "decode_calls": 12,
+            "decode_seconds": 1.7354013069999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.736089636,
+            "last_rms": 0.058458822072368334,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 13.44,
+            "real_audio_real_time_factor": 0.1291221210565476,
+            "real_time_factor": 0.1291221210565476,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like"
+        },
+        {
+          "data": {
+            "audio_seconds": 14.56,
+            "decode_calls": 13,
+            "decode_seconds": 1.8886226099999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.889370335,
+            "last_rms": 0.0668339493005818,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 14.56,
+            "real_audio_real_time_factor": 0.12971309134615383,
+            "real_time_factor": 0.12971309134615383,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws"
+        },
+        {
+          "data": {
+            "audio_seconds": 15.68,
+            "decode_calls": 14,
+            "decode_seconds": 2.043024135,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.043834967,
+            "last_rms": 0.06616602592914422,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 15.68,
+            "real_audio_real_time_factor": 0.13029490656887754,
+            "real_time_factor": 0.13029490656887754,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore"
+        },
+        {
+          "data": {
+            "audio_seconds": 16.8,
+            "decode_calls": 15,
+            "decode_seconds": 2.199341733,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.200217455,
+            "last_rms": 0.05396174015628435,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 16.8,
+            "real_audio_real_time_factor": 0.13091319839285712,
+            "real_time_factor": 0.13091319839285712,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical"
+        },
+        {
+          "data": {
+            "audio_seconds": 17.92,
+            "decode_calls": 16,
+            "decode_seconds": 2.3597006069999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.360636224,
+            "last_rms": 0.07417817248594498,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 17.92,
+            "real_audio_real_time_factor": 0.13167972137276782,
+            "real_time_factor": 0.13167972137276782,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like"
+        },
+        {
+          "data": {
+            "audio_seconds": 19.04,
+            "decode_calls": 17,
+            "decode_seconds": 2.519600615,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.520599351,
+            "last_rms": 0.047001580633331555,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 19.04,
+            "real_audio_real_time_factor": 0.1323319650735294,
+            "real_time_factor": 0.1323319650735294,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big"
+        },
+        {
+          "data": {
+            "audio_seconds": 20.16,
+            "decode_calls": 18,
+            "decode_seconds": 2.671651891,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.672712271,
+            "last_rms": 0.057238417177969805,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 20.16,
+            "real_audio_real_time_factor": 0.1325224152281746,
+            "real_time_factor": 0.1325224152281746,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural."
+        },
+        {
+          "data": {
+            "audio_seconds": 21.28,
+            "decode_calls": 19,
+            "decode_seconds": 2.8503065359999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.851431131,
+            "last_rms": 0.06316892645519197,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 21.28,
+            "real_audio_real_time_factor": 0.13394297631578944,
+            "real_time_factor": 0.13394297631578944,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another"
+        },
+        {
+          "data": {
+            "audio_seconds": 22.4,
+            "decode_calls": 20,
+            "decode_seconds": 3.0050553399999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.00624653,
+            "last_rms": 0.05779591284101893,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 22.4,
+            "real_audio_real_time_factor": 0.13415425625,
+            "real_time_factor": 0.13415425625,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazell"
+        },
+        {
+          "data": {
+            "audio_seconds": 23.52,
+            "decode_calls": 21,
+            "decode_seconds": 3.1625635359999995,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.163818582,
+            "last_rms": 0.06767503242633709,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 23.52,
+            "real_audio_real_time_factor": 0.13446273537414963,
+            "real_time_factor": 0.13446273537414963,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.64,
+            "decode_calls": 22,
+            "decode_seconds": 3.3356648829999993,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.336981505,
+            "last_rms": 0.042089122948434636,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.64,
+            "real_audio_real_time_factor": 0.13537600986201295,
+            "real_time_factor": 0.13537600986201295,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.8,
+            "decode_calls": 23,
+            "decode_seconds": 3.4905349609999994,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.491890841,
+            "last_rms": 0.00023323996203422482,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.8,
+            "real_audio_real_time_factor": 0.1407473774596774,
+            "real_time_factor": 0.1407473774596774,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.8,
+            "decode_calls": 24,
+            "decode_seconds": 3.8863984179999993,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.887782762,
+            "last_rms": 0.00023323996203422482,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.8,
+            "real_audio_real_time_factor": 0.1567096136290322,
+            "real_time_factor": 0.1567096136290322,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.24,
+            "decode_calls": 2,
+            "decode_seconds": 0.182386796,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.182453901,
+            "last_rms": 0.05575073920508851,
+            "peak_rms": 0.33758544921875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.24,
+            "real_audio_real_time_factor": 0.08142267678571427,
+            "real_time_factor": 0.08142267678571427,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 3,
+            "decode_seconds": 0.359475014,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.359610338,
+            "last_rms": 0.05990052621462555,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.1069866113095238,
+            "real_time_factor": 0.1069866113095238,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 4,
+            "decode_seconds": 0.5091653,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.509366967,
+            "last_rms": 0.05988876762017332,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.11365296875,
+            "real_time_factor": 0.11365296875,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 5,
+            "decode_seconds": 0.685576617,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.685843658,
+            "last_rms": 0.04722520259365348,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.12242439589285715,
+            "real_time_factor": 0.12242439589285715,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds"
+        },
+        {
+          "data": {
+            "audio_seconds": 6.72,
+            "decode_calls": 6,
+            "decode_seconds": 0.865386069,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.865715135,
+            "last_rms": 0.05866868510268048,
+            "peak_rms": 0.400177001953125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 6.72,
+            "real_audio_real_time_factor": 0.12877768883928573,
+            "real_time_factor": 0.12877768883928573,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that"
+        },
+        {
+          "data": {
+            "audio_seconds": 7.84,
+            "decode_calls": 7,
+            "decode_seconds": 1.0187826260000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.019173566,
+            "last_rms": 0.05379343072526497,
+            "peak_rms": 0.400177001953125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 7.84,
+            "real_audio_real_time_factor": 0.12994676352040818,
+            "real_time_factor": 0.12994676352040818,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be"
+        },
+        {
+          "data": {
+            "audio_seconds": 8.96,
+            "decode_calls": 8,
+            "decode_seconds": 1.2049556750000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.205409041,
+            "last_rms": 0.055281320102674614,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 8.96,
+            "real_audio_real_time_factor": 0.13448166015625,
+            "real_time_factor": 0.13448166015625,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a rept"
+        },
+        {
+          "data": {
+            "audio_seconds": 10.08,
+            "decode_calls": 9,
+            "decode_seconds": 1.3550589190000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.355573518,
+            "last_rms": 0.06617376778654938,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 10.08,
+            "real_audio_real_time_factor": 0.13443044831349207,
+            "real_time_factor": 0.13443044831349207,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a"
+        },
+        {
+          "data": {
+            "audio_seconds": 11.2,
+            "decode_calls": 10,
+            "decode_seconds": 1.5295418740000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.530129084,
+            "last_rms": 0.04202535449310619,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 11.2,
+            "real_audio_real_time_factor": 0.13656623875,
+            "real_time_factor": 0.13656623875,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal"
+        },
+        {
+          "data": {
+            "audio_seconds": 12.32,
+            "decode_calls": 11,
+            "decode_seconds": 1.6873802560000002,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.68803233,
+            "last_rms": 0.0662665037886662,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 12.32,
+            "real_audio_real_time_factor": 0.13696268311688312,
+            "real_time_factor": 0.13696268311688312,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat"
+        },
+        {
+          "data": {
+            "audio_seconds": 13.44,
+            "decode_calls": 12,
+            "decode_seconds": 1.8403514970000001,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.841063628,
+            "last_rms": 0.058458822072368334,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 13.44,
+            "real_audio_real_time_factor": 0.13693091495535717,
+            "real_time_factor": 0.13693091495535717,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like"
+        },
+        {
+          "data": {
+            "audio_seconds": 14.56,
+            "decode_calls": 13,
+            "decode_seconds": 1.994577974,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.995352456,
+            "last_rms": 0.0668339493005818,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 14.56,
+            "real_audio_real_time_factor": 0.13699024546703298,
+            "real_time_factor": 0.13699024546703298,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws"
+        },
+        {
+          "data": {
+            "audio_seconds": 15.68,
+            "decode_calls": 14,
+            "decode_seconds": 2.147408339,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.148248205,
+            "last_rms": 0.06616602592914422,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 15.68,
+            "real_audio_real_time_factor": 0.1369520624362245,
+            "real_time_factor": 0.1369520624362245,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore"
+        },
+        {
+          "data": {
+            "audio_seconds": 16.8,
+            "decode_calls": 15,
+            "decode_seconds": 2.301993324,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.302894268,
+            "last_rms": 0.05396174015628435,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 16.8,
+            "real_audio_real_time_factor": 0.13702341214285715,
+            "real_time_factor": 0.13702341214285715,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical"
+        },
+        {
+          "data": {
+            "audio_seconds": 17.92,
+            "decode_calls": 16,
+            "decode_seconds": 2.4647740810000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.465739654,
+            "last_rms": 0.07417817248594498,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 17.92,
+            "real_audio_real_time_factor": 0.137543196484375,
+            "real_time_factor": 0.137543196484375,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like"
+        },
+        {
+          "data": {
+            "audio_seconds": 19.04,
+            "decode_calls": 17,
+            "decode_seconds": 2.617308314,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.6183345,
+            "last_rms": 0.047001580633331555,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 19.04,
+            "real_audio_real_time_factor": 0.13746367195378154,
+            "real_time_factor": 0.13746367195378154,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big"
+        },
+        {
+          "data": {
+            "audio_seconds": 20.16,
+            "decode_calls": 18,
+            "decode_seconds": 2.7720250120000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.773115088,
+            "last_rms": 0.057238417177969805,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 20.16,
+            "real_audio_real_time_factor": 0.13750124067460318,
+            "real_time_factor": 0.13750124067460318,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural."
+        },
+        {
+          "data": {
+            "audio_seconds": 21.28,
+            "decode_calls": 19,
+            "decode_seconds": 2.925193811,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.926347038,
+            "last_rms": 0.06316892645519197,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 21.28,
+            "real_audio_real_time_factor": 0.13746211517857143,
+            "real_time_factor": 0.13746211517857143,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another"
+        },
+        {
+          "data": {
+            "audio_seconds": 22.4,
+            "decode_calls": 20,
+            "decode_seconds": 3.0787528980000003,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.079970499,
+            "last_rms": 0.05779591284101893,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 22.4,
+            "real_audio_real_time_factor": 0.13744432580357144,
+            "real_time_factor": 0.13744432580357144,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazell"
+        },
+        {
+          "data": {
+            "audio_seconds": 23.52,
+            "decode_calls": 21,
+            "decode_seconds": 3.2478491440000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.249128324,
+            "last_rms": 0.06767503242633709,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 23.52,
+            "real_audio_real_time_factor": 0.1380888241496599,
+            "real_time_factor": 0.1380888241496599,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.64,
+            "decode_calls": 22,
+            "decode_seconds": 3.4123748820000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.413717985,
+            "last_rms": 0.042089122948434636,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.64,
+            "real_audio_real_time_factor": 0.1384892403409091,
+            "real_time_factor": 0.1384892403409091,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.8,
+            "decode_calls": 23,
+            "decode_seconds": 3.5654626740000004,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.56684351,
+            "last_rms": 0.00023323996203422482,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.8,
+            "real_audio_real_time_factor": 0.14376865620967744,
+            "real_time_factor": 0.14376865620967744,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.8,
+            "decode_calls": 24,
+            "decode_seconds": 3.8709228030000005,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.872330932,
+            "last_rms": 0.00023323996203422482,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.8,
+            "real_audio_real_time_factor": 0.1560855968951613,
+            "real_time_factor": 0.1560855968951613,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "data": {
+            "audio_seconds": 2.24,
+            "decode_calls": 2,
+            "decode_seconds": 0.16396821099999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.164035628,
+            "last_rms": 0.05575073920508851,
+            "peak_rms": 0.33758544921875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 2.24,
+            "real_audio_real_time_factor": 0.07320009419642855,
+            "real_time_factor": 0.07320009419642855,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had"
+        },
+        {
+          "data": {
+            "audio_seconds": 3.36,
+            "decode_calls": 3,
+            "decode_seconds": 0.31946833499999994,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.319599001,
+            "last_rms": 0.05990052621462555,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 3.36,
+            "real_audio_real_time_factor": 0.09507986160714284,
+            "real_time_factor": 0.09507986160714284,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species"
+        },
+        {
+          "data": {
+            "audio_seconds": 4.48,
+            "decode_calls": 4,
+            "decode_seconds": 0.47395216799999995,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.474145224,
+            "last_rms": 0.05988876762017332,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 4.48,
+            "real_audio_real_time_factor": 0.10579289464285713,
+            "real_time_factor": 0.10579289464285713,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might"
+        },
+        {
+          "data": {
+            "audio_seconds": 5.6,
+            "decode_calls": 5,
+            "decode_seconds": 0.6309969249999999,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.631261388,
+            "last_rms": 0.04722520259365348,
+            "peak_rms": 0.342254638671875,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 5.6,
+            "real_audio_real_time_factor": 0.11267802232142857,
+            "real_time_factor": 0.11267802232142857,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds"
+        },
+        {
+          "data": {
+            "audio_seconds": 6.72,
+            "decode_calls": 6,
+            "decode_seconds": 0.78376472,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.78409081,
+            "last_rms": 0.05866868510268048,
+            "peak_rms": 0.400177001953125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 6.72,
+            "real_audio_real_time_factor": 0.11663165476190476,
+            "real_time_factor": 0.11663165476190476,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that"
+        },
+        {
+          "data": {
+            "audio_seconds": 7.84,
+            "decode_calls": 7,
+            "decode_seconds": 0.938315416,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 0.938703989,
+            "last_rms": 0.05379343072526497,
+            "peak_rms": 0.400177001953125,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 7.84,
+            "real_audio_real_time_factor": 0.1196830887755102,
+            "real_time_factor": 0.1196830887755102,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be"
+        },
+        {
+          "data": {
+            "audio_seconds": 8.96,
+            "decode_calls": 8,
+            "decode_seconds": 1.101658992,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.102108056,
+            "last_rms": 0.055281320102674614,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 8.96,
+            "real_audio_real_time_factor": 0.12295301249999999,
+            "real_time_factor": 0.12295301249999999,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a rept"
+        },
+        {
+          "data": {
+            "audio_seconds": 10.08,
+            "decode_calls": 9,
+            "decode_seconds": 1.238524115,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.239035796,
+            "last_rms": 0.06617376778654938,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 10.08,
+            "real_audio_real_time_factor": 0.12286945585317459,
+            "real_time_factor": 0.12286945585317459,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a"
+        },
+        {
+          "data": {
+            "audio_seconds": 11.2,
+            "decode_calls": 10,
+            "decode_seconds": 1.389114092,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.389687146,
+            "last_rms": 0.04202535449310619,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 11.2,
+            "real_audio_real_time_factor": 0.12402804392857143,
+            "real_time_factor": 0.12402804392857143,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal"
+        },
+        {
+          "data": {
+            "audio_seconds": 12.32,
+            "decode_calls": 11,
+            "decode_seconds": 1.560212761,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.560849048,
+            "last_rms": 0.0662665037886662,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 12.32,
+            "real_audio_real_time_factor": 0.12664064618506493,
+            "real_time_factor": 0.12664064618506493,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat"
+        },
+        {
+          "data": {
+            "audio_seconds": 13.44,
+            "decode_calls": 12,
+            "decode_seconds": 1.712124451,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.712827803,
+            "last_rms": 0.058458822072368334,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 13.44,
+            "real_audio_real_time_factor": 0.1273902121279762,
+            "real_time_factor": 0.1273902121279762,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like"
+        },
+        {
+          "data": {
+            "audio_seconds": 14.56,
+            "decode_calls": 13,
+            "decode_seconds": 1.865492874,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 1.866259852,
+            "last_rms": 0.0668339493005818,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 14.56,
+            "real_audio_real_time_factor": 0.1281245105769231,
+            "real_time_factor": 0.1281245105769231,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws"
+        },
+        {
+          "data": {
+            "audio_seconds": 15.68,
+            "decode_calls": 14,
+            "decode_seconds": 2.020111928,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.020944182,
+            "last_rms": 0.06616602592914422,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 15.68,
+            "real_audio_real_time_factor": 0.12883366887755102,
+            "real_time_factor": 0.12883366887755102,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore"
+        },
+        {
+          "data": {
+            "audio_seconds": 16.8,
+            "decode_calls": 15,
+            "decode_seconds": 2.177887373,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.178783006,
+            "last_rms": 0.05396174015628435,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 16.8,
+            "real_audio_real_time_factor": 0.1296361531547619,
+            "real_time_factor": 0.1296361531547619,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical"
+        },
+        {
+          "data": {
+            "audio_seconds": 17.92,
+            "decode_calls": 16,
+            "decode_seconds": 2.3652001929999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.366159638,
+            "last_rms": 0.07417817248594498,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 17.92,
+            "real_audio_real_time_factor": 0.1319866179129464,
+            "real_time_factor": 0.1319866179129464,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like"
+        },
+        {
+          "data": {
+            "audio_seconds": 19.04,
+            "decode_calls": 17,
+            "decode_seconds": 2.5270194999999998,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.528045803,
+            "last_rms": 0.047001580633331555,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 19.04,
+            "real_audio_real_time_factor": 0.13272161239495797,
+            "real_time_factor": 0.13272161239495797,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big"
+        },
+        {
+          "data": {
+            "audio_seconds": 20.16,
+            "decode_calls": 18,
+            "decode_seconds": 2.7497838729999997,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.750872753,
+            "last_rms": 0.057238417177969805,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 20.16,
+            "real_audio_real_time_factor": 0.1363980095734127,
+            "real_time_factor": 0.1363980095734127,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural."
+        },
+        {
+          "data": {
+            "audio_seconds": 21.28,
+            "decode_calls": 19,
+            "decode_seconds": 2.907856591,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 2.909008745,
+            "last_rms": 0.06316892645519197,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 21.28,
+            "real_audio_real_time_factor": 0.136647396193609,
+            "real_time_factor": 0.136647396193609,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another"
+        },
+        {
+          "data": {
+            "audio_seconds": 22.4,
+            "decode_calls": 20,
+            "decode_seconds": 3.060715627,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.061931244,
+            "last_rms": 0.05779591284101893,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 22.4,
+            "real_audio_real_time_factor": 0.13663909049107142,
+            "real_time_factor": 0.13663909049107142,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazell"
+        },
+        {
+          "data": {
+            "audio_seconds": 23.52,
+            "decode_calls": 21,
+            "decode_seconds": 3.236190756,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.237468179,
+            "last_rms": 0.06767503242633709,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 23.52,
+            "real_audio_real_time_factor": 0.1375931443877551,
+            "real_time_factor": 0.1375931443877551,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.64,
+            "decode_calls": 22,
+            "decode_seconds": 3.400956961,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.402298604,
+            "last_rms": 0.042089122948434636,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.64,
+            "real_audio_real_time_factor": 0.13802585068993506,
+            "real_time_factor": 0.13802585068993506,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.8,
+            "decode_calls": 23,
+            "decode_seconds": 3.56809741,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.569478892,
+            "last_rms": 0.00023323996203422482,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.8,
+            "real_audio_real_time_factor": 0.14387489556451613,
+            "real_time_factor": 0.14387489556451613,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "partial",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "data": {
+            "audio_seconds": 24.8,
+            "decode_calls": 24,
+            "decode_seconds": 3.866698287,
+            "dropped_audio_chunks": 0,
+            "elapsed_seconds": 3.868109772,
+            "last_rms": 0.00023323996203422482,
+            "peak_rms": 0.403472900390625,
+            "preview_endpoints": 0,
+            "processed_audio_seconds": 24.8,
+            "real_audio_real_time_factor": 0.1559152535080645,
+            "real_time_factor": 0.1559152535080645,
+            "synthetic_audio_seconds": 0,
+            "utterance_commits": 0
+          },
+          "event": "commit",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "clip": "251-136532-0004",
+      "iteration": 0,
+      "warmup": true,
+      "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "decode_calls": 24,
+        "decode_seconds": 4.219798636,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 4.221244109,
+        "last_rms": 0.00023323996203422482,
+        "peak_rms": 0.403472900390625,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 24.8,
+        "real_audio_real_time_factor": 0.17015317080645162,
+        "real_time_factor": 0.17015317080645162,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    },
+    {
+      "clip": "251-136532-0004",
+      "iteration": 1,
+      "warmup": false,
+      "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "decode_calls": 24,
+        "decode_seconds": 3.8863984179999993,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 3.887782762,
+        "last_rms": 0.00023323996203422482,
+        "peak_rms": 0.403472900390625,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 24.8,
+        "real_audio_real_time_factor": 0.1567096136290322,
+        "real_time_factor": 0.1567096136290322,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    },
+    {
+      "clip": "251-136532-0004",
+      "iteration": 2,
+      "warmup": false,
+      "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "decode_calls": 24,
+        "decode_seconds": 3.8709228030000005,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 3.872330932,
+        "last_rms": 0.00023323996203422482,
+        "peak_rms": 0.403472900390625,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 24.8,
+        "real_audio_real_time_factor": 0.1560855968951613,
+        "real_time_factor": 0.1560855968951613,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    },
+    {
+      "clip": "251-136532-0004",
+      "iteration": 3,
+      "warmup": false,
+      "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "decode_calls": 24,
+        "decode_seconds": 3.866698287,
+        "dropped_audio_chunks": 0,
+        "elapsed_seconds": 3.868109772,
+        "last_rms": 0.00023323996203422482,
+        "peak_rms": 0.403472900390625,
+        "preview_endpoints": 0,
+        "processed_audio_seconds": 24.8,
+        "real_audio_real_time_factor": 0.1559152535080645,
+        "real_time_factor": 0.1559152535080645,
+        "synthetic_audio_seconds": 0,
+        "utterance_commits": 0
+      }
+    }
+  ],
+  "summary": {
+    "runs": 3,
+    "audio_seconds": 74.4,
+    "elapsed_seconds": 11.628223466,
+    "aggregate_rtf": 0.15629332615591396,
+    "median_rtf": 0.15614237629032257,
+    "min_rtf": 0.15597216822580645,
+    "max_rtf": 0.1567654339516129,
+    "decode_rtf": 0.156236821344086
+  }
+}

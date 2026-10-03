@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nemote"
-version = "0.1.31"
+version = "0.1.32"
 description = "GNOME dictation with native Nemotron streaming ASR"
 readme = "README.md"
 requires-python = ">=3.11"

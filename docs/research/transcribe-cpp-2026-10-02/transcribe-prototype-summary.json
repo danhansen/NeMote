@@ -1,0 +1,1161 @@
+{
+  "reports": [
+    {
+      "file": "accuracy-nemo-q8-1120.json",
+      "label": "nemo-q8-accuracy-1120",
+      "summary": {
+        "runs": 40,
+        "audio_seconds": 326.5250625,
+        "elapsed_seconds": 72.688058578,
+        "aggregate_rtf": 0.22261096291192042,
+        "median_rtf": 0.23748695728455974,
+        "min_rtf": 0.17069262173344948,
+        "max_rtf": 0.46399520178571424,
+        "edits": 25,
+        "words": 914,
+        "wer": 0.02735229759299781,
+        "decode_rtf": 0.2225545819197263
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0,
+      "errors": [
+        {
+          "clip": "84-121550-0030",
+          "edits": 2,
+          "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+          "text": "But by the largesse of celestial graces which have such lofty vapours for their reign that near to them our sight approaches not"
+        },
+        {
+          "clip": "251-136532-0004",
+          "edits": 6,
+          "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "clip": "422-122949-0019",
+          "edits": 1,
+          "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+          "text": "The noble soul accepts the fact of his egoism without question and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say it is justice itself"
+        },
+        {
+          "clip": "2078-142845-0027",
+          "edits": 1,
+          "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+          "text": "Never use new bread for making any kind of toast as it eats heavy and besides it is very extravagant"
+        },
+        {
+          "clip": "2277-149874-0005",
+          "edits": 1,
+          "reference": "SHE HAD SOME SLIGHT GIFT OF OBSERVATION AND THAT SENSE SO RICH IN EVERY WOMAN INTUITION",
+          "text": "She had some slight gift of observation in that sense so rich in every woman intuition"
+        },
+        {
+          "clip": "2803-154320-0011",
+          "edits": 1,
+          "reference": "THINK OF LADY GLENARVAN THINK OF MARY GRANT",
+          "text": "Think of Lady Glenarvin. Think of Mary Grant"
+        },
+        {
+          "clip": "3000-15664-0022",
+          "edits": 1,
+          "reference": "HERE YOU STRIKE THE OLD EMIGRANT ROAD WHICH LEADS OVER THE LOW DIVIDE TO THE EASTERN SLOPES OF THE MOUNTAIN",
+          "text": "Here you strike the old immigrant road which leads over the low divide to the eastern slopes of the mountain"
+        },
+        {
+          "clip": "3170-137482-0024",
+          "edits": 1,
+          "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required."
+        },
+        {
+          "clip": "3536-8226-0010",
+          "edits": 2,
+          "reference": "WHEN A MARRIED WOMAN HAS FOLLOWERS AND THE HUSBAND DON'T GO THE WRONG SIDE OF THE POST TOO OR IT AIN'T PROVED AGAIN HIM THAT HE DO THEY'LL NEVER LET HER HAVE NOTHING TO DO WITH THE CHILDREN",
+          "text": "When a married woman has followers and the husband don't go the wrong side of the post too, or it ain't proved agenem that he do, they'll never let her have nothing to do with the children."
+        },
+        {
+          "clip": "3576-138058-0004",
+          "edits": 2,
+          "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+          "text": "Dulcinea is perishing thou art living on regardless. I am dying of hope deferred therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand lashes"
+        },
+        {
+          "clip": "3853-163249-0056",
+          "edits": 1,
+          "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+          "text": "I could not love thee dear so much loved I not honour more"
+        },
+        {
+          "clip": "5895-34622-0009",
+          "edits": 1,
+          "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+          "text": "Unknown people had worked upon his face. He, on the other hand, had worked on his mind. And behind this well executed mask he had placed all that he could have thought"
+        },
+        {
+          "clip": "6295-64301-0023",
+          "edits": 1,
+          "reference": "WHEN THOU LOVEST MAN OR WOMAN OR CHILD YEA OR EVEN DOG ARIGHT THEN WILT THOU NO LONGER NEED THAT I TELL THEE HOW GOD AND HIS CHRIST WOULD NOT BE CONTENT WITH EACH OTHER ALONE IN THE GLORIES EVEN OF THE ETERNAL ORIGINAL LOVE BECAUSE THEY COULD CREATE MORE LOVE",
+          "text": "When thou lovest man or woman or child, yea, or even dog arright, then wilt thou no longer need that I tell thee how God and His Christ would not be content with each other alone in the glories even of the eternal original love because they could create more love"
+        },
+        {
+          "clip": "8842-304647-0006",
+          "edits": 4,
+          "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+          "text": "The people is a beast of muddy brain that knows not its own force and therefore stands loaded with wood and stone, the powerless hands of a mere child guide it with bit and rain. One kick would be enough to break the chain, but the beast fears and what the child demands it does nor its own terror understands confused and stupefied by bugbear's vein"
+        }
+      ],
+      "ending_alignment": {
+        "last_reference_word_deleted": 0,
+        "last_reference_word_substituted": 1,
+        "clips_with_trailing_insertions": 0,
+        "warning": "Edit alignment describes errors at the end, not their cause; ties use diagonal before deletion before insertion."
+      }
+    },
+    {
+      "file": "accuracy-nemo-q8-560.json",
+      "label": "nemo-q8-accuracy-560",
+      "summary": {
+        "runs": 40,
+        "audio_seconds": 326.5250625,
+        "elapsed_seconds": 87.978408454,
+        "aggregate_rtf": 0.269438455291621,
+        "median_rtf": 0.2854373448710116,
+        "min_rtf": 0.22169769633064518,
+        "max_rtf": 0.45537088169642853,
+        "edits": 20,
+        "words": 914,
+        "wer": 0.02188183807439825,
+        "decode_rtf": 0.26935880854168737
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0,
+      "errors": [
+        {
+          "clip": "84-121550-0030",
+          "edits": 1,
+          "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+          "text": "But by the largesse of celestial graces which have such lofty vapours for their rain that near to them our sight approaches not"
+        },
+        {
+          "clip": "251-136532-0004",
+          "edits": 6,
+          "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+          "text": "They had four or five species of what might loosely be called birds and something that could easily be classed as a reptile and a carnivorous mammal the size of a cat with bird like claws and a herbivore almost identical with the pig like thing in the big darf hulva mural. And another like a gazelle with a single horn in the middle of its forehead"
+        },
+        {
+          "clip": "422-122949-0019",
+          "edits": 1,
+          "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+          "text": "The noble soul accepts the fact of his egoism without question and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say it is justice itself"
+        },
+        {
+          "clip": "1988-24833-0013",
+          "edits": 2,
+          "reference": "I GET THE PILLOWS COMFORTABLY ARRANGED ON THE FLOOR WITH A BIG BOTTLE OF SODA AND A BAG OF POPCORN WITHIN EASY REACH",
+          "text": "I get the pillows comfortably arranged on the floor with a big bottle of soda and a bag of popcorn with an easy reach."
+        },
+        {
+          "clip": "2078-142845-0027",
+          "edits": 1,
+          "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+          "text": "Never use new bread for making any kind of toast as it eats heavy and besides it is very extravagant"
+        },
+        {
+          "clip": "2803-154320-0011",
+          "edits": 1,
+          "reference": "THINK OF LADY GLENARVAN THINK OF MARY GRANT",
+          "text": "Think of Lady Glenarvin. Think of Mary Grant"
+        },
+        {
+          "clip": "3000-15664-0022",
+          "edits": 1,
+          "reference": "HERE YOU STRIKE THE OLD EMIGRANT ROAD WHICH LEADS OVER THE LOW DIVIDE TO THE EASTERN SLOPES OF THE MOUNTAIN",
+          "text": "Here you strike the old immigrant road which leads over the low divide to the eastern slopes of the mountain"
+        },
+        {
+          "clip": "3170-137482-0024",
+          "edits": 1,
+          "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required"
+        },
+        {
+          "clip": "3576-138058-0004",
+          "edits": 1,
+          "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+          "text": "Dulcinea is perishing thou art living on regardless. I am dying of hope deferred therefore untrust thyself with a good will for mine it is here in this retired spot to give thee at least two thousand lashes"
+        },
+        {
+          "clip": "3853-163249-0056",
+          "edits": 1,
+          "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+          "text": "I could not love thee dear so much. Loved I not honour more"
+        },
+        {
+          "clip": "5895-34622-0009",
+          "edits": 1,
+          "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+          "text": "Unknown people had worked upon his face. He, on the other hand, had worked on his mind. And behind this well executed mask he had placed all that he could have thought"
+        },
+        {
+          "clip": "8842-304647-0006",
+          "edits": 3,
+          "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+          "text": "The people is a beast of muddy brain that knows not its own force and therefore stands loaded with wood and stone, the powerless hands of a mere child guide it with bit and rein. One kick would be enough to break the chain, but the beast fears and what the child demands it does nor its own terror understands confused and stupefied by Bugbear's vein."
+        }
+      ],
+      "ending_alignment": {
+        "last_reference_word_deleted": 0,
+        "last_reference_word_substituted": 1,
+        "clips_with_trailing_insertions": 0,
+        "warning": "Edit alignment describes errors at the end, not their cause; ties use diagonal before deletion before insertion."
+      }
+    },
+    {
+      "file": "accuracy-transcribe-q8-1120.json",
+      "label": "transcribe-q8-accuracy-1120",
+      "summary": {
+        "runs": 40,
+        "audio_seconds": 326.5250625,
+        "elapsed_seconds": 51.242401041,
+        "aggregate_rtf": 0.15693252042789213,
+        "median_rtf": 0.16172403935277063,
+        "min_rtf": 0.13716618278225806,
+        "max_rtf": 0.21078811562499997,
+        "edits": 19,
+        "words": 914,
+        "wer": 0.020787746170678335
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 36,
+      "errors": [
+        {
+          "clip": "84-121550-0030",
+          "edits": 1,
+          "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+          "text": "but by the largess of celestial graces which have such lofty vapours for their reign that near to them our sight approaches not."
+        },
+        {
+          "clip": "251-136532-0004",
+          "edits": 6,
+          "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big darf hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead."
+        },
+        {
+          "clip": "422-122949-0019",
+          "edits": 1,
+          "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+          "text": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it he would say It is justice itself."
+        },
+        {
+          "clip": "2078-142845-0027",
+          "edits": 1,
+          "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+          "text": "never use new bread for making any kind of toast, as it eats heavy and besides it is very extravagant."
+        },
+        {
+          "clip": "2803-154320-0011",
+          "edits": 1,
+          "reference": "THINK OF LADY GLENARVAN THINK OF MARY GRANT",
+          "text": "Think of Lady Glenarvin. Think of Mary Grant"
+        },
+        {
+          "clip": "3170-137482-0024",
+          "edits": 1,
+          "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required."
+        },
+        {
+          "clip": "3576-138058-0004",
+          "edits": 1,
+          "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+          "text": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred therefore untrust thyself with a good will for mine it is here in this retired spot to give thee at least two thousand lashes"
+        },
+        {
+          "clip": "3853-163249-0056",
+          "edits": 1,
+          "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+          "text": "I could not love thee, dear, so much loved I not honour more"
+        },
+        {
+          "clip": "5895-34622-0009",
+          "edits": 1,
+          "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+          "text": "Unknown people had worked upon his face. He, on the other hand, had worked on his mind and behind this well executed mask he had placed all that he could have thought"
+        },
+        {
+          "clip": "6313-66129-0007",
+          "edits": 1,
+          "reference": "I AM FREE TO ADMIT THAT I AM HUNGRY TOO",
+          "text": "I am afraid to admit that I am hungry too"
+        },
+        {
+          "clip": "8842-304647-0006",
+          "edits": 4,
+          "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+          "text": "The people is a beast of muddy brain that knows not its own force, and therefore stands, loaded with wood and stone, the powerless hands of a mere child guide it with bit and rain. One kick would be enough to break the chain, but the beast fears, and what the child demands It does nor its own terror understands, confused and stupefied by bugbear's vein"
+        }
+      ],
+      "ending_alignment": {
+        "last_reference_word_deleted": 0,
+        "last_reference_word_substituted": 1,
+        "clips_with_trailing_insertions": 0,
+        "warning": "Edit alignment describes errors at the end, not their cause; ties use diagonal before deletion before insertion."
+      }
+    },
+    {
+      "file": "accuracy-transcribe-q8-560.json",
+      "label": "transcribe-q8-accuracy-560",
+      "summary": {
+        "runs": 40,
+        "audio_seconds": 326.5250625,
+        "elapsed_seconds": 68.979733182,
+        "aggregate_rtf": 0.21125402336306115,
+        "median_rtf": 0.21218652258630893,
+        "min_rtf": 0.19697758341616534,
+        "max_rtf": 0.34910896249999995,
+        "edits": 21,
+        "words": 914,
+        "wer": 0.022975929978118162
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 26,
+      "errors": [
+        {
+          "clip": "84-121550-0030",
+          "edits": 2,
+          "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+          "text": "but by the largesse of celestial graces which have such lofty vapours for their reign that near to them our sight approaches not."
+        },
+        {
+          "clip": "251-136532-0004",
+          "edits": 5,
+          "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat with bird-like claws, and a herbivore almost identical with the pig-like thing in the big darfulva mural, and another, like a gazelle, with a single horn in the middle of its forehead."
+        },
+        {
+          "clip": "422-122949-0019",
+          "edits": 1,
+          "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+          "text": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it he would say It is justice itself."
+        },
+        {
+          "clip": "2078-142845-0027",
+          "edits": 1,
+          "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+          "text": "never use new bread for making any kind of toast, as it eats heavy, and besides it is very extravagant."
+        },
+        {
+          "clip": "2803-154320-0011",
+          "edits": 1,
+          "reference": "THINK OF LADY GLENARVAN THINK OF MARY GRANT",
+          "text": "Think of Lady Glenarvin. Think of Mary Grant"
+        },
+        {
+          "clip": "3170-137482-0024",
+          "edits": 1,
+          "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required."
+        },
+        {
+          "clip": "3576-138058-0004",
+          "edits": 1,
+          "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+          "text": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred therefore untrust thyself with a good will for mine it is here in this retired spot to give thee at least two thousand lashes"
+        },
+        {
+          "clip": "3853-163249-0056",
+          "edits": 3,
+          "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+          "text": "I could not love thee, dear, so much Love die not honour more"
+        },
+        {
+          "clip": "5895-34622-0009",
+          "edits": 1,
+          "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+          "text": "Unknown people had worked upon his face he, on the other hand, had worked on his mind and behind this well executed mask he had placed all that he could have thought"
+        },
+        {
+          "clip": "6313-66129-0007",
+          "edits": 1,
+          "reference": "I AM FREE TO ADMIT THAT I AM HUNGRY TOO",
+          "text": "I am afraid to admit that I am hungry too"
+        },
+        {
+          "clip": "8842-304647-0006",
+          "edits": 4,
+          "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+          "text": "The people is a beast of muddy brain, that knows not its own force, and therefore stands, loaded with wood and stone, the powerless hands of a mere child guide it with bit and rain One kick would be enough to break the chain But the beast fears, and what the child demands It does nor its own terror understands Confused and stupefied by bugbear's vein"
+        }
+      ],
+      "ending_alignment": {
+        "last_reference_word_deleted": 0,
+        "last_reference_word_substituted": 1,
+        "clips_with_trailing_insertions": 0,
+        "warning": "Edit alignment describes errors at the end, not their cause; ties use diagonal before deletion before insertion."
+      }
+    },
+    {
+      "file": "accuracy-unified-f32-1120.json",
+      "label": "unified-f32-accuracy-1120",
+      "summary": {
+        "runs": 40,
+        "audio_seconds": 326.5250625,
+        "elapsed_seconds": 285.763013379,
+        "aggregate_rtf": 0.875164102844326,
+        "median_rtf": 0.7515028586397519,
+        "min_rtf": 0.2984826969696969,
+        "max_rtf": 1.3185137425958187,
+        "edits": 22,
+        "words": 914,
+        "wer": 0.024070021881838075
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 34,
+      "errors": [
+        {
+          "clip": "84-121550-0030",
+          "edits": 1,
+          "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+          "text": "but by the largesse of celestial graces which have such lofty vapours for their rain that near to them our sight approaches not"
+        },
+        {
+          "clip": "251-136532-0004",
+          "edits": 6,
+          "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead"
+        },
+        {
+          "clip": "422-122949-0019",
+          "edits": 1,
+          "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+          "text": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say, it is justice itself"
+        },
+        {
+          "clip": "777-126732-0053",
+          "edits": 1,
+          "reference": "HE STOOD STILL IN THE MIDDLE OF THE PARLOUR AND LOOKED INTO THE KITCHEN IN SILENCE",
+          "text": "He stood still in the middle of the parlor and looked into the kitchen in silence"
+        },
+        {
+          "clip": "2078-142845-0027",
+          "edits": 1,
+          "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+          "text": "Never use new bread for making any kind of toast, as it eats heavy, and besides, it is very extravagant"
+        },
+        {
+          "clip": "3170-137482-0024",
+          "edits": 1,
+          "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required"
+        },
+        {
+          "clip": "3576-138058-0004",
+          "edits": 2,
+          "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+          "text": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand lashes"
+        },
+        {
+          "clip": "3853-163249-0056",
+          "edits": 1,
+          "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+          "text": "I could not love thee, dear, so much loved I not honour more"
+        },
+        {
+          "clip": "5895-34622-0009",
+          "edits": 1,
+          "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+          "text": "Unknown people had worked upon his face he, on the other hand, had worked on his mind. And behind this well-executed mask he had placed all that he could have thought"
+        },
+        {
+          "clip": "8842-304647-0006",
+          "edits": 7,
+          "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+          "text": "The people is a beast of muddy brain, That knows not its own force and therefore stands Loaded with wood and stone, the powerless hands of a mere child guided with bit and rein would be enough to break the chain, but the beast fears, and what the child demands it does, nor its own terror understands, confused and stupefied by Bugbear's vein"
+        }
+      ],
+      "ending_alignment": {
+        "last_reference_word_deleted": 0,
+        "last_reference_word_substituted": 1,
+        "clips_with_trailing_insertions": 0,
+        "warning": "Edit alignment describes errors at the end, not their cause; ties use diagonal before deletion before insertion."
+      }
+    },
+    {
+      "file": "accuracy-unified-f32-accuracy-2080.json",
+      "label": "unified-f32-accuracy-2080",
+      "summary": {
+        "runs": 40,
+        "audio_seconds": 326.5250625,
+        "elapsed_seconds": 170.207124095,
+        "aggregate_rtf": 0.5212681770637438,
+        "median_rtf": 0.4460863935112148,
+        "min_rtf": 0.250635899796334,
+        "max_rtf": 0.6911697112369337,
+        "edits": 20,
+        "words": 914,
+        "wer": 0.02188183807439825
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 40,
+      "errors": [
+        {
+          "clip": "84-121550-0030",
+          "edits": 1,
+          "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+          "text": "but by the largesse of celestial graces, which have such lofty vapours for their rain that near to them our sight approaches not"
+        },
+        {
+          "clip": "251-136532-0004",
+          "edits": 6,
+          "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead"
+        },
+        {
+          "clip": "422-122949-0019",
+          "edits": 1,
+          "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+          "text": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say, it is justice itself"
+        },
+        {
+          "clip": "777-126732-0053",
+          "edits": 1,
+          "reference": "HE STOOD STILL IN THE MIDDLE OF THE PARLOUR AND LOOKED INTO THE KITCHEN IN SILENCE",
+          "text": "He stood still in the middle of the parlor and looked into the kitchen in silence"
+        },
+        {
+          "clip": "2078-142845-0027",
+          "edits": 1,
+          "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+          "text": "Never use new bread for making any kind of toast, as it eats heavy, and besides, it is very extravagant"
+        },
+        {
+          "clip": "3170-137482-0024",
+          "edits": 1,
+          "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required"
+        },
+        {
+          "clip": "3576-138058-0004",
+          "edits": 2,
+          "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+          "text": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred Therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand lashes"
+        },
+        {
+          "clip": "3853-163249-0056",
+          "edits": 1,
+          "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+          "text": "I could not love thee, dear, so much Loved I not honour more"
+        },
+        {
+          "clip": "5895-34622-0009",
+          "edits": 1,
+          "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+          "text": "Unknown people had worked upon his face he, on the other hand, had worked on his mind. And behind this well-executed mask he had placed all that he could have thought"
+        },
+        {
+          "clip": "8842-304647-0006",
+          "edits": 5,
+          "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+          "text": "The people is a beast of muddy brain, that knows not its own force, and therefore stands, loaded with wood and stone, the powerless hands of a mere child guided with bit and rein. One kick would be enough to break the chain, but the beast fears, and what the child demands it does, nor its own terror understands, confused and stupefied by Bugbear's vein."
+        }
+      ],
+      "ending_alignment": {
+        "last_reference_word_deleted": 0,
+        "last_reference_word_substituted": 1,
+        "clips_with_trailing_insertions": 0,
+        "warning": "Edit alignment describes errors at the end, not their cause; ties use diagonal before deletion before insertion."
+      }
+    },
+    {
+      "file": "accuracy-unified-q8-1120.json",
+      "label": "unified-q8-accuracy-1120",
+      "summary": {
+        "runs": 40,
+        "audio_seconds": 326.5250625,
+        "elapsed_seconds": 305.454991579,
+        "aggregate_rtf": 0.9354718110772892,
+        "median_rtf": 0.8066326019380241,
+        "min_rtf": 0.31873886433566434,
+        "max_rtf": 1.2169352661290322,
+        "edits": 22,
+        "words": 914,
+        "wer": 0.024070021881838075
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 34,
+      "errors": [
+        {
+          "clip": "84-121550-0030",
+          "edits": 1,
+          "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+          "text": "but by the largesse of celestial graces which have such lofty vapours for their rain that near to them our sight approaches not"
+        },
+        {
+          "clip": "251-136532-0004",
+          "edits": 6,
+          "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead"
+        },
+        {
+          "clip": "422-122949-0019",
+          "edits": 1,
+          "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+          "text": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say, it is justice itself"
+        },
+        {
+          "clip": "777-126732-0053",
+          "edits": 1,
+          "reference": "HE STOOD STILL IN THE MIDDLE OF THE PARLOUR AND LOOKED INTO THE KITCHEN IN SILENCE",
+          "text": "He stood still in the middle of the parlor and looked into the kitchen in silence"
+        },
+        {
+          "clip": "2078-142845-0027",
+          "edits": 1,
+          "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+          "text": "Never use new bread for making any kind of toast, as it eats heavy, and besides, it is very extravagant"
+        },
+        {
+          "clip": "3170-137482-0024",
+          "edits": 1,
+          "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required"
+        },
+        {
+          "clip": "3576-138058-0004",
+          "edits": 2,
+          "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+          "text": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand lashes"
+        },
+        {
+          "clip": "3853-163249-0056",
+          "edits": 1,
+          "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+          "text": "I could not love thee, dear, so much loved I not honour more"
+        },
+        {
+          "clip": "5895-34622-0009",
+          "edits": 1,
+          "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+          "text": "Unknown people had worked upon his face he, on the other hand, had worked on his mind. And behind this well-executed mask he had placed all that he could have thought"
+        },
+        {
+          "clip": "8842-304647-0006",
+          "edits": 7,
+          "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+          "text": "The people is a beast of muddy brain, That knows not its own force and therefore stands Loaded with wood and stone, the powerless hands of a mere child guided with bit and rein would be enough to break the chain, but the beast fears, and what the child demands it does, nor its own terror understands, confused and stupefied by Bugbear's vein"
+        }
+      ],
+      "ending_alignment": {
+        "last_reference_word_deleted": 0,
+        "last_reference_word_substituted": 1,
+        "clips_with_trailing_insertions": 0,
+        "warning": "Edit alignment describes errors at the end, not their cause; ties use diagonal before deletion before insertion."
+      }
+    },
+    {
+      "file": "accuracy-unified-q8-accuracy-2080.json",
+      "label": "unified-q8-accuracy-2080",
+      "summary": {
+        "runs": 40,
+        "audio_seconds": 326.5250625,
+        "elapsed_seconds": 186.347851156,
+        "aggregate_rtf": 0.5706999938358484,
+        "median_rtf": 0.49127632848866704,
+        "min_rtf": 0.2657556317718941,
+        "max_rtf": 0.7351110365033621,
+        "edits": 20,
+        "words": 914,
+        "wer": 0.02188183807439825
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 40,
+      "errors": [
+        {
+          "clip": "84-121550-0030",
+          "edits": 1,
+          "reference": "BUT BY THE LARGESS OF CELESTIAL GRACES WHICH HAVE SUCH LOFTY VAPOURS FOR THEIR RAIN THAT NEAR TO THEM OUR SIGHT APPROACHES NOT",
+          "text": "but by the largesse of celestial graces, which have such lofty vapours for their rain that near to them our sight approaches not"
+        },
+        {
+          "clip": "251-136532-0004",
+          "edits": 6,
+          "reference": "THEY HAD FOUR OR FIVE SPECIES OF WHAT MIGHT LOOSELY BE CALLED BIRDS AND SOMETHING THAT COULD EASILY BE CLASSED AS A REPTILE AND A CARNIVOROUS MAMMAL THE SIZE OF A CAT WITH BIRDLIKE CLAWS AND A HERBIVORE ALMOST IDENTICAL WITH THE PIGLIKE THING IN THE BIG DARFHULVA MURAL AND ANOTHER LIKE A GAZELLE WITH A SINGLE HORN IN THE MIDDLE OF ITS FOREHEAD",
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead"
+        },
+        {
+          "clip": "422-122949-0019",
+          "edits": 1,
+          "reference": "THE NOBLE SOUL ACCEPTS THE FACT OF HIS EGOISM WITHOUT QUESTION AND ALSO WITHOUT CONSCIOUSNESS OF HARSHNESS CONSTRAINT OR ARBITRARINESS THEREIN BUT RATHER AS SOMETHING THAT MAY HAVE ITS BASIS IN THE PRIMARY LAW OF THINGS IF HE SOUGHT A DESIGNATION FOR IT HE WOULD SAY IT IS JUSTICE ITSELF",
+          "text": "The noble soul accepts the fact of his egoism without question, and also without consciousness of harshness, constraint, or arbitrariness therein, but rather is something that may have its basis in the primary law of things. If he sought a designation for it, he would say, it is justice itself"
+        },
+        {
+          "clip": "777-126732-0053",
+          "edits": 1,
+          "reference": "HE STOOD STILL IN THE MIDDLE OF THE PARLOUR AND LOOKED INTO THE KITCHEN IN SILENCE",
+          "text": "He stood still in the middle of the parlor and looked into the kitchen in silence"
+        },
+        {
+          "clip": "2078-142845-0027",
+          "edits": 1,
+          "reference": "NEVER USE NEW BREAD FOR MAKING ANY KIND OF TOAST AS IT EATS HEAVY AND BESIDES IS VERY EXTRAVAGANT",
+          "text": "Never use new bread for making any kind of toast, as it eats heavy, and besides, it is very extravagant"
+        },
+        {
+          "clip": "3170-137482-0024",
+          "edits": 1,
+          "reference": "THINKING I HAD A RIGHT TO WATCH THE SICK MAN I SETTLED MYSELF NEAR HIS BED TO GIVE HIM EVERY CARE HE REQUIRED",
+          "text": "Thinking I had the right to watch the sick man, I settled myself near his bed to give him every care he required"
+        },
+        {
+          "clip": "3576-138058-0004",
+          "edits": 2,
+          "reference": "DULCINEA IS PERISHING THOU ART LIVING ON REGARDLESS I AM DYING OF HOPE DEFERRED THEREFORE UNTRUSS THYSELF WITH A GOOD WILL FOR MINE IT IS HERE IN THIS RETIRED SPOT TO GIVE THEE AT LEAST TWO THOUSAND LASHES",
+          "text": "Dulcinea is perishing thou art living on regardless I am dying of hope deferred Therefore untrust thyself with the good will for mine it is here in this retired spot to give thee at least two thousand lashes"
+        },
+        {
+          "clip": "3853-163249-0056",
+          "edits": 1,
+          "reference": "I COULD NOT LOVE THEE DEAR SO MUCH LOVED I NOT HONOR MORE",
+          "text": "I could not love thee, dear, so much Loved I not honour more"
+        },
+        {
+          "clip": "5895-34622-0009",
+          "edits": 1,
+          "reference": "UNKNOWN PEOPLE HAD WORKED UPON HIS FACE HE ON THE OTHER HAND HAD WORKED ON HIS MIND AND BEHIND THIS WELL EXECUTED MASK HE HAD PLACED ALL THAT HE COULD OF THOUGHT",
+          "text": "Unknown people had worked upon his face he, on the other hand, had worked on his mind. And behind this well-executed mask he had placed all that he could have thought"
+        },
+        {
+          "clip": "8842-304647-0006",
+          "edits": 5,
+          "reference": "THE PEOPLE IS A BEAST OF MUDDY BRAIN THAT KNOWS NOT ITS OWN FORCE AND THEREFORE STANDS LOADED WITH WOOD AND STONE THE POWERLESS HANDS OF A MERE CHILD GUIDE IT WITH BIT AND REIN ONE KICK WOULD BE ENOUGH TO BREAK THE CHAIN BUT THE BEAST FEARS AND WHAT THE CHILD DEMANDS IT DOES NOR ITS OWN TERROR UNDERSTANDS CONFUSED AND STUPEFIED BY BUGBEARS VAIN",
+          "text": "The people is a beast of muddy brain, that knows not its own force, and therefore stands, loaded with wood and stone, the powerless hands of a mere child guided with bit and rein. One kick would be enough to break the chain, but the beast fears, and what the child demands it does, nor its own terror understands, confused and stupefied by Bugbear's vein."
+        }
+      ],
+      "ending_alignment": {
+        "last_reference_word_deleted": 0,
+        "last_reference_word_substituted": 1,
+        "clips_with_trailing_insertions": 0,
+        "warning": "Edit alignment describes errors at the end, not their cause; ties use diagonal before deletion before insertion."
+      }
+    },
+    {
+      "file": "perf-long-nemo-q8-1120.json",
+      "label": "nemo-q8-long-1120",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 11.628223466,
+        "aggregate_rtf": 0.15629332615591396,
+        "median_rtf": 0.15614237629032257,
+        "min_rtf": 0.15597216822580645,
+        "max_rtf": 0.1567654339516129,
+        "decode_rtf": 0.156236821344086
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-long-nemo-q8-160.json",
+      "label": "nemo-q8-long-160",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 25.900700563999997,
+        "aggregate_rtf": 0.3481276957526881,
+        "median_rtf": 0.3461662241129032,
+        "min_rtf": 0.34257985084677417,
+        "max_rtf": 0.35563701229838707,
+        "decode_rtf": 0.34796558924731186
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-long-nemo-q8-560.json",
+      "label": "nemo-q8-long-560",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 15.694604434999999,
+        "aggregate_rtf": 0.2109489843413978,
+        "median_rtf": 0.21186478616935484,
+        "min_rtf": 0.20840250370967742,
+        "max_rtf": 0.21257966314516127,
+        "decode_rtf": 0.21086712571236557
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-long-nemo-q8-80.json",
+      "label": "nemo-q8-long-80",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 39.134902585,
+        "aggregate_rtf": 0.5260067551747312,
+        "median_rtf": 0.5236436988709677,
+        "min_rtf": 0.5234147138709677,
+        "max_rtf": 0.530961852782258,
+        "decode_rtf": 0.525800427110215
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-long-transcribe-q8-1120.json",
+      "label": "transcribe-q8-long-1120",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 10.540108618,
+        "aggregate_rtf": 0.1416681265860215,
+        "median_rtf": 0.14154071334677418,
+        "min_rtf": 0.1399713651612903,
+        "max_rtf": 0.14349230124999998
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 3
+    },
+    {
+      "file": "perf-long-transcribe-q8-160.json",
+      "label": "transcribe-q8-long-160",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 26.714859523999998,
+        "aggregate_rtf": 0.3590706925268817,
+        "median_rtf": 0.3592097629032258,
+        "min_rtf": 0.3537842279435484,
+        "max_rtf": 0.3642180867338709
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 3
+    },
+    {
+      "file": "perf-long-transcribe-q8-560.json",
+      "label": "transcribe-q8-long-560",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 14.837859717,
+        "aggregate_rtf": 0.19943359834677418,
+        "median_rtf": 0.1995392591935484,
+        "min_rtf": 0.19818156524193548,
+        "max_rtf": 0.2005799706048387
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 3
+    },
+    {
+      "file": "perf-long-transcribe-q8-80.json",
+      "label": "transcribe-q8-long-80",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 43.321185,
+        "aggregate_rtf": 0.5822739919354838,
+        "median_rtf": 0.5815892653225807,
+        "min_rtf": 0.5799385677419354,
+        "max_rtf": 0.5852941427419355
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-long-unified-F32-1120.json",
+      "label": "unified-F32-long-1120",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 83.21232907,
+        "aggregate_rtf": 1.1184452831989247,
+        "median_rtf": 1.118570472983871,
+        "min_rtf": 1.117463470967742,
+        "max_rtf": 1.1193019056451612
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-long-unified-Q8_0-1120.json",
+      "label": "unified-Q8_0-long-1120",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 90.00320122,
+        "aggregate_rtf": 1.2097204465053761,
+        "median_rtf": 1.2116815681451611,
+        "min_rtf": 1.2003181225806452,
+        "max_rtf": 1.2171616487903225
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-long-unified-q8-2080.json",
+      "label": "unified-q8-long-2080",
+      "summary": {
+        "runs": 3,
+        "audio_seconds": 74.4,
+        "elapsed_seconds": 54.04990762,
+        "aggregate_rtf": 0.7264772529569892,
+        "median_rtf": 0.7289679467741935,
+        "min_rtf": 0.7186738193548386,
+        "max_rtf": 0.7317899927419355
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 3
+    },
+    {
+      "file": "perf-nemo-q8-1120.json",
+      "label": "nemo-q8-1120",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 5.6084674329999995,
+        "aggregate_rtf": 0.1915787338343296,
+        "median_rtf": 0.18924351460290348,
+        "min_rtf": 0.18585001725021347,
+        "max_rtf": 0.2032590556789069,
+        "decode_rtf": 0.19152527713065756
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-nemo-q8-160.json",
+      "label": "nemo-q8-160",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 10.74886003,
+        "aggregate_rtf": 0.3671685748932536,
+        "median_rtf": 0.3647558457728437,
+        "min_rtf": 0.35800755883859947,
+        "max_rtf": 0.3801031786507258,
+        "decode_rtf": 0.3670019814517506
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-nemo-q8-560.json",
+      "label": "nemo-q8-560",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 6.520067343,
+        "aggregate_rtf": 0.22271792802732707,
+        "median_rtf": 0.21720612365499573,
+        "min_rtf": 0.21290678377455163,
+        "max_rtf": 0.24029381759180188,
+        "decode_rtf": 0.22264101813834328
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-nemo-q8-80.json",
+      "label": "nemo-q8-80",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 15.989868172,
+        "aggregate_rtf": 0.546195326114432,
+        "median_rtf": 0.5456665091374893,
+        "min_rtf": 0.5360559736976942,
+        "max_rtf": 0.5536421629376601,
+        "decode_rtf": 0.5459916612126388
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    },
+    {
+      "file": "perf-transcribe-q8-1120.json",
+      "label": "transcribe-q8-1120",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 4.806759727,
+        "aggregate_rtf": 0.16419332970111017,
+        "median_rtf": 0.16312230657557641,
+        "min_rtf": 0.1587386507258753,
+        "max_rtf": 0.17353959760888127
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 5
+    },
+    {
+      "file": "perf-transcribe-q8-160.json",
+      "label": "transcribe-q8-160",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 10.957049851,
+        "aggregate_rtf": 0.37428009738684886,
+        "median_rtf": 0.3710883280956447,
+        "min_rtf": 0.3609173296327925,
+        "max_rtf": 0.3871698883005978
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 5
+    },
+    {
+      "file": "perf-transcribe-q8-560.json",
+      "label": "transcribe-q8-560",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 6.3619746169999996,
+        "aggregate_rtf": 0.21731766411614,
+        "median_rtf": 0.21655975678906916,
+        "min_rtf": 0.21463004013663534,
+        "max_rtf": 0.22123893458582408
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 5
+    },
+    {
+      "file": "perf-transcribe-q8-80.json",
+      "label": "transcribe-q8-80",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 17.663699703,
+        "aggregate_rtf": 0.6033714672245943,
+        "median_rtf": 0.6028826855678907,
+        "min_rtf": 0.5995797275832622,
+        "max_rtf": 0.6091229856532878
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 5
+    },
+    {
+      "file": "perf-unified-q8-1120.json",
+      "label": "unified-q8-1120",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 20.085088829,
+        "aggregate_rtf": 0.6860833075661827,
+        "median_rtf": 0.6837253419299744,
+        "min_rtf": 0.6708699340734415,
+        "max_rtf": 0.708618779675491
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 5
+    },
+    {
+      "file": "perf-unified-q8-160.json",
+      "label": "unified-q8-160",
+      "summary": {
+        "runs": 5,
+        "audio_seconds": 29.275000000000002,
+        "elapsed_seconds": 128.47900088,
+        "aggregate_rtf": 4.388693454483347,
+        "median_rtf": 4.387419514944492,
+        "min_rtf": 4.359135111870196,
+        "max_rtf": 4.417875807002562
+      },
+      "repeated_transcripts_stable": true,
+      "transcripts_changed_at_eof": 0
+    }
+  ],
+  "paired_accuracy": [
+    {
+      "baseline": "nemo-q8-accuracy-560",
+      "candidate": "transcribe-q8-accuracy-560",
+      "extra_errors": 1,
+      "identical_normalized_transcripts": 33,
+      "wer_delta_percentage_points": 0.10940919037199125,
+      "paired_utterance_bootstrap_95_percent_interval_pp": [
+        -0.6756756756756757,
+        0.9041591320072333
+      ],
+      "warning": "Exploratory 40-utterance interval, not a population-level noninferiority gate."
+    },
+    {
+      "baseline": "nemo-q8-accuracy-1120",
+      "candidate": "transcribe-q8-accuracy-1120",
+      "extra_errors": -6,
+      "identical_normalized_transcripts": 33,
+      "wer_delta_percentage_points": -0.6564551422319475,
+      "paired_utterance_bootstrap_95_percent_interval_pp": [
+        -1.3100436681222707,
+        -0.1111111111111111
+      ],
+      "warning": "Exploratory 40-utterance interval, not a population-level noninferiority gate."
+    },
+    {
+      "baseline": "nemo-q8-accuracy-1120",
+      "candidate": "unified-q8-accuracy-1120",
+      "extra_errors": -3,
+      "identical_normalized_transcripts": 32,
+      "wer_delta_percentage_points": -0.3282275711159737,
+      "paired_utterance_bootstrap_95_percent_interval_pp": [
+        -1.236917221693625,
+        0.5847953216374269
+      ],
+      "warning": "Exploratory 40-utterance interval, not a population-level noninferiority gate."
+    },
+    {
+      "baseline": "unified-f32-accuracy-1120",
+      "candidate": "unified-q8-accuracy-1120",
+      "extra_errors": 0,
+      "identical_normalized_transcripts": 40,
+      "wer_delta_percentage_points": 0.0,
+      "paired_utterance_bootstrap_95_percent_interval_pp": [
+        0.0,
+        0.0
+      ],
+      "warning": "Exploratory 40-utterance interval, not a population-level noninferiority gate."
+    },
+    {
+      "baseline": "unified-f32-accuracy-2080",
+      "candidate": "unified-q8-accuracy-2080",
+      "extra_errors": 0,
+      "identical_normalized_transcripts": 40,
+      "wer_delta_percentage_points": 0.0,
+      "paired_utterance_bootstrap_95_percent_interval_pp": [
+        0.0,
+        0.0
+      ],
+      "warning": "Exploratory 40-utterance interval, not a population-level noninferiority gate."
+    }
+  ],
+  "historical_fp32": {
+    "source": "local-research-archive-2026-10-02/performance-audit/frontend-flush-accuracy.json",
+    "warning": "Historical ORT frontend/EOF policy; not a live same-backend ablation.",
+    "results": [
+      {
+        "chunk_ms": 80,
+        "clips": 40,
+        "edits": 25,
+        "words": 914,
+        "wer": 0.02735229759299781
+      },
+      {
+        "chunk_ms": 160,
+        "clips": 40,
+        "edits": 23,
+        "words": 914,
+        "wer": 0.02516411378555799
+      },
+      {
+        "chunk_ms": 560,
+        "clips": 40,
+        "edits": 22,
+        "words": 914,
+        "wer": 0.024070021881838075
+      },
+      {
+        "chunk_ms": 1120,
+        "clips": 40,
+        "edits": 26,
+        "words": 914,
+        "wer": 0.028446389496717725
+      }
+    ]
+  }
+}

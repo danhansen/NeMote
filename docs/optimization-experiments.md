@@ -1,10 +1,32 @@
 # Optimization Experiments
 
-This log tracks ONNX/ORT optimization experiments ported from Sayboard's
-Parakeet EOU work onto NeMote's Nemotron/Parakeet runtime.
+This log preserves runtime optimization experiments, including historical
+ONNX/ORT work and investigations of alternatives to the current NeMo-Speech.cpp
+backend.
 
 See [sayboard-optimization-harvest.md](sayboard-optimization-harvest.md) for
 the source-level Sayboard optimization inventory and harvest results.
+
+## 2026-10-02: transcribe.cpp and Parakeet Unified — Not Adopted
+
+The WAV-driven screen did not demonstrate a compelling benefit for dictation.
+Nemotron performance was chunk-dependent: transcribe.cpp was about 11% slower
+at 80 ms, close at 560 ms, and 9% faster at 1120 ms on an i5-1235U with two
+threads and concurrency one. Differences within 5% were treated as noise.
+
+Parakeet Unified Q8 did not sustain real time at 1120 ms buffering latency
+(RTF 1.21 on the longer clip); at its default 2080 ms it did (RTF 0.73).
+On 40 speakers / 914 words, default-setting WER was 2.19%, matching the
+existing NeMo/Nemotron backend at 560 ms. Unified Q8 and F32 had identical
+normalized transcripts at both tested accuracy settings. This small read-English
+sample does not establish general accuracy equivalence or superiority.
+
+Decision: retain NeMo-Speech.cpp/Nemotron; do not integrate the alternative
+backend. Prototype code, build scripts and tests were removed from main.
+Only the [archived report](research/transcribe-cpp-2026-10-02/transcribe-prototype-report.txt),
+provenance, raw measurements and summary remain under
+`docs/research/transcribe-cpp-2026-10-02/`. Commands in those artifacts are
+historical records, not maintained tools.
 
 ## 2026-06-22: ORT Serialization And Linear-Pos Dequantization
 

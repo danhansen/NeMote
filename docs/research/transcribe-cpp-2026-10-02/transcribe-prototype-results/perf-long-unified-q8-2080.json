@@ -1,0 +1,213 @@
+{
+  "config": {
+    "engine": "transcribe",
+    "executable": "/tmp/nemote-transcribe-prototype.YTZkeq/prototype-build/nemote-transcribe-prototype",
+    "model": "/tmp/nemote-transcribe-prototype.YTZkeq/unified-Q8_0.gguf",
+    "backend_dir": "/tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin",
+    "manifest": null,
+    "audio_dir": null,
+    "wav": "local-research-archive-2026-10-02/performance-audit/accuracy-audio/251-136532-0004.wav",
+    "output": "/tmp/nemote-transcribe-prototype.YTZkeq/results/perf-long-unified-q8-2080.json",
+    "label": "unified-q8-long-2080",
+    "threads": 2,
+    "feed_ms": 1040,
+    "right_context": 6,
+    "buffered": true,
+    "buffered_chunk_ms": 1040,
+    "buffered_right_ms": 1040,
+    "repeat": 3,
+    "warmup": 1
+  },
+  "clips": [
+    {
+      "utt_id": "251-136532-0004",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/performance-audit/accuracy-audio/251-136532-0004.wav"
+    }
+  ],
+  "processes": [
+    {
+      "command": [
+        "/tmp/nemote-transcribe-prototype.YTZkeq/prototype-build/nemote-transcribe-prototype",
+        "--model",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/unified-Q8_0.gguf",
+        "--wav-list",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/results/perf-long-unified-q8-2080.tsv",
+        "--threads",
+        "2",
+        "--feed-ms",
+        "1040",
+        "--right-context",
+        "6",
+        "--repeat",
+        "3",
+        "--warmup",
+        "1",
+        "--backend-dir",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin",
+        "--buffered",
+        "--left-ms",
+        "5600",
+        "--buffered-chunk-ms",
+        "1040",
+        "--buffered-right-ms",
+        "1040"
+      ],
+      "diagnostics": "load_backend: loaded CPU backend from /tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin/libggml-cpu.so\nparakeet: using cpu backend (strict)\nparakeet: promoted 48 conv pointwise weights from F16 \u2192 F32 for CPU backend\n",
+      "events": [
+        {
+          "event": "model_loaded",
+          "data": {
+            "load_seconds": 0.511008752,
+            "version": "0.2.4",
+            "revision": "1da90df",
+            "backend": "CPU",
+            "threads": 2
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "251-136532-0004",
+          "iteration": 0,
+          "warmup": true,
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+          "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn",
+          "data": {
+            "audio_seconds": 24.8,
+            "elapsed_seconds": 17.91146477,
+            "decode_calls": 25,
+            "finish_seconds": 0.957481914,
+            "peak_rss_kb": 1118276,
+            "first_partial_seconds": 0.680893483,
+            "first_partial_audio_ms": 3120
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "251-136532-0004",
+          "iteration": 1,
+          "warmup": false,
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+          "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn",
+          "data": {
+            "audio_seconds": 24.8,
+            "elapsed_seconds": 17.82311072,
+            "decode_calls": 25,
+            "finish_seconds": 1.010898678,
+            "peak_rss_kb": 1118404,
+            "first_partial_seconds": 0.607832228,
+            "first_partial_audio_ms": 3120
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "251-136532-0004",
+          "iteration": 2,
+          "warmup": false,
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+          "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn",
+          "data": {
+            "audio_seconds": 24.8,
+            "elapsed_seconds": 18.14839182,
+            "decode_calls": 25,
+            "finish_seconds": 1.011287193,
+            "peak_rss_kb": 1118404,
+            "first_partial_seconds": 0.620618257,
+            "first_partial_audio_ms": 3120
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "251-136532-0004",
+          "iteration": 3,
+          "warmup": false,
+          "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+          "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn",
+          "data": {
+            "audio_seconds": 24.8,
+            "elapsed_seconds": 18.07840508,
+            "decode_calls": 25,
+            "finish_seconds": 0.948898314,
+            "peak_rss_kb": 1118404,
+            "first_partial_seconds": 0.611233497,
+            "first_partial_audio_ms": 3120
+          }
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "clip": "251-136532-0004",
+      "iteration": 0,
+      "warmup": true,
+      "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "elapsed_seconds": 17.91146477,
+        "decode_calls": 25,
+        "finish_seconds": 0.957481914,
+        "peak_rss_kb": 1118276,
+        "first_partial_seconds": 0.680893483,
+        "first_partial_audio_ms": 3120
+      },
+      "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn"
+    },
+    {
+      "clip": "251-136532-0004",
+      "iteration": 1,
+      "warmup": false,
+      "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "elapsed_seconds": 17.82311072,
+        "decode_calls": 25,
+        "finish_seconds": 1.010898678,
+        "peak_rss_kb": 1118404,
+        "first_partial_seconds": 0.607832228,
+        "first_partial_audio_ms": 3120
+      },
+      "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn"
+    },
+    {
+      "clip": "251-136532-0004",
+      "iteration": 2,
+      "warmup": false,
+      "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "elapsed_seconds": 18.14839182,
+        "decode_calls": 25,
+        "finish_seconds": 1.011287193,
+        "peak_rss_kb": 1118404,
+        "first_partial_seconds": 0.620618257,
+        "first_partial_audio_ms": 3120
+      },
+      "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn"
+    },
+    {
+      "clip": "251-136532-0004",
+      "iteration": 3,
+      "warmup": false,
+      "text": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn in the middle of its forehead",
+      "metrics": {
+        "audio_seconds": 24.8,
+        "elapsed_seconds": 18.07840508,
+        "decode_calls": 25,
+        "finish_seconds": 0.948898314,
+        "peak_rss_kb": 1118404,
+        "first_partial_seconds": 0.611233497,
+        "first_partial_audio_ms": 3120
+      },
+      "before_final": "They had four or five species of what might loosely be called birds, and something that could easily be classed as a reptile, and a carnivorous mammal the size of a cat, with bird-like claws, and a herbivore almost identical with the pig-like thing in the big Darf Hulva mural, and another, like a gazelle, with a single horn"
+    }
+  ],
+  "summary": {
+    "runs": 3,
+    "audio_seconds": 74.4,
+    "elapsed_seconds": 54.04990762,
+    "aggregate_rtf": 0.7264772529569892,
+    "median_rtf": 0.7289679467741935,
+    "min_rtf": 0.7186738193548386,
+    "max_rtf": 0.7317899927419355
+  }
+}

@@ -1,0 +1,272 @@
+{
+  "config": {
+    "engine": "transcribe",
+    "executable": "/tmp/nemote-transcribe-prototype.YTZkeq/prototype-build/nemote-transcribe-prototype",
+    "model": "/tmp/nemote-transcribe-prototype.YTZkeq/nemotron-Q8_0.gguf",
+    "backend_dir": "/tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin",
+    "manifest": null,
+    "audio_dir": null,
+    "wav": "local-research-archive-2026-10-02/dynamic-chunk-validation/audio/1272-128104-0000.wav",
+    "output": "/tmp/nemote-transcribe-prototype.YTZkeq/results/perf-transcribe-q8-1120.json",
+    "label": "transcribe-q8-1120",
+    "threads": 2,
+    "feed_ms": 1120,
+    "right_context": 13,
+    "buffered": false,
+    "buffered_chunk_ms": 560,
+    "buffered_right_ms": 560,
+    "repeat": 5,
+    "warmup": 1
+  },
+  "clips": [
+    {
+      "utt_id": "1272-128104-0000",
+      "path": "/home/dhansen/Projects/NeMote/local-research-archive-2026-10-02/dynamic-chunk-validation/audio/1272-128104-0000.wav"
+    }
+  ],
+  "processes": [
+    {
+      "command": [
+        "/tmp/nemote-transcribe-prototype.YTZkeq/prototype-build/nemote-transcribe-prototype",
+        "--model",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/nemotron-Q8_0.gguf",
+        "--wav-list",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/results/perf-transcribe-q8-1120.tsv",
+        "--threads",
+        "2",
+        "--feed-ms",
+        "1120",
+        "--right-context",
+        "13",
+        "--repeat",
+        "5",
+        "--warmup",
+        "1",
+        "--backend-dir",
+        "/tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin"
+      ],
+      "diagnostics": "load_backend: loaded CPU backend from /tmp/nemote-transcribe-prototype.YTZkeq/sdk-build/bin/libggml-cpu.so\nparakeet: using cpu backend (strict)\nparakeet: promoted 48 conv pointwise weights from F16 \u2192 F32 for CPU backend\n",
+      "events": [
+        {
+          "event": "model_loaded",
+          "data": {
+            "load_seconds": 0.50097008,
+            "version": "0.2.4",
+            "revision": "1da90df",
+            "backend": "CPU",
+            "threads": 2
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1272-128104-0000",
+          "iteration": 0,
+          "warmup": true,
+          "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+          "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel",
+          "data": {
+            "audio_seconds": 5.855,
+            "elapsed_seconds": 0.97006444,
+            "decode_calls": 7,
+            "finish_seconds": 0.139582852,
+            "peak_rss_kb": 1121900,
+            "first_partial_seconds": 0.22711401,
+            "first_partial_audio_ms": 1120
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1272-128104-0000",
+          "iteration": 1,
+          "warmup": false,
+          "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+          "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel",
+          "data": {
+            "audio_seconds": 5.855,
+            "elapsed_seconds": 0.9294148,
+            "decode_calls": 7,
+            "finish_seconds": 0.145923341,
+            "peak_rss_kb": 1130508,
+            "first_partial_seconds": 0.194148994,
+            "first_partial_audio_ms": 1120
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1272-128104-0000",
+          "iteration": 2,
+          "warmup": false,
+          "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+          "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel",
+          "data": {
+            "audio_seconds": 5.855,
+            "elapsed_seconds": 1.016074344,
+            "decode_calls": 7,
+            "finish_seconds": 0.139847407,
+            "peak_rss_kb": 1137292,
+            "first_partial_seconds": 0.215309295,
+            "first_partial_audio_ms": 1120
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1272-128104-0000",
+          "iteration": 3,
+          "warmup": false,
+          "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+          "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel",
+          "data": {
+            "audio_seconds": 5.855,
+            "elapsed_seconds": 0.956275703,
+            "decode_calls": 7,
+            "finish_seconds": 0.141690025,
+            "peak_rss_kb": 1137292,
+            "first_partial_seconds": 0.225610516,
+            "first_partial_audio_ms": 1120
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1272-128104-0000",
+          "iteration": 4,
+          "warmup": false,
+          "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+          "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel",
+          "data": {
+            "audio_seconds": 5.855,
+            "elapsed_seconds": 0.949913775,
+            "decode_calls": 7,
+            "finish_seconds": 0.143345825,
+            "peak_rss_kb": 1139212,
+            "first_partial_seconds": 0.214909081,
+            "first_partial_audio_ms": 1120
+          }
+        },
+        {
+          "event": "commit",
+          "clip": "1272-128104-0000",
+          "iteration": 5,
+          "warmup": false,
+          "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+          "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel",
+          "data": {
+            "audio_seconds": 5.855,
+            "elapsed_seconds": 0.955081105,
+            "decode_calls": 7,
+            "finish_seconds": 0.148768171,
+            "peak_rss_kb": 1139212,
+            "first_partial_seconds": 0.209108103,
+            "first_partial_audio_ms": 1120
+          }
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 0,
+      "warmup": true,
+      "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "elapsed_seconds": 0.97006444,
+        "decode_calls": 7,
+        "finish_seconds": 0.139582852,
+        "peak_rss_kb": 1121900,
+        "first_partial_seconds": 0.22711401,
+        "first_partial_audio_ms": 1120
+      },
+      "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel"
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 1,
+      "warmup": false,
+      "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "elapsed_seconds": 0.9294148,
+        "decode_calls": 7,
+        "finish_seconds": 0.145923341,
+        "peak_rss_kb": 1130508,
+        "first_partial_seconds": 0.194148994,
+        "first_partial_audio_ms": 1120
+      },
+      "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel"
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 2,
+      "warmup": false,
+      "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "elapsed_seconds": 1.016074344,
+        "decode_calls": 7,
+        "finish_seconds": 0.139847407,
+        "peak_rss_kb": 1137292,
+        "first_partial_seconds": 0.215309295,
+        "first_partial_audio_ms": 1120
+      },
+      "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel"
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 3,
+      "warmup": false,
+      "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "elapsed_seconds": 0.956275703,
+        "decode_calls": 7,
+        "finish_seconds": 0.141690025,
+        "peak_rss_kb": 1137292,
+        "first_partial_seconds": 0.225610516,
+        "first_partial_audio_ms": 1120
+      },
+      "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel"
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 4,
+      "warmup": false,
+      "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "elapsed_seconds": 0.949913775,
+        "decode_calls": 7,
+        "finish_seconds": 0.143345825,
+        "peak_rss_kb": 1139212,
+        "first_partial_seconds": 0.214909081,
+        "first_partial_audio_ms": 1120
+      },
+      "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel"
+    },
+    {
+      "clip": "1272-128104-0000",
+      "iteration": 5,
+      "warmup": false,
+      "text": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+      "metrics": {
+        "audio_seconds": 5.855,
+        "elapsed_seconds": 0.955081105,
+        "decode_calls": 7,
+        "finish_seconds": 0.148768171,
+        "peak_rss_kb": 1139212,
+        "first_partial_seconds": 0.209108103,
+        "first_partial_audio_ms": 1120
+      },
+      "before_final": "mister Quilter is the apostle of the middle classes, and we are glad to welcome his gospel"
+    }
+  ],
+  "summary": {
+    "runs": 5,
+    "audio_seconds": 29.275000000000002,
+    "elapsed_seconds": 4.806759727,
+    "aggregate_rtf": 0.16419332970111017,
+    "median_rtf": 0.16312230657557641,
+    "min_rtf": 0.1587386507258753,
+    "max_rtf": 0.17353959760888127
+  }
+}

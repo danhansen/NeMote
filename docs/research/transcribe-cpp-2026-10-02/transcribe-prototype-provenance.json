@@ -1,0 +1,79 @@
+{
+  "scope": "WAV-driven research prototype only. No application integration, VAD, ITN, boosting, install, or release changes.",
+  "date_local": "2026-10-02",
+  "host": {
+    "cpu": "Intel Core i5-1235U (Alder Lake)",
+    "compiler": "GCC 16.1.1 20260515 (Red Hat 16.1.1-2)",
+    "kernel": "7.1.6-201.fc44.x86_64",
+    "threads": 2,
+    "concurrency": 1
+  },
+  "transcribe": {
+    "repository": "https://github.com/handy-computer/transcribe.cpp",
+    "revision": "1da90df95ef295d12978954e72b240f2056a8ebe",
+    "version": "0.2.4",
+    "upstream_changes": false,
+    "cpu_isa": "SSE4.2,F16C,FMA,BMI2,AVX,AVX2,AVX_VNNI",
+    "native_build": false,
+    "openmp": false,
+    "system_blas_found": false,
+    "prototype_sha256": "f2e29273fb4eb16f70294e4e7a67c2e8cfd420e833d32e99fdeac875ec861818",
+    "library_sha256": "0dde771a33ea0aad8b1e5e8d640459da9f3b8f8a478f2623d2434862687f4fdb"
+  },
+  "nemo": {
+    "baseline": "Installed released NeMote worker, not the newly committed ITN cleanup; ITN disabled for all runs.",
+    "worker_sha256": "a867e7e716b8022974fc80616ba24c79a0a918a3549b1f828b8046d8f2d6873a",
+    "cpu_plugin": "libggml-cpu-alderlake.so",
+    "cpu_plugin_sha256": "3b1ab0638e7feabb29be48a7b0b7de65114870d406aaddf008ae2890059adfa5",
+    "cpu_isa": "SSE4.2,F16C,FMA,BMI2,AVX,AVX2,AVX_VNNI",
+    "openmp": true,
+    "model_sha256": "d9a01898d2a611c8764e23a1c2f45e70bbd5a425dc4de93692ac951dd603812d",
+    "model_bytes": 699872960
+  },
+  "models": [
+    {
+      "repository": "handy-computer/nemotron-speech-streaming-en-0.6b-gguf",
+      "revision": "9789e0ebf77277911272f0d9a35e1646b5aa6004",
+      "files": {
+        "nemotron-speech-streaming-en-0.6b-Q8_0.gguf": {
+          "bytes": 729650176,
+          "sha256": "90d8c89714cd31efc88be62a40c6b2bea57e0cc2063af1ffe2c28f1a228ca110"
+        },
+        "nemotron-speech-streaming-en-0.6b-F32.gguf": {
+          "bytes": 2472386176,
+          "sha256": "53bdc1d4d21e419d4da513d2df31ce88784e25cc908841386490658854b13b41"
+        }
+      }
+    },
+    {
+      "repository": "handy-computer/parakeet-unified-en-0.6b-gguf",
+      "revision": "d5249700b2382bf5c5024c2421d101b8db54a629",
+      "files": {
+        "parakeet-unified-en-0.6b-Q8_0.gguf": {
+          "bytes": 731357568,
+          "sha256": "4b50b6dd862bf6e346929aaf4f5eaacec003bfa3f56462d6c874b41ef2f38795"
+        },
+        "parakeet-unified-en-0.6b-F32.gguf": {
+          "bytes": 2473323520,
+          "sha256": "81d3a8c7676324a4dae977dac0f5900dc1468755fdf3b5369261bb759f17fdf3"
+        }
+      }
+    }
+  ],
+  "method": {
+    "performance": "Serial CPU inference, one warmup plus five measured repetitions on 5.855s WAV. Includes frontend, feeds, text queries and normal SDK EOF finalization; excludes model load. Transcribe preloads WAV and times stream begin through finalize, before final JSON output. The installed NeMo worker's elapsed timer also includes streaming WAV reads and partial JSON emission, but exposes decode_seconds separately. Report this wrapper difference; these are WAV tests, not live capture.",
+    "accuracy": "40 utterances from 40 speakers, 326.525s total, 914 normalized reference words, preserved LibriSpeech English corpus with per-WAV SHA-256 validation. Lowercase, punctuation-separated word edit distance; raw transcripts retained.",
+    "latency": "Nemotron context R=0/1/6/13 corresponds to 80/160/560/1120ms chunk. Unified buffered latency is chunk+right; L=5600ms, C=R=80ms gives 160ms; C=R=560ms gives 1120ms. PCM feed size is not model lookahead.",
+    "eof": "Use each public SDK's normal finalize operation; no harness-injected silence. Unified's internal EOF silence padding remains part of its SDK behavior.",
+    "noise_threshold_percent": 5,
+    "long_performance": "24.8s corpus WAV 251-136532-0004; one warmup plus three measured runs. Alternate Nemotron backend order across chunk settings. No concurrent inference, build or download during dedicated warmed speed measurements.",
+    "f32_usage": "Live same-backend Unified F32 weights; historical ORT FP32 Nemotron anchor only. F32 does not imply every runtime activation/cache uses FP32.",
+    "limitations": [
+      "Same Nemotron family, but separately converted GGUF files and quantization layouts, different SDK graphs, thread runtimes and compiler builds. Not an isolated kernel ablation.",
+      "Read English test-clean speech does not cover noisy dictation, numbers, names, multilingual speech or punctuation quality.",
+      "914 words is a screening sample, not statistical proof of population-level accuracy superiority or noninferiority.",
+      "Accuracy-run elapsed times may overlap a model download and include per-clip cold NeMo sessions; use dedicated warmed performance runs for speed comparisons.",
+      "Historical ORT FP32 results, when included, have a different frontend/EOF policy; use live same-model transcribe F32 results for quantization comparisons."
+    ]
+  }
+}
