@@ -6,7 +6,13 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../extensions/gnome-shell/nemote@dhansen.dev/extension.js', import.meta.url), 'utf8');
 const injectorSource = source.slice(source.indexOf('class TextInjector {'), source.indexOf('export default class NeMoteExtension'));
 
-function fixture({preedit = true} = {}) {
+test('metadata supports GNOME Shell 50 and 51', () => {
+    const metadata = JSON.parse(readFileSync(new URL(
+        '../extensions/gnome-shell/nemote@dhansen.dev/metadata.json', import.meta.url), 'utf8'));
+    assert.deepEqual(metadata['shell-version'], ['50', '51']);
+});
+
+function fixture({preedit = true, backend = 'modern'} = {}) {
     const calls = [];
     const timers = new Map();
     let nextTimer = 0;
@@ -17,10 +23,13 @@ function fixture({preedit = true} = {}) {
         commit: text => calls.push(['commit', text]),
     };
     const display = {focus_window: {}};
+    const shellBackend = {get_input_method: () => method};
     const context = vm.createContext({
         log: () => {},
-        global: {display},
-        Clutter: {PreeditResetMode: {CLEAR: 0}, get_default_backend: () => ({get_input_method: () => method})},
+        global: {display, stage: backend === 'modern'
+            ? {context: {get_backend: () => shellBackend}} : {}},
+        Clutter: {PreeditResetMode: {CLEAR: 0}, ...(backend === 'legacy'
+            ? {get_default_backend: () => shellBackend} : {})},
         GLib: {PRIORITY_DEFAULT: 0, SOURCE_REMOVE: false,
             timeout_add: (_priority, _delay, callback) => { timers.set(++nextTimer, callback); return nextTimer; },
             Source: {remove: id => timers.delete(id)}},
@@ -42,6 +51,22 @@ test('partials are replaceable preedit; ITN final is committed once', () => {
         ['preedit', 'twenty', 6, 6, 0], ['preedit', 'twenty five', 11, 11, 0],
         ['preedit', null, 0, 0, 0], ['commit', '25'],
     ]);
+});
+
+test('legacy GNOME backend lookup still supports preedit and commits', () => {
+    const {injector, calls} = fixture({backend: 'legacy'});
+    injector.insertPartial(1, 1, 'one');
+    injector.insertCommit(1, 2, '1');
+    assert.deepEqual(calls, [
+        ['preedit', 'one', 3, 3, 0], ['preedit', null, 0, 0, 0], ['commit', '1'],
+    ]);
+});
+
+test('missing backend safely suppresses insertion', () => {
+    const {injector, calls} = fixture({backend: 'missing'});
+    injector.insertPartial(1, 1, 'one');
+    injector.insertCommit(1, 2, '1');
+    assert.deepEqual(calls, []);
 });
 
 test('committed-only has no preedit and accepts complete final', () => {

@@ -461,7 +461,10 @@ class TextInjector {
         if (this._inputMethod)
             return this._inputMethod;
 
-        const backend = Clutter.get_default_backend?.();
+        // GNOME 51 removed Clutter.get_default_backend(). Prefer the stage
+        // context API, with a fallback for GNOME 50 environments.
+        const backend = global.stage?.context?.get_backend?.() ??
+            Clutter.get_default_backend?.();
         this._inputMethod = backend?.get_input_method?.() ?? null;
         return this._inputMethod;
     }

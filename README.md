@@ -1,6 +1,6 @@
 # NeMote
 
-Streaming dictation for GNOME Shell on Wayland, powered by Nemotron and
+Streaming dictation for GNOME Shell 50 and 51 on Wayland, powered by Nemotron and
 NVIDIA's NeMo-Speech.cpp runtime. Recognition and the D-Bus service are C++;
 the extension is JavaScript. Small standard-library Python helpers download
 models. There is no Rust, ONNX Runtime, local model export, or client compilation.

@@ -2,7 +2,7 @@
   "uuid": "nemote@dhansen.dev",
   "name": "NeMote",
   "description": "GNOME voice keyboard backed by the NeMote ASR service",
-  "shell-version": ["50"],
+  "shell-version": ["50", "51"],
   "settings-schema": "org.gnome.shell.extensions.nemote",
   "url": "https://github.com/danhansen/NeMote"
 }
