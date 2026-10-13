@@ -482,11 +482,49 @@ class NeMotePage extends Adw.PreferencesPage {
         });
         this._itnRow = row;
         group.add(row);
+        this._pncModelPathRow = new Adw.EntryRow({
+            title: _('PnC Model Override (.gguf; empty = automatic)'),
+            text: this._settings.get_string('pnc-model-path'),
+            show_apply_button: true,
+        });
+        this._pncModelPathRow.connect('apply', widget => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_string('pnc-model-path', widget.text.trim());
+            this._pushRuntimeOptions();
+        });
+        group.add(this._pncModelPathRow);
+        this._pncRow = new Adw.SwitchRow({
+            title: _('Restore Punctuation and Capitalization'),
+            subtitle: _('Experimental, English only. First start downloads NVIDIA weights and converts locally using a private CPU-only Python environment. Runs after optional ITN at pauses or Stop, not on immediate partials. Change while stopped.'),
+            active: this._settings.get_boolean('pnc'),
+        });
+        this._pncRow.connect('notify::active', widget => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_boolean('pnc', widget.active);
+            this._pushRuntimeOptions();
+        });
+        group.add(this._pncRow);
+        this._pncVariants = ['bert', 'distilbert'];
+        this._pncVariantRow = new Adw.ComboRow({
+            title: _('English Punctuation Model'),
+            subtitle: _('BERT: about 139 MB. DistilBERT: about 94 MB, fewer layers. A custom GGUF override takes precedence. Change while stopped.'),
+            model: Gtk.StringList.new([_('BERT'), _('DistilBERT (smaller)')]),
+            selected: Math.max(0, this._pncVariants.indexOf(this._settings.get_string('pnc-variant'))),
+        });
+        this._pncVariantRow.connect('notify::selected', widget => {
+            if (this._syncingSettings)
+                return;
+            this._settings.set_string('pnc-variant', this._pncVariants[widget.selected] ?? 'bert');
+            this._pushRuntimeOptions();
+        });
+        group.add(this._pncVariantRow);
         this._endpointModes = ['disabled', 'preview', 'commit'];
         this._endpointModeRow = new Adw.ComboRow({
             title: _('Pause Endpointing'),
-            subtitle: _('Uses about 800 ms of decoded token silence. ITN switch controls normalization. Preview mode needs partial insertion to show text before Stop.'),
-            model: Gtk.StringList.new([_('Disabled'), _('ITN Preview — Do Not Commit'), _('ITN + Commit')]),
+            subtitle: _('Uses about 800 ms of decoded token silence. ITN and PnC switches control processing. Preview mode needs partial insertion to show text before Stop.'),
+            model: Gtk.StringList.new([_('Disabled'), _('Postprocessing Preview — Do Not Commit'), _('Postprocess + Commit')]),
             selected: Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode'))),
         });
         this._endpointModeRow.connect('notify::selected', widget => {
@@ -912,11 +950,11 @@ class NeMotePage extends Adw.PreferencesPage {
                 this._settings.set_boolean('itn', values.itn);
             if (typeof values.endpoint_mode === 'string')
                 this._settings.set_string('endpoint-mode', values.endpoint_mode);
-            for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering']]) {
+            for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering'], ['pnc', 'pnc']]) {
                 if (typeof values[key] === 'boolean')
                     this._settings.set_boolean(setting, values[key]);
             }
-            for (const [key, setting] of [['boost_phrases', 'boost-phrases'], ['boost_tokenizer_path', 'boost-tokenizer-path'], ['vad_model_path', 'vad-model-path']]) {
+            for (const [key, setting] of [['boost_phrases', 'boost-phrases'], ['boost_tokenizer_path', 'boost-tokenizer-path'], ['vad_model_path', 'vad-model-path'], ['pnc_model_path', 'pnc-model-path'], ['pnc_variant', 'pnc-variant']]) {
                 if (typeof values[key] === 'string')
                     this._settings.set_string(setting, values[key]);
             }
@@ -960,6 +998,9 @@ class NeMotePage extends Adw.PreferencesPage {
         this._spokenPunctuationRow.active = this._settings.get_boolean('spoken-punctuation');
         this._insertPartialsRow.selected = this._settings.get_boolean('insert-partials') ? 0 : 1;
         this._itnRow.active = this._settings.get_boolean('itn');
+        this._pncRow.active = this._settings.get_boolean('pnc');
+        this._pncModelPathRow.text = this._settings.get_string('pnc-model-path');
+        this._pncVariantRow.selected = Math.max(0, this._pncVariants.indexOf(this._settings.get_string('pnc-variant')));
         this._endpointModeRow.selected = Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode')));
         this._vadModelPathRow.text = this._settings.get_string('vad-model-path');
         this._boostTokenizerPathRow.text = this._settings.get_string('boost-tokenizer-path');
@@ -1050,7 +1091,7 @@ class NeMotePage extends Adw.PreferencesPage {
             !values.stopping && !values.installing;
         const selectedModelInstalled = values.selected_model_installed !== false;
         if (values.loading_model)
-            this._statusRow.subtitle = _('Loading model');
+            this._statusRow.subtitle = values.loading_message || _('Loading model');
         else if (values.listening)
             this._statusRow.subtitle = _('Listening');
         else if (values.stopping)
@@ -1199,6 +1240,9 @@ class NeMotePage extends Adw.PreferencesPage {
     _pushRuntimeOptions() {
         this._callRemote('SetRuntimeOptions', {
             itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
+            pnc: new GLib.Variant('b', this._settings.get_boolean('pnc')),
+            pnc_model_path: new GLib.Variant('s', this._settings.get_string('pnc-model-path')),
+            pnc_variant: new GLib.Variant('s', this._settings.get_string('pnc-variant')),
             endpoint_mode: new GLib.Variant('s', this._settings.get_string('endpoint-mode')),
             phrase_boosting: new GLib.Variant('b', this._settings.get_boolean('phrase-boosting')),
             boost_phrases: new GLib.Variant('s', this._settings.get_string('boost-phrases')),

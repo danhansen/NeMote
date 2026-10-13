@@ -85,3 +85,4 @@ cmake -S "$ROOT/native/nemote-nemo-worker" -B "$WORKER_BUILD" \
   -DNEMOTE_NEMO_DYNAMIC_BACKENDS="$CPU_VARIANTS" \
   -DNEMOTE_NEMO_ITN="$ITN" -DNEMOTE_NEMO_ITN_GRAMMAR_DIR="$UPSTREAM_BUILD/deps/itn_configs"
 cmake --build "$WORKER_BUILD" -j "${NEMOTE_BUILD_JOBS:-2}"
+python3 "$ROOT/scripts/package_pnc_converter.py" --sdk "$SOURCE"

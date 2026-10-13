@@ -18,6 +18,9 @@
 #include "recognizer.h"
 #include "transcript.h"
 #include "itn_format.h"
+#include "pnc_format.h"
+#include "pnc_model.h"
+#include "pnc_runner.h"
 #include <sstream>
 #include <spawn.h>
 #include <sys/wait.h>
@@ -25,6 +28,7 @@
 extern char** environ;
 #include "session_thread.h"
 #include <ggml-backend.h>
+#include <gguf.h>
 #include "nlohmann/json.hpp"
 #define MA_NO_ENCODING
 #define MA_NO_RESOURCE_MANAGER
@@ -54,6 +58,9 @@ struct Args {
     double queue_seconds = 10, stats_interval = 1;
     bool list_devices = false;
     bool itn = false;
+    bool pnc = false;
+    std::string pnc_model;
+    std::string pnc_variant = "bert";
     bool phrase_boosting = false, vad_filtering = false;
     std::string boost_phrases, vad_model;
     std::string boost_tokenizer;
@@ -68,13 +75,14 @@ static Args parse_args(int argc, char** argv) {
         std::string key = argv[i];
         if (key == "--list-input-devices") { args.list_devices = true; continue; }
         if (key == "--itn") { args.itn = true; continue; }
+        if (key == "--pnc") { args.pnc = true; continue; }
         if (key == "--phrase-boosting") { args.phrase_boosting = true; continue; }
         if (key == "--vad-filtering") { args.vad_filtering = true; continue; }
         if (key == "--help") {
             std::cout << "nemote-nemo-worker --model-dir DIR|GGUF [--wav WAV] "
                          "[--chunk-samples 1280|2560|8960|17920] [--num-threads N] "
                          "[--language en-US|auto] [--input-device NAME|INDEX] "
-                         "[--device auto|cpu] [--itn] [--phrase-boosting --boost-phrases TEXT [--boost-tokenizer MODEL]] "
+                         "[--device auto|cpu] [--itn] [--pnc [--pnc-variant bert|distilbert] [--pnc-model GGUF]] [--phrase-boosting --boost-phrases TEXT [--boost-tokenizer MODEL]] "
                          "[--vad-filtering [--vad-model GGUF]] [--model-family english|multilingual] "
                          "[--companion-installer PATH]\n";
             std::exit(0);
@@ -89,6 +97,8 @@ static Args parse_args(int argc, char** argv) {
         else if (key == "--companion-installer") args.companion_installer = value;
         else if (key == "--endpoint-mode") args.endpoint_mode = value;
         else if (key == "--vad-model") args.vad_model = value;
+        else if (key == "--pnc-model") args.pnc_model = value;
+        else if (key == "--pnc-variant") args.pnc_variant = value;
         else if (key == "--input-device") args.input_device = value;
         else if (key == "--wav") args.wav = value;
         else if (key == "--wav-repeat") args.wav_repeat = std::stoi(value);
@@ -101,8 +111,34 @@ static Args parse_args(int argc, char** argv) {
         else throw std::invalid_argument("unknown option: " + key);
     }
     if (!args.list_devices && args.model_dir.empty()) throw std::invalid_argument("--model-dir is required");
+    if (args.pnc_variant != "bert" && args.pnc_variant != "distilbert")
+        throw std::invalid_argument("--pnc-variant must be bert or distilbert");
     if (args.endpoint_mode != "disabled" && args.endpoint_mode != "preview" && args.endpoint_mode != "commit")
         throw std::invalid_argument("--endpoint-mode must be disabled, preview, or commit");
+    if (args.pnc && !args.pnc_model.empty() && !std::filesystem::is_regular_file(args.pnc_model))
+        throw std::invalid_argument("PnC requires an existing English BERT GGUF (--pnc-model)");
+    if (args.pnc && !args.pnc_model.empty()) {
+        // Reject another model's GGUF before the PnC loader attempts to build
+        // a BERT graph with missing heads/vocabulary. Metadata only, no weights.
+        gguf_init_params params{true, nullptr};
+        std::unique_ptr<gguf_context, decltype(&gguf_free)> metadata(
+            gguf_init_from_file(args.pnc_model.c_str(), params), gguf_free);
+        if (!metadata) throw std::invalid_argument("Could not read the PnC GGUF metadata");
+        const auto arch = gguf_find_key(metadata.get(), "general.architecture");
+        if (arch < 0 || gguf_get_kv_type(metadata.get(), arch) != GGUF_TYPE_STRING ||
+            std::string(gguf_get_val_str(metadata.get(), arch)) != "pnc")
+            throw std::invalid_argument("Select a NeMo-Speech.cpp PnC GGUF (architecture must be pnc)");
+        for (const char* name : {"pnc.tokenizer.vocab", "pnc.punct.labels", "pnc.capit.labels"}) {
+            const auto key = gguf_find_key(metadata.get(), name);
+            if (key < 0 || gguf_get_kv_type(metadata.get(), key) != GGUF_TYPE_ARRAY ||
+                gguf_get_arr_type(metadata.get(), key) != GGUF_TYPE_STRING || gguf_get_arr_n(metadata.get(), key) == 0)
+                throw std::invalid_argument(std::string("PnC GGUF is missing ") + name);
+        }
+    }
+    if (args.pnc && args.language != "auto" && args.language != "en" && args.language.rfind("en-", 0) != 0)
+        throw std::invalid_argument("The PnC model supports English only");
+    if (args.pnc && args.language == "auto" && args.model_family == "multilingual")
+        throw std::invalid_argument("Select English explicitly when using PnC with the multilingual model");
     if (args.phrase_boosting && args.boost_phrases.find_first_not_of(" \t\r\n") == std::string::npos)
         throw std::invalid_argument("Phrase boosting requires at least one phrase");
     if (args.boost_phrases.size() > 16384) throw std::invalid_argument("Boost phrases exceed 16 KiB");
@@ -229,27 +265,38 @@ class Session {
     std::unique_ptr<asr::RecognitionStream> stream_;
     const Args& args_;
     asr::Recognizer& model_;
+    asr::pnc::PncRunner* pnc_;
     Clock::time_point started_ = Clock::now();
     Transcript transcript_;
     PreviewTranscript preview_;
     size_t accepted_ = 0, calls_ = 0, dropped_ = 0;
     double decode_seconds_ = 0, rms_ = 0, peak_ = 0;
     bool english_model_ = false;
+    std::string detected_language_;
     size_t preview_endpoints_ = 0, utterance_commits_ = 0;
     void update(const asr::Result& result, bool end_of_stream = false) {
         std::string text = result.alternatives.empty() ? "" : result.alternatives.front().transcript;
         auto language = args_.language;
         if (language == "auto" && !result.alternatives.empty()) {
             const auto& codes = result.alternatives.front().language_codes;
-            language = codes.empty() ? (english_model_ ? "en" : "") : codes.front();
+            if (!codes.empty()) detected_language_ = codes.front();
+            language = detected_language_.empty() ? (english_model_ ? "en" : "") : detected_language_;
         }
         auto normalize = [&](const std::string& raw) {
-            if (!args_.itn || raw.empty()) return raw;
-            auto options = stream_->options();
-            options.verbatim_transcripts = false;
-            auto formatted = model_.postproc().apply(raw, options, nullptr, language);
-            return language.substr(0, language.find('-')) == "en"
-                ? format_english_itn(formatted) : formatted;
+            if (raw.empty()) return raw;
+            const bool english = language.substr(0, language.find('-')) == "en";
+            const bool use_pnc = pnc_ && english;
+            auto itn = [&](const std::string& input) {
+                if (!args_.itn) return input;
+                auto options = stream_->options();
+                options.verbatim_transcripts = false;
+                auto formatted = model_.postproc().apply(input, options, nullptr, language);
+                if (english) formatted = format_english_itn(formatted);
+                return formatted;
+            };
+            return use_pnc ? postprocess_with_pnc(raw, itn, [&](const std::string& plain) {
+                return pnc_->postprocess(plain);
+            }) : itn(raw);
         };
         if (args_.endpoint_mode == "preview") {
             preview_.update(text, result.is_final, result.late_punctuation, normalize);
@@ -257,13 +304,19 @@ class Session {
             return;
         }
         if (result.is_final) text = normalize(text);
-        transcript_.update(text, result.is_final, result.late_punctuation);
+        // PnC already owns punctuation on the committed segment; don't append
+        // an additional late sentence mark from the acoustic decoder.
+        const bool pnc_english = pnc_ && language.substr(0, language.find('-')) == "en";
+        transcript_.update(text, result.is_final, pnc_english ? "" : result.late_punctuation);
     }
     const std::string& display_text() const {
         return args_.endpoint_mode == "preview" ? preview_.text() : transcript_.text();
     }
 public:
-    Session(asr::Recognizer& model, const Args& args) : args_(args), model_(model) {
+    Session(asr::Recognizer& model, const Args& args, asr::pnc::PncRunner* pnc = nullptr)
+        : args_(args), model_(model), pnc_(pnc) {
+        if (args.pnc && args.language != "auto" && args.language != "en" && args.language.rfind("en-", 0) != 0)
+            throw std::invalid_argument("The PnC model supports English only");
         if (args.itn && args.language != "auto") {
             auto base = args.language.substr(0, args.language.find('-'));
             if (!std::filesystem::is_regular_file(std::filesystem::path(args.itn_grammar_dir) / base / "verbalize.far"))
@@ -274,6 +327,8 @@ public:
         english_model_ = supported.empty() || std::all_of(supported.begin(), supported.end(), [](const auto& code) {
             return code.substr(0, code.find('-')) == "en";
         });
+        if (args.pnc && args.language == "auto" && (!english_model_ || args.model_family == "multilingual"))
+            throw std::invalid_argument("Select English explicitly when using PnC with the multilingual model");
         if (!language.empty() && !supported.empty() &&
             std::find(supported.begin(), supported.end(), language) == supported.end()) {
             auto base = language.substr(0, language.find('-'));
@@ -344,9 +399,9 @@ public:
     }
 };
 
-static void run_capture(asr::Recognizer& model, const Args& args, std::atomic<bool>& stop) {
+static void run_capture(asr::Recognizer& model, const Args& args, asr::pnc::PncRunner* pnc, std::atomic<bool>& stop) {
     try {
-        Session session(model, args);
+        Session session(model, args, pnc);
         Capture capture(args);
         capture.start(args);
         emit({{"event", "listening"}, {"data", {{"input_device", {{"name", capture.name()}, {"requested", args.input_device}}}}}});
@@ -373,7 +428,11 @@ static void prepare_companions(Args& args, const std::filesystem::path& model) {
     if (args.vad_filtering && args.vad_model.empty())
         args.vad_model = (directory / "silero-v6.2.0.gguf").string();
     const bool vad = args.vad_filtering && !std::filesystem::is_regular_file(args.vad_model);
-    if (!boosting && !vad) return;
+    const bool pnc = args.pnc && args.pnc_model.empty();
+    if (pnc) args.pnc_model = (directory / ("pnc-" + args.pnc_variant + "-en.q8_0.gguf")).string();
+    // Always validate the automatic PnC cache receipt/checksum in the helper.
+    // An explicit model override never triggers downloads or conversion.
+    if (!boosting && !vad && !pnc) return;
     if (args.model_family != "english" && args.model_family != "multilingual")
         throw std::invalid_argument("Automatic companion downloads require --model-family english|multilingual");
     auto installer = args.companion_installer.empty()
@@ -385,6 +444,10 @@ static void prepare_companions(Args& args, const std::filesystem::path& model) {
                                      "--model-family", args.model_family};
     if (boosting) command.push_back("--boosting");
     if (vad) command.push_back("--vad");
+    if (pnc) {
+        command.push_back("--pnc");
+        command.push_back("--pnc-variant"); command.push_back(args.pnc_variant);
+    }
     std::vector<char*> argv;
     for (auto& item : command) argv.push_back(item.data());
     argv.push_back(nullptr);
@@ -400,6 +463,8 @@ static void prepare_companions(Args& args, const std::filesystem::path& model) {
         throw std::runtime_error("Companion installer did not produce a tokenizer");
     if (vad && !std::filesystem::is_regular_file(args.vad_model))
         throw std::runtime_error("Companion installer did not produce the VAD model");
+    if (pnc && !std::filesystem::is_regular_file(args.pnc_model))
+        throw std::runtime_error("Companion installer did not produce the PnC model");
 }
 
 int main(int argc, char** argv) {
@@ -448,10 +513,22 @@ int main(int argc, char** argv) {
         config.log_status = false;
         auto start = Clock::now();
         asr::Recognizer model(config);
+        // Load once, outside the recognizer's automatic PnC pipeline (which
+        // correctly skips self-punctuating acoustic models). We explicitly
+        // prepare plain text and schedule this standalone SDK runner instead.
+        std::unique_ptr<asr::pnc::PncModel> pnc_model;
+        std::unique_ptr<asr::pnc::PncRunner> pnc;
+        if (args.pnc) {
+            pnc_model = std::make_unique<asr::pnc::PncModel>(
+                model.model()->backend_manager(), args.pnc_model, config.batching);
+            pnc = std::make_unique<asr::pnc::PncRunner>(pnc_model.get());
+        }
         if (model.sample_rate() != 16000) throw std::invalid_argument("this worker requires a 16 kHz model");
-        { Session validate(model, args); }
+        { Session validate(model, args, pnc.get()); }
         emit({{"event", "model_loaded"}, {"data", {{"load_seconds", seconds(start)}, {"num_threads", args.threads},
              {"compute_backend", "cpu"}, {"cpu_features", cpu_features()}, {"itn", args.itn},
+             {"pnc", args.pnc},
+             {"pnc_variant", args.pnc_variant},
              {"phrase_boosting", args.phrase_boosting}, {"vad_filtering", args.vad_filtering},
              {"endpoint_mode", args.endpoint_mode}, {"state_arena_slots", config.batching.state_arena_slots}}}});
         if (!args.wav.empty()) {
@@ -461,7 +538,7 @@ int main(int argc, char** argv) {
             if (ma_decoder_init_file(args.wav.c_str(), &decode_config, &decoder) != MA_SUCCESS)
                 throw std::runtime_error("could not read WAV: " + args.wav);
             struct Cleanup { ma_decoder* p; ~Cleanup() { ma_decoder_uninit(p); } } cleanup{&decoder};
-            Session session(model, args);
+            Session session(model, args, pnc.get());
             std::vector<float> audio(args.chunk_samples);
             ma_uint64 count = 0;
             while (true) {
@@ -485,7 +562,7 @@ int main(int argc, char** argv) {
                 auto command = Json::parse(line);
                 auto name = command.at("command").get<std::string>();
                 if (name == "start") {
-                    session.start([&](std::atomic<bool>& stop) { run_capture(model, args, stop); },
+                    session.start([&](std::atomic<bool>& stop) { run_capture(model, args, pnc.get(), stop); },
                         [] { emit({{"event", "stopped"}}); });
                 } else if (name == "stop") { if (session.active()) join(); else { join(); emit({{"event", "stopped"}}); } }
                 else if (name == "shutdown") { join(); break; }
@@ -493,7 +570,7 @@ int main(int argc, char** argv) {
                     if (session.active()) throw std::invalid_argument("cannot change language while recognition is active");
                     session.stop();
                     Args next = args; next.language = command.at("language").get<std::string>();
-                    Session validate(model, next);
+                    Session validate(model, next, pnc.get());
                     args.language = next.language;
                     emit({{"event", "language_changed"}, {"data", {{"language", args.language}}}});
                 } else throw std::invalid_argument("unknown command: " + name);

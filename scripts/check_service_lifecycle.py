@@ -93,6 +93,7 @@ def main():
             view = call("GetConfig")[0]
             assert view["backend"] == "nemo-speech" and view["model_profile"] == "nemo-q8"
             assert view["input_device"] == "" and view["supported_streaming_latencies_ms"] == [80, 160, 560, 1120]
+            assert view["pnc"] is False and view["pnc_model_path"] == ""
             assert [item["title"] for item in call("ListModelProfiles")[0]] == ["English (lower WER)", "Multilingual"]
             devices = call("ListInputDevices")[0]
             assert devices[0]["name"] == "Fixture microphone"
@@ -126,6 +127,33 @@ def main():
                 assert call("GetConfig")[0] == before
             runtime({"itn": GLib.Variant("b", True), "endpoint_mode": GLib.Variant("s", "preview")})
             assert json.loads(config.read_text())["itn"] is True
+            before = call("GetConfig")[0]
+            try:
+                runtime({"pnc": GLib.Variant("b", True), "pnc_model_path": GLib.Variant("s", str(root / "missing.gguf"))})
+                raise AssertionError("Missing PnC override was accepted")
+            except GLib.Error:
+                assert call("GetConfig")[0] == before
+            runtime({"pnc": GLib.Variant("b", True), "pnc_variant": GLib.Variant("s", "distilbert")})
+            call("Start")
+            state = wait(lambda state: state.get("loading_message") == "PnC fixture setup")
+            assert state["loading_model"] is True
+            state = wait(lambda state: state["listening"] and state["model_loaded"] and state["last_metrics"].get("pnc") is True)
+            assert state["loading_message"] == ""
+            assert state["last_metrics"]["pnc_model_path"] == ""
+            assert state["last_metrics"]["pnc_variant"] == "distilbert"
+            call("Stop")
+            wait(lambda state: not state["listening"] and not state["stopping"])
+            # Only the SDK parses model contents; this private-bus fixture
+            # checks persistence, forwarding and worker restarts, not weights.
+            runtime({"pnc_model_path": GLib.Variant("s", str(worker)), "pnc": GLib.Variant("b", True)})
+            saved = json.loads(config.read_text())
+            assert saved["pnc"] is True and saved["pnc_model_path"] == str(worker)
+            call("Start")
+            state = wait(lambda state: state["listening"] and state["model_loaded"] and state["last_metrics"].get("pnc_model_path") == str(worker))
+            assert state["last_metrics"]["pnc_model_path"] == str(worker)
+            call("Stop")
+            wait(lambda state: not state["listening"] and not state["stopping"])
+            runtime({"pnc": GLib.Variant("b", False)})
             if args.legacy_config:
                 assert saved_config.read_text() == original, "Legacy settings were overwritten"
             call("SetModelProfile", GLib.Variant("(s)", ("nemo-q8",)))

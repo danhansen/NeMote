@@ -94,6 +94,22 @@
       <summary>Inverse text normalization</summary>
       <description>Use NeMo's bundled grammars to format spoken numbers, dates, amounts and units on finalized transcripts. NeMo backend only.</description>
     </key>
+    <key name="pnc" type="b">
+      <default>false</default>
+      <summary>Restore English punctuation and capitalization</summary>
+      <description>Run a separate BERT PnC model after optional ITN at pauses or Stop, without processing immediate live partials. Off by default.</description>
+    </key>
+    <key name="pnc-model-path" type="s">
+      <default>''</default>
+      <summary>Optional English PnC GGUF override</summary>
+      <description>Empty means download the chosen NVIDIA checkpoint and convert locally on first use.</description>
+    </key>
+    <key name="pnc-variant" type="s">
+      <choices><choice value="bert"/><choice value="distilbert"/></choices>
+      <default>'bert'</default>
+      <summary>English punctuation and capitalization model</summary>
+      <description>BERT or smaller DistilBERT. Downloads and converts once on first use unless a model override is supplied.</description>
+    </key>
     <key name="endpoint-mode" type="s">
       <default>'disabled'</default>
       <choices>
@@ -102,7 +118,7 @@
         <choice value="commit"/>
       </choices>
       <summary>NeMo pause endpoint behavior</summary>
-      <description>Disabled: finalize on Stop only. Preview: SDK endpoints normalize the accumulated session text at pauses without committing it to the application. Commit: normalize and commit each utterance at pauses. The ITN switch controls normalization.</description>
+      <description>Disabled: finalize on Stop only. Preview: SDK endpoints postprocess the accumulated session text at pauses without committing it to the application. Commit: postprocess and commit each utterance at pauses. ITN and PnC are independently selectable.</description>
     </key>
     <key name="phrase-boosting" type="b">
       <default>false</default>

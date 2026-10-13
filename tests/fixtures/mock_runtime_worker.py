@@ -9,8 +9,12 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument("--chunk-samples", type=int, default=8960)
 parser.add_argument("--list-input-devices", action="store_true")
+parser.add_argument("--pnc", action="store_true")
+parser.add_argument("--pnc-model", default="")
+parser.add_argument("--pnc-variant", default="bert")
 args, _ = parser.parse_known_args()
-metrics = {"worker_pid": os.getpid(), "chunk_samples": args.chunk_samples}
+metrics = {"worker_pid": os.getpid(), "chunk_samples": args.chunk_samples,
+           "pnc": args.pnc, "pnc_model_path": args.pnc_model, "pnc_variant": args.pnc_variant}
 
 
 def emit(event, **fields):
@@ -21,6 +25,9 @@ if args.list_input_devices:
     emit("input_device", data={"index": 0, "name": "Fixture microphone", "is_default": True})
     sys.exit(0)
 time.sleep(0.02)
+if args.pnc:
+    emit("loading_model", data={"message": "PnC fixture setup"})
+    time.sleep(0.05)
 emit("model_loaded", data={"worker_pid": os.getpid(), "chunk_samples": args.chunk_samples,
                           "state_arena_slots": 1})
 emit("ready")

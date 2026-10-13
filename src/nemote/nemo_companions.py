@@ -1,15 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
 # Silero layout translation follows NVIDIA/NeMo-Speech.cpp conversion/vad.py,
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-"""Verified, small NeMo companions; no PyTorch or client-side ASR export."""
+"""Verified NeMo companions; optional PnC conversion, no client-side ASR export."""
 from __future__ import annotations
 
 import argparse
 from array import array
 import hashlib
 import io
+import json
 import math
 from pathlib import Path
+import time
 import struct
 import sys
 import tempfile
@@ -37,6 +39,11 @@ def sha(path):
 
 def download(asset, destination, progress):
     repo, revision, filename, size, digest = asset
+    return download_url(f"https://huggingface.co/{repo}/resolve/{revision}/{filename}",
+                        filename, size, digest, destination, progress)
+
+
+def download_url(url, filename, size, digest, destination, progress):
     destination = Path(destination)
     if destination.is_file() and destination.stat().st_size == size and sha(destination) == digest:
         return destination
@@ -47,13 +54,17 @@ def download(asset, destination, progress):
     try:
         actual = hashlib.sha256()
         count = 0
-        with output, urlopen(f"https://huggingface.co/{repo}/resolve/{revision}/{filename}", timeout=60) as reader:
+        last_progress = time.monotonic()
+        with output, urlopen(url, timeout=60) as reader:
             while chunk := reader.read(65536):
                 count += len(chunk)
                 if count > size:
                     raise RuntimeError(f"Companion exceeds pinned size: {filename}")
                 actual.update(chunk)
                 output.write(chunk)
+                if time.monotonic() - last_progress >= 1:
+                    progress(f"Downloading {filename}: {count / size:.0%} ({count / 1e6:.1f}/{size / 1e6:.1f} MB)")
+                    last_progress = time.monotonic()
         if count != size or actual.hexdigest() != digest:
             raise RuntimeError(f"Companion checksum/size verification failed: {filename}")
         temporary.replace(destination)
@@ -158,8 +169,11 @@ def silero_gguf(source):
     return bytes(header + payload)
 
 
-def install(runtime_dir, family, *, boosting=False, vad=False, progress=print):
+def install(runtime_dir, family, *, boosting=False, vad=False, pnc=False, pnc_variant="bert", progress=print):
     runtime_dir = Path(runtime_dir)
+    if pnc:
+        from .pnc_install import install as install_pnc
+        install_pnc(runtime_dir, variant=pnc_variant, progress=progress)
     if boosting:
         download(TOKENIZERS[family], runtime_dir / "tokenizer.model", progress)
     if vad:
@@ -186,10 +200,17 @@ def main():
     parser.add_argument("--model-family", choices=tuple(TOKENIZERS), required=True)
     parser.add_argument("--boosting", action="store_true")
     parser.add_argument("--vad", action="store_true")
+    parser.add_argument("--pnc", action="store_true", help="Download NVIDIA's PnC checkpoint and convert locally once")
+    parser.add_argument("--pnc-variant", choices=("bert", "distilbert"), default="bert")
     args = parser.parse_args()
+    def progress(message):
+        print(message, file=sys.stderr, flush=True)
+        if args.pnc:
+            # The worker inherits stdout; keep it strictly JSONL for the service.
+            print(json.dumps({"event": "loading_model", "data": {"message": message}}), flush=True)
     try:
-        install(args.runtime_dir, args.model_family, boosting=args.boosting, vad=args.vad,
-                progress=lambda message: print(message, file=sys.stderr, flush=True))
+        install(args.runtime_dir, args.model_family, boosting=args.boosting, vad=args.vad, pnc=args.pnc,
+                pnc_variant=args.pnc_variant, progress=progress)
     except Exception as error:
         print(f"NeMo companion installation failed: {error}", file=sys.stderr)
         return 1

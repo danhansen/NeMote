@@ -62,3 +62,14 @@ class NemoCompanionTests(unittest.TestCase):
                 self.assertEqual(target.stat().st_mtime_ns, before)
                 self.assertEqual(target.read_bytes(), b"GGUFfixture")
                 self.assertEqual(list(root.glob(".*.part")), [])
+
+    def test_pnc_runs_even_when_vad_is_already_cached(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(companions, "download", return_value=root / "source"), \
+                    patch.object(companions, "silero_gguf", return_value=b"GGUFfixture"), \
+                    patch("nemote.pnc_install.install") as install_pnc:
+                for _ in range(2):
+                    companions.install(root, "english", pnc=True, pnc_variant="distilbert", vad=True, progress=lambda _: None)
+                self.assertEqual(install_pnc.call_count, 2)
+                self.assertEqual(install_pnc.call_args.kwargs["variant"], "distilbert")

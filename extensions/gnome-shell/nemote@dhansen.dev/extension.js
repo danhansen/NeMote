@@ -958,11 +958,11 @@ export default class NeMoteExtension extends Extension {
                 this._settings.set_boolean('itn', config.itn);
             if (typeof config.endpoint_mode === 'string')
                 this._settings.set_string('endpoint-mode', config.endpoint_mode);
-            for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering']]) {
+            for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering'], ['pnc', 'pnc']]) {
                 if (typeof config[key] === 'boolean')
                     this._settings.set_boolean(setting, config[key]);
             }
-            for (const [key, setting] of [['boost_phrases', 'boost-phrases'], ['boost_tokenizer_path', 'boost-tokenizer-path'], ['vad_model_path', 'vad-model-path']]) {
+            for (const [key, setting] of [['boost_phrases', 'boost-phrases'], ['boost_tokenizer_path', 'boost-tokenizer-path'], ['vad_model_path', 'vad-model-path'], ['pnc_model_path', 'pnc-model-path'], ['pnc_variant', 'pnc-variant']]) {
                 if (typeof config[key] === 'string')
                     this._settings.set_string(setting, config[key]);
             }
@@ -1004,6 +1004,9 @@ export default class NeMoteExtension extends Extension {
             break;
         case 'model-root':
         case 'itn':
+        case 'pnc':
+        case 'pnc-model-path':
+        case 'pnc-variant':
         case 'endpoint-mode':
         case 'phrase-boosting':
         case 'boost-phrases':
@@ -1044,6 +1047,9 @@ export default class NeMoteExtension extends Extension {
         this._callRemote('SetRuntimeOptions', {
             streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
             itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
+            pnc: new GLib.Variant('b', this._settings.get_boolean('pnc')),
+            pnc_model_path: new GLib.Variant('s', this._settings.get_string('pnc-model-path')),
+            pnc_variant: new GLib.Variant('s', this._settings.get_string('pnc-variant')),
             endpoint_mode: new GLib.Variant('s', this._settings.get_string('endpoint-mode')),
             phrase_boosting: new GLib.Variant('b', this._settings.get_boolean('phrase-boosting')),
             boost_phrases: new GLib.Variant('s', this._settings.get_string('boost-phrases')),
@@ -1163,7 +1169,7 @@ function statusText(state, selectedModelInstalled) {
     if (state?.installing)
         return _('Installing model');
     if (state?.loading_model)
-        return _('Loading model');
+        return state.loading_message || _('Loading model');
     if (state?.listening)
         return _('Listening');
     if (state?.stopping)

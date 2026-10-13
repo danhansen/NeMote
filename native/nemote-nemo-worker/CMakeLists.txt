@@ -27,6 +27,7 @@ target_include_directories(nemote-nemo-worker PRIVATE
   "${NEMO_SPEECH_SOURCE_DIR}/src/asr/vad"
   "${NEMO_SPEECH_SOURCE_DIR}/src/asr/diar"
   "${NEMO_SPEECH_SOURCE_DIR}/src/asr/postproc"
+  "${NEMO_SPEECH_SOURCE_DIR}/src/asr/pnc"
   "${NEMO_SPEECH_SOURCE_DIR}/src/runtime/ggml"
   "${NEMO_SPEECH_SOURCE_DIR}/ggml/include"
   "${NEMO_SPEECH_SOURCE_DIR}/llama.cpp/vendor"
@@ -46,6 +47,12 @@ install(TARGETS nemote-nemo-worker RUNTIME DESTINATION bin)
 enable_testing()
 add_executable(test-transcript test_transcript.cpp)
 add_test(NAME transcript-snapshots COMMAND test-transcript)
+add_executable(test-pnc-format test_pnc_format.cpp)
+add_test(NAME pnc-formatting COMMAND test-pnc-format)
+add_executable(test-pnc-infer test_pnc_infer.cpp)
+get_target_property(PNC_TEST_INCLUDE_DIRS nemote-nemo-worker INCLUDE_DIRECTORIES)
+target_include_directories(test-pnc-infer PRIVATE ${PNC_TEST_INCLUDE_DIRS})
+target_link_libraries(test-pnc-infer PRIVATE "${NEMO_ASR}" "${NEMO_GGML}" "${NEMO_GGML_BASE}" Threads::Threads ${CMAKE_DL_LIBS})
 add_test(NAME worker-help COMMAND nemote-nemo-worker --help)
 add_executable(test-session-thread test_session_thread.cpp)
 target_link_libraries(test-session-thread PRIVATE Threads::Threads)

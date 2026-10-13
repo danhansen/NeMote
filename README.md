@@ -3,7 +3,8 @@
 Streaming dictation for GNOME Shell 50 and 51 on Wayland, powered by Nemotron and
 NVIDIA's NeMo-Speech.cpp runtime. Recognition and the D-Bus service are C++;
 the extension is JavaScript. Small standard-library Python helpers download
-models. There is no Rust, ONNX Runtime, local model export, or client compilation.
+models. There is no Rust, ONNX Runtime, or client compilation. Optional English
+punctuation restoration performs a one-time local model conversion.
 
 ## Install
 
@@ -23,7 +24,8 @@ sh install-nemote-release
 
 Alternatively, download a Linux release from [GitHub Releases](https://github.com/danhansen/NeMote/releases),
 extract it, and run `./install.sh`. Python 3.11 or newer is required; no pip
-packages or virtual environment are needed. Log out and back in after an
+packages or virtual environment are needed for normal dictation. Optional PnC
+setup creates a private conversion environment (see below). Log out and back in after an
 extension upgrade so GNOME Shell loads the new code.
 
 Open preferences with:
@@ -43,10 +45,16 @@ Choose a microphone, language, chunk size, and CPU thread count in preferences.
 ## Dictation options
 
 - Inverse text normalization (ITN) formats spoken numbers, dates, and units.
+- Experimental English punctuation/capitalization restoration (PnC) uses a
+  selectable BERT or smaller DistilBERT GGUF. It runs after optional ITN at pauses
+  or Stop, not on immediate partials. First use downloads NVIDIA's checkpoint
+  and converts locally; setup needs venv support, about 1.25 GiB available RAM,
+  free disk space and CPU-only Python conversion dependencies. A supplied GGUF
+  override bypasses setup. See [PnC setup and model terms](docs/pnc.md).
 - Partial + committed insertion shows replaceable previews; committed-only
   insertion waits for a finalized endpoint or Stop.
-- Pause endpointing can be disabled, run ITN on the current full-utterance
-  preview without finalizing, or run ITN and finalize/commit at pauses.
+- Pause endpointing can be disabled, run enabled ITN/PnC processing on the
+  accumulated preview without finalizing, or postprocess and commit at pauses.
 - Vocabulary/phrase boosting favors names and jargon. Its tokenizer downloads
   automatically; boosting can also introduce incorrect matches.
 - Optional VAD masks non-speech features. Its Silero model downloads automatically.
@@ -85,6 +93,7 @@ scripts/dev-container all dev build/release
 The development container builds the pinned NeMo SDK, C++ worker/service, ITN
 grammars, and release packages. Native builds require CMake, a C++17 compiler,
 GLib/GIO development files, and the dependencies used by `scripts/build-nemo-worker`.
+Packaging the optional PnC converter also needs Python pip on the build machine.
 See [architecture](docs/architecture.md) and [runtime/protocol](docs/asr-backends.md).
 
 ## Historical performance research

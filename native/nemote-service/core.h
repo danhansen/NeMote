@@ -30,6 +30,7 @@ inline Json defaults(const fs::path&, const fs::path& prefix, const fs::path& da
         {"worker_path", (prefix / "bin/nemote-nemo-worker").string()},
         {"model_installer_path", (prefix / "bin/nemote-model-install").string()},
         {"sample_rate", 16000u}, {"num_threads", 2u}, {"spoken_punctuation", true}, {"itn", false},
+        {"pnc", false}, {"pnc_variant", "bert"}, {"pnc_model_path", ""},
         {"phrase_boosting", false}, {"boost_phrases", ""}, {"boost_tokenizer_path", ""},
         {"vad_filtering", false}, {"vad_model_path", ""}, {"endpoint_mode", "disabled"},
         {"insert_partials", true}, {"stream_insert_delay_ms", 0u}, {"show_overlay", true}};
@@ -70,8 +71,15 @@ inline void validate(const Json& config) {
     require(config.at("num_threads").get<int64_t>() > 0 && config.at("num_threads").get<int64_t>() <= 256, "Thread count must be 1–256");
     require(config.at("stream_insert_delay_ms").get<int64_t>() >= 0 && config.at("stream_insert_delay_ms").get<int64_t>() <= 60000, "Insertion delay must be 0–60000 ms");
     auto language = config.at("language").get<std::string>();
+    require(config.at("pnc_variant") == "bert" || config.at("pnc_variant") == "distilbert", "PnC variant must be bert or distilbert");
     require(supported_language(language), "Unknown language");
     require(config.at("model_family") != "english" || language == "auto" || language.rfind("en-", 0) == 0, "English model requires English or Auto language");
+    if (config.at("pnc").get<bool>()) {
+        require(language == "auto" || language.rfind("en-", 0) == 0, "PnC supports English only");
+        require(language != "auto" || config.at("model_family") == "english", "Select English explicitly when using PnC with the multilingual model");
+        const auto path = config.at("pnc_model_path").get<std::string>();
+        require(path.empty() || fs::is_regular_file(path), "PnC model override does not exist");
+    }
     auto mode = config.at("endpoint_mode").get<std::string>();
     require(mode == "disabled" || mode == "preview" || mode == "commit", "Endpoint mode must be disabled, preview, or commit");
     auto phrases = config.at("boost_phrases").get<std::string>();
@@ -118,6 +126,7 @@ inline std::vector<std::string> worker_command(const Json& config) {
     auto add = [&](const char* key, const char* argument) { if (config.at(key) != "") { command.push_back(argument); command.push_back(config.at(key)); } };
     add("input_device", "--input-device");
     if (config.at("itn")) command.push_back("--itn");
+    if (config.at("pnc")) { command.push_back("--pnc"); add("pnc_variant", "--pnc-variant"); add("pnc_model_path", "--pnc-model"); }
     command.insert(command.end(), {"--endpoint-mode", config.at("endpoint_mode")});
     if (config.at("phrase_boosting")) {
         command.insert(command.end(), {"--phrase-boosting", "--boost-phrases", config.at("boost_phrases")});

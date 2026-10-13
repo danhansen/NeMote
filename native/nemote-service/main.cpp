@@ -98,7 +98,7 @@ public:
     fs::path config_path;
     bool listening = false, stopping = false, loading = false, loaded = false, shutting_down = false;
     guint64 session_id = 0, seq = 0;
-    std::string partial, committed, last_error, shell;
+    std::string partial, committed, last_error, shell, loading_message;
     std::shared_ptr<Child> worker, installer;
     std::vector<std::weak_ptr<Child>> children;
 
@@ -123,6 +123,7 @@ public:
     Json config_view() const { auto result = config; result["model_preset"] = preset(config); result["supported_streaming_latencies_ms"] = latencies(); return result; }
     Json state() const {
         return {{"listening", listening}, {"stopping", stopping}, {"loading_model", loading}, {"model_loaded", loaded},
+            {"loading_message", loading_message},
             {"installing", bool(installer)}, {"installing_profile", installer ? installer->profile : ""},
             {"session_id", session_id}, {"seq", seq}, {"backend", "nemo-speech"}, {"model_profile", "nemo-q8"},
             {"model_family", config.at("model_family")}, {"model_preset", preset(config)}, {"input_device", config.at("input_device")},
@@ -160,7 +161,7 @@ public:
         signal("ConfigChanged", g_variant_new("(@a{sv})", to_variant(config_view()))); changed();
     }
     void normalize_paths(Json& next) const {
-        for (const auto* key : {"model_root", "worker_path", "model_installer_path", "boost_tokenizer_path", "vad_model_path"}) {
+        for (const auto* key : {"model_root", "worker_path", "model_installer_path", "boost_tokenizer_path", "vad_model_path", "pnc_model_path"}) {
             auto value = trim(next.at(key).get<std::string>());
             if (value.rfind("~/", 0) == 0) value = (fs::path(g_get_home_dir()) / value.substr(2)).string();
             if (value.empty() && default_config.at(key) != "") value = default_config.at(key);
@@ -235,7 +236,7 @@ public:
         if (listening) return;
         if (!worker) {
             if (!installed(config)) throw std::runtime_error("NeMo model is not installed at " + runtime(config).string());
-            worker = spawn(worker_command(config), Child::Worker); loading = true; loaded = false;
+            worker = spawn(worker_command(config), Child::Worker); loading = true; loaded = false; loading_message.clear();
         }
         session_id = std::max(session_id + 1, guint64(g_get_real_time())); seq = 0;
         partial.clear(); committed.clear(); last_error.clear(); listening = true;
@@ -252,9 +253,13 @@ public:
     }
     void event(const Json& value) {
         auto name = value.value("event", "");
-        if (name == "loading_model") { loading = true; loaded = false; changed(); }
+        if (name == "loading_model") {
+            loading = true; loaded = false;
+            loading_message = value.value("data", Json::object()).value("message", "");
+            changed();
+        }
         else if (name == "model_loaded" || name == "ready") {
-            loading = false; loaded = true;
+            loading = false; loaded = true; loading_message.clear();
             if (value.contains("data")) metrics = value["data"];
             changed(); signal("Metrics", g_variant_new("(@a{sv})", to_variant(metrics)));
         } else if (name == "listening") { if (!stopping) listening = true; changed(); }

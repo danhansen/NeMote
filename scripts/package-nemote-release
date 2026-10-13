@@ -107,6 +107,7 @@ NEMO_WORKER_BUILD="${NEMOTE_NEMO_WORKER_BUILD:-$ROOT/build/nemote-worker}"
 NEMO_SOURCE="${NEMOTE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}"
 NEMO_BUILD="${NEMOTE_NEMO_BUILD:-$NEMO_SOURCE/build/nemote-cpu}"
 cmake --install "$NEMO_WORKER_BUILD" --prefix "$STAGE_ROOT"
+python3 "$ROOT/scripts/package_pnc_converter.py" --sdk "$NEMO_SOURCE" --output "$STAGE_ROOT/share/nemote/pnc-converter"
 mkdir -p "$STAGE_ROOT/lib/nemo" "$STAGE_ROOT/share/nemote/licenses/nemo"
 cp -a "$NEMO_BUILD/bin/"*.so* "$STAGE_ROOT/lib/nemo/"
 if [[ "${NEMOTE_NEMO_ITN:-ON}" == ON ]]; then

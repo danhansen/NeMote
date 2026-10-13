@@ -5,6 +5,37 @@ static void check(bool condition) { if (!condition) throw std::runtime_error("Co
 int main() {
     auto config = defaults("/home/test", "/opt/nemote", "/home/test/.local/share");
     validate(config);
+    check(config["pnc"] == false && config["pnc_model_path"] == "");
+    auto pnc_config = config;
+    pnc_config["pnc"] = true;
+    validate(pnc_config); // Empty override means automatic local setup.
+    pnc_config["pnc_variant"] = "distilbert";
+    validate(pnc_config);
+    const auto automatic_pnc_args = worker_command(pnc_config);
+    check(std::find(automatic_pnc_args.begin(), automatic_pnc_args.end(), "--pnc-model") == automatic_pnc_args.end());
+    auto variant = std::find(automatic_pnc_args.begin(), automatic_pnc_args.end(), "--pnc-variant");
+    check(variant != automatic_pnc_args.end() && *++variant == "distilbert");
+    pnc_config["pnc_model_path"] = "/missing-pnc-model.gguf";
+    bool pnc_rejected = false;
+    try { validate(pnc_config); } catch (const std::invalid_argument&) { pnc_rejected = true; }
+    check(pnc_rejected);
+    pnc_config["pnc_model_path"] = __FILE__;
+    validate(pnc_config); // Model parsing belongs to the SDK, not config validation.
+    const auto pnc_args = worker_command(pnc_config);
+    check(std::find(pnc_args.begin(), pnc_args.end(), "--pnc") != pnc_args.end());
+    auto pnc_path = std::find(pnc_args.begin(), pnc_args.end(), "--pnc-model");
+    check(pnc_path != pnc_args.end() && *++pnc_path == __FILE__);
+    pnc_config["model_family"] = "multilingual";
+    pnc_config["language"] = "es-US";
+    pnc_rejected = false;
+    try { validate(pnc_config); } catch (const std::invalid_argument&) { pnc_rejected = true; }
+    check(pnc_rejected);
+    pnc_config["language"] = "auto";
+    pnc_rejected = false;
+    try { validate(pnc_config); } catch (const std::invalid_argument&) { pnc_rejected = true; }
+    check(pnc_rejected);
+    pnc_config["model_family"] = "english";
+    validate(pnc_config);
     auto migrated = migrate(config, {{"backend", "parakeet"}, {"model_profile", "fast"},
         {"worker_path", "/opt/wordpipe/bin/wordpipe-parakeet-worker"}, {"input_device", "cpal:3"}, {"itn", true}});
     check(migrated["backend"] == "nemo-speech" && migrated["model_profile"] == "nemo-q8");

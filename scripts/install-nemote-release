@@ -139,7 +139,8 @@ cp -a "$PACKAGE_DIR/bin" "$LIBEXEC_DIR/bin"
 cp -a "$PACKAGE_DIR/lib" "$LIBEXEC_DIR/lib"
 cp -a "$PACKAGE_DIR/share" "$LIBEXEC_DIR/share"
 
-# Downloads use only the standard library: no venv, pip or ONNX packages.
+# ASR downloads use the standard library. Optional PnC creates its own venv
+# on first use; the base installation needs no pip or ONNX packages.
 
 echo "Installing D-Bus activation service"
 mkdir -p "$DBUS_SERVICE_DIR"
