@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -8,9 +9,23 @@ import unittest
 from unittest.mock import patch
 
 from nemote import pnc_install as pnc
+from nemote import nemo_companions as companions
 
 
 class PncInstallTests(unittest.TestCase):
+    def test_explicit_cli_uses_install_progress_not_worker_loading_events(self):
+        argv = ["nemote-companion-install", "--runtime-dir", "/unused", "--model-family", "english",
+                "--pnc", "--pnc-variant", "distilbert", "--install-progress"]
+        for error in (None, RuntimeError("Fixture conversion failure")):
+            with self.subTest(error=error), patch("sys.argv", argv), patch("sys.stdout", new_callable=io.StringIO) as out, \
+                    patch("sys.stderr", new_callable=io.StringIO), patch.object(companions, "install", side_effect=error) as install:
+                result = companions.main()
+                event = json.loads(out.getvalue().removeprefix("nemote-progress "))
+                self.assertEqual(event["phase"], "error" if error else "complete")
+                self.assertEqual(result, 1 if error else 0)
+                self.assertEqual(install.call_args.kwargs["pnc_variant"], "distilbert")
+                self.assertNotIn("loading_model", out.getvalue())
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -38,9 +53,12 @@ class PncInstallTests(unittest.TestCase):
         models = self.root / "models"
         with patch.dict(pnc.MODELS, bert=self.model), patch.object(pnc, "converter_directory", return_value=self.sdk), \
                 patch.object(pnc, "check_resources"), patch.object(pnc, "conversion_python", return_value="fixture-python"), \
-                patch.object(pnc, "download_url", side_effect=lambda *args: args[-2]) as download, \
+                patch.object(pnc, "download_url", side_effect=lambda *args, **kwargs: args[-2]) as download, \
                 patch.object(pnc.subprocess, "run", side_effect=self.convert) as convert:
-            result = pnc.install(models, progress=messages.append)
+            events = []
+            result = pnc.install(models, progress=messages.append, install_progress=events.append)
+            self.assertEqual([event["phase"] for event in events], ["checking", "preparing", "converting", "verifying"])
+            self.assertEqual(download.call_args_list[0].kwargs["download_progress"], events.append)
             self.assertEqual(result.read_bytes(), self.data)
             self.assertEqual(download.call_count, 2)
             self.assertEqual(download.call_args_list[0].args[0], self.model[1])
@@ -74,7 +92,7 @@ class PncInstallTests(unittest.TestCase):
         (models / self.model[0]).write_bytes(b"previous")
         with patch.dict(pnc.MODELS, bert=self.model), patch.object(pnc, "converter_directory", return_value=self.sdk), \
                 patch.object(pnc, "check_resources"), patch.object(pnc, "conversion_python", return_value="fixture-python"), \
-                patch.object(pnc, "download_url", side_effect=lambda *args: args[-2]), \
+                patch.object(pnc, "download_url", side_effect=lambda *args, **kwargs: args[-2]), \
                 patch.object(pnc.subprocess, "run", side_effect=RuntimeError("conversion failed")):
             with self.assertRaisesRegex(RuntimeError, "conversion failed"):
                 pnc.install(models, progress=lambda _: None)

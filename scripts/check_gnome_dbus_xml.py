@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SERVICE_PROTOCOL = ROOT / "native/nemote-service/interface.xml"
 GNOME_CLIENTS = [
     ROOT / "extensions/gnome-shell/nemote@dhansen.dev/extension.js",
-    ROOT / "extensions/gnome-shell/nemote@dhansen.dev/prefs.js",
+    ROOT / "extensions/gnome-shell/nemote@dhansen.dev/preferencesPage.js",
 ]
 GNOME_SCHEMA = (
     ROOT
@@ -63,7 +63,7 @@ def main() -> int:
                 f"{path.relative_to(ROOT)} does not reference settings keys: "
                 + ", ".join(missing_keys)
             )
-        if path.name == "prefs.js":
+        if path.name == "preferencesPage.js":
             errors.extend(prefs_import_errors(path))
     schema_errors = settings_schema_errors(GNOME_SCHEMA)
     if schema_errors:

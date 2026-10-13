@@ -428,11 +428,16 @@ static void prepare_companions(Args& args, const std::filesystem::path& model) {
     if (args.vad_filtering && args.vad_model.empty())
         args.vad_model = (directory / "silero-v6.2.0.gguf").string();
     const bool vad = args.vad_filtering && !std::filesystem::is_regular_file(args.vad_model);
-    const bool pnc = args.pnc && args.pnc_model.empty();
-    if (pnc) args.pnc_model = (directory / ("pnc-" + args.pnc_variant + "-en.q8_0.gguf")).string();
-    // Always validate the automatic PnC cache receipt/checksum in the helper.
-    // An explicit model override never triggers downloads or conversion.
-    if (!boosting && !vad && !pnc) return;
+    if (args.pnc && args.pnc_model.empty()) {
+        const auto filename = "pnc-" + args.pnc_variant + "-en.q8_0.gguf";
+        auto path = directory.parent_path() / "pnc" / filename;
+        if (!std::filesystem::is_regular_file(path)) path = directory / filename;
+        args.pnc_model = path.string();
+    }
+    if (args.pnc && !std::filesystem::is_regular_file(args.pnc_model))
+        throw std::runtime_error("PnC model is not installed. Install it in NeMote preferences before starting dictation.");
+    // PnC setup is explicitly initiated in preferences, never by dictation.
+    if (!boosting && !vad) return;
     if (args.model_family != "english" && args.model_family != "multilingual")
         throw std::invalid_argument("Automatic companion downloads require --model-family english|multilingual");
     auto installer = args.companion_installer.empty()
@@ -444,10 +449,6 @@ static void prepare_companions(Args& args, const std::filesystem::path& model) {
                                      "--model-family", args.model_family};
     if (boosting) command.push_back("--boosting");
     if (vad) command.push_back("--vad");
-    if (pnc) {
-        command.push_back("--pnc");
-        command.push_back("--pnc-variant"); command.push_back(args.pnc_variant);
-    }
     std::vector<char*> argv;
     for (auto& item : command) argv.push_back(item.data());
     argv.push_back(nullptr);
@@ -463,8 +464,6 @@ static void prepare_companions(Args& args, const std::filesystem::path& model) {
         throw std::runtime_error("Companion installer did not produce a tokenizer");
     if (vad && !std::filesystem::is_regular_file(args.vad_model))
         throw std::runtime_error("Companion installer did not produce the VAD model");
-    if (pnc && !std::filesystem::is_regular_file(args.pnc_model))
-        throw std::runtime_error("Companion installer did not produce the PnC model");
 }
 
 int main(int argc, char** argv) {

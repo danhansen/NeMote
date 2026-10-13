@@ -128,7 +128,8 @@ public:
             {"session_id", session_id}, {"seq", seq}, {"backend", "nemo-speech"}, {"model_profile", "nemo-q8"},
             {"model_family", config.at("model_family")}, {"model_preset", preset(config)}, {"input_device", config.at("input_device")},
             {"partial_text", partial}, {"last_commit_text", committed}, {"selected_runtime_dir", runtime(config).string()},
-            {"selected_model_installed", installed(config)}, {"last_error", last_error}, {"last_metrics", metrics}, {"last_install_progress", progress}};
+            {"selected_model_installed", installed(config)}, {"selected_pnc_model_installed", pnc_ready(config)},
+            {"last_error", last_error}, {"last_metrics", metrics}, {"last_install_progress", progress}};
     }
     void signal(const char* name, GVariant* args) {
         GError* error = nullptr;
@@ -234,6 +235,7 @@ public:
     void start() {
         if (stopping || installer) throw std::runtime_error("Wait for dictation to stop or model installation to finish");
         if (listening) return;
+        if (!pnc_ready(config)) throw std::runtime_error("PnC model is not installed. Install the selected punctuation model in NeMote preferences, or disable punctuation restoration.");
         if (!worker) {
             if (!installed(config)) throw std::runtime_error("NeMo model is not installed at " + runtime(config).string());
             worker = spawn(worker_command(config), Child::Worker); loading = true; loaded = false; loading_message.clear();
@@ -301,6 +303,16 @@ public:
         }
         return rows;
     }
+    Json pnc_models() const {
+        Json rows = Json::array();
+        for (const auto* variant : {"bert", "distilbert"}) {
+            const bool bert = std::string(variant) == "bert";
+            rows.push_back({{"id", std::string("pnc-") + variant}, {"title", bert ? "English PnC — BERT" : "English PnC — DistilBERT"},
+                {"description", bert ? "139 MB installed; 406 MB checkpoint download, plus conversion dependencies" : "94 MB installed; 245 MB checkpoint download, plus conversion dependencies"},
+                {"runtime_dir", pnc_directory(config).string()}, {"installed", pnc_installed(config, variant)}});
+        }
+        return rows;
+    }
     void method(const std::string& name, GVariant* params, const char* sender, GDBusMethodInvocation* invocation) {
         if (shutting_down) throw std::runtime_error("Service is shutting down");
         auto string_arg = [&] { const gchar* value; g_variant_get(params, "(&s)", &value); return std::string(value); };
@@ -308,6 +320,7 @@ public:
         else if (name == "GetConfig") g_dbus_method_invocation_return_value(invocation, g_variant_new("(@a{sv})", to_variant(config_view())));
         else if (name == "ListBackends") g_dbus_method_invocation_return_value(invocation, g_variant_new("(@aa{sv})", list_variant(Json::array({{{"id", "nemo-speech"}, {"title", "NeMo-Speech.cpp"}, {"description", "Native C++ Nemotron streaming"}}}))));
         else if (name == "ListModelProfiles") g_dbus_method_invocation_return_value(invocation, g_variant_new("(@aa{sv})", list_variant(profiles())));
+        else if (name == "ListPncModels") g_dbus_method_invocation_return_value(invocation, g_variant_new("(@aa{sv})", list_variant(pnc_models())));
         else if (name == "ListInputDevices") {
             auto child = spawn({config["worker_path"], "--list-input-devices"}, Child::Devices);
             child->invocation = G_DBUS_METHOD_INVOCATION(g_object_ref(invocation));
@@ -355,11 +368,21 @@ public:
                 if (worker && language_changed && !listening && !stopping) send({{"command", "set_language"}, {"language", config["language"]}});
             } else if (name == "InstallModel") {
                 auto id = string_arg(); require_idle();
-                if (id != "nemo-q8" && id != "nemo-q8-english") throw std::invalid_argument("Unknown NeMo model preset");
-                auto family = id == "nemo-q8" ? "multilingual" : "english";
-                installer = spawn({config["model_installer_path"], "--profile", "nemo-q8", "--model-family", family,
-                    "--model-root", config["model_root"], "--streaming-latency-ms", std::to_string(config["streaming_latency_ms"].get<unsigned>())}, Child::Installer, id);
-                last_error.clear(); install_progress({{"phase", "starting"}, {"message", "Starting model download"}, {"fraction", 0.0}}, id); changed();
+                if (id == "pnc-bert" || id == "pnc-distilbert") {
+                    auto variant = id.substr(4);
+                    // Free the idle recognizer's memory before local conversion.
+                    stop_worker();
+                    installer = spawn({companion_installer(config).string(), "--runtime-dir", pnc_path(config, variant).parent_path().string(),
+                        "--model-family", "english", "--pnc", "--pnc-variant", variant, "--install-progress"}, Child::Installer, id);
+                    last_error.clear(); install_progress({{"phase", "starting"}, {"message", "Preparing punctuation model installation"}, {"fraction", 0.0}}, id);
+                } else {
+                    if (id != "nemo-q8" && id != "nemo-q8-english") throw std::invalid_argument("Unknown NeMo model preset");
+                    auto family = id == "nemo-q8" ? "multilingual" : "english";
+                    installer = spawn({config["model_installer_path"], "--profile", "nemo-q8", "--model-family", family,
+                        "--model-root", config["model_root"], "--streaming-latency-ms", std::to_string(config["streaming_latency_ms"].get<unsigned>())}, Child::Installer, id);
+                    last_error.clear(); install_progress({{"phase", "starting"}, {"message", "Starting model download"}, {"fraction", 0.0}}, id);
+                }
+                changed();
             } else throw std::invalid_argument("Unknown D-Bus method");
             g_dbus_method_invocation_return_value(invocation, nullptr);
         }
@@ -422,6 +445,9 @@ void Service::finish_if_ready(const std::shared_ptr<Child>& child) {
     } else if (!service->shutting_down && child->kind == Child::Worker && service->worker == child) {
         service->stop_worker(); service->fail("ASR worker exited unexpectedly");
     } else if (!service->shutting_down && child->kind == Child::Installer && service->installer == child) {
+        if (success && child->profile.rfind("pnc-", 0) == 0 && !pnc_installed(service->config, child->profile.substr(4))) {
+            success = false; child->error = "PnC installer did not produce the expected model; retry installation in preferences";
+        }
         service->installer.reset();
         std::string message = success ? "Model installed" : (child->error.empty() ? "Model installer exited unexpectedly; retry to resume" : child->error);
         service->install_progress({{"phase", success ? "complete" : "error"}, {"message", message}, {"fraction", success ? 1.0 : 0.0}}, child->profile);

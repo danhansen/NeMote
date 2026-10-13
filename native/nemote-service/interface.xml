@@ -9,6 +9,7 @@
     <method name="GetConfig"><arg name="config" type="a{sv}" direction="out"/></method>
     <method name="ListBackends"><arg name="backends" type="aa{sv}" direction="out"/></method>
     <method name="ListModelProfiles"><arg name="profiles" type="aa{sv}" direction="out"/></method>
+    <method name="ListPncModels"><arg name="models" type="aa{sv}" direction="out"/></method>
     <method name="ListInputDevices"><arg name="devices" type="aa{sv}" direction="out"/></method>
     <method name="SetBackend"><arg name="backend" type="s" direction="in"/></method>
     <method name="SetModelProfile"><arg name="profile" type="s" direction="in"/></method>

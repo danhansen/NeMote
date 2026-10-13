@@ -18,18 +18,8 @@
   width: 2px;
 }
 
-.nemote-model-title-missing {
-  color: rgba(255, 255, 255, 0.48);
-}
-
 .nemote-model-download-button {
-  padding: 3px 8px;
-  border-radius: 6px;
-  background-color: rgba(255, 255, 255, 0.14);
-}
-
-.nemote-model-download-button:hover {
-  background-color: rgba(255, 255, 255, 0.22);
+  padding: 6px 12px;
 }
 
 .nemote-model-download-content {
@@ -37,8 +27,7 @@
 }
 
 .nemote-model-download-disabled {
-  color: rgba(255, 255, 255, 0.42);
-  background-color: rgba(255, 255, 255, 0.05);
+  opacity: 0.5;
 }
 
 .nemote-model-download-icon {

@@ -42,13 +42,21 @@ chunk sizes—80, 160, 560, and 1120 ms—use the same model file.
 The default shortcut is Ctrl+Alt+Space. Toggle and push-to-talk are supported.
 Choose a microphone, language, chunk size, and CPU thread count in preferences.
 
+Preferences are organized into four pages:
+
+- **Dictation:** microphone, recognition, keyboard shortcut, and vocabulary.
+- **Text:** number/date formatting, punctuation, pauses, and live previews.
+- **Models:** explicit speech and punctuation model installation, with setup progress.
+- **Advanced:** runtime paths, CPU threads, model overrides, and diagnostics.
+
 ## Dictation options
 
-- Inverse text normalization (ITN) formats spoken numbers, dates, and units.
+- **Format Numbers and Dates** enables inverse text normalization (ITN) for spoken numbers, dates, and units.
 - Experimental English punctuation/capitalization restoration (PnC) uses a
   selectable BERT or smaller DistilBERT GGUF. It runs after optional ITN at pauses
-  or Stop, not on immediate partials. First use downloads NVIDIA's checkpoint
-  and converts locally; setup needs venv support, about 1.25 GiB available RAM,
+  or Stop, not on immediate partials. Install explicitly from preferences;
+  installation downloads NVIDIA's checkpoint and converts locally, never during
+  dictation startup. Setup needs venv support, about 1.25 GiB available RAM,
   free disk space and CPU-only Python conversion dependencies. A supplied GGUF
   override bypasses setup. See [PnC setup and model terms](docs/pnc.md).
 - Partial + committed insertion shows replaceable previews; committed-only
@@ -95,6 +103,34 @@ grammars, and release packages. Native builds require CMake, a C++17 compiler,
 GLib/GIO development files, and the dependencies used by `scripts/build-nemo-worker`.
 Packaging the optional PnC converter also needs Python pip on the build machine.
 See [architecture](docs/architecture.md) and [runtime/protocol](docs/asr-backends.md).
+
+Preview the **actual production UI** without installing the extension or starting
+ASR, downloading models, or changing your settings:
+
+```sh
+scripts/preview-ui --watch
+```
+
+UI edits restart the preview automatically. The extra Preview Controls page
+simulates missing models, downloads, loading, dictation, errors and an unavailable
+service; it also switches theme and font size. Requires GJS, GTK 4 and libadwaita.
+On your normal desktop, GNOME's existing global shortcuts still apply; the
+headless audit below is fully isolated from those shortcuts.
+
+For a repeatable visual audit without using your desktop:
+
+```sh
+scripts/preview-ui --headless --audit
+```
+
+This also requires GNOME Shell and `dbus-run-session`. It runs a private,
+software-rendered compositor with memory-only settings and no D-Bus service
+auto-activation. Open `build/ui-audit/index.html` for the preferences gallery and
+`build/ui-audit/shell.html` for the real GNOME panel menu. The audit covers all four
+pages (whole windows and individual sections), dropdowns and shortcut capture; normal/light and narrow/dark/large-text
+layouts; and representative service states. Layout alerts are recorded in JSON
+manifests and make the command fail. Screenshots still require visual review:
+geometry checks alone cannot establish that a UI is correct.
 
 ## Historical performance research
 

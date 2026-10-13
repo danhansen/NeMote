@@ -100,7 +100,7 @@ def cached(destination, receipt, model):
         return False
 
 
-def install(runtime_dir, *, variant="bert", progress=print):
+def install(runtime_dir, *, variant="bert", progress=print, install_progress=None):
     if variant not in MODELS:
         raise ValueError("PnC variant must be bert or distilbert")
     model = MODELS[variant]
@@ -110,9 +110,13 @@ def install(runtime_dir, *, variant="bert", progress=print):
     cache.mkdir(parents=True, exist_ok=True)
     destination = runtime_dir / model[0]
     receipt = runtime_dir / (model[0] + ".json")
+    def phase(name, message):
+        progress(message)
+        if install_progress:
+            install_progress({"phase": name, "message": message})
     # Serialize dependency setup and publication, even across ASR model families.
     with (cache / "install.lock").open("a") as lock:
-        progress("Checking cached English PnC model")
+        phase("checking", "Checking cached English PnC model")
         fcntl.flock(lock, fcntl.LOCK_EX)
         if cached(destination, receipt, model):
             return destination
@@ -121,6 +125,7 @@ def install(runtime_dir, *, variant="bert", progress=print):
         if any(not (converter / name).is_file() for name in required) or (converter / "REVISION").read_text().strip() != SDK_REVISION:
             raise RuntimeError("Pinned PnC converter is missing. Reinstall NeMote; source builds should run scripts/package_pnc_converter.py")
         check_resources(runtime_dir, cache)
+        phase("preparing", "Preparing CPU-only conversion dependencies; first installation may take several minutes")
         python = conversion_python(cache, progress)
         check_resources(runtime_dir, cache)
         progress("PnC weights download directly from NVIDIA NGC; their model terms apply: https://ngc.nvidia.com/legal/terms")
@@ -129,11 +134,11 @@ def install(runtime_dir, *, variant="bert", progress=print):
         with tempfile.TemporaryDirectory(dir=runtime_dir, prefix=".pnc-export-") as scratch:
             directory = Path(scratch)
             checkpoint = download_url(model[1], f"punctuation_en_{variant}.nemo", model[2],
-                                      model[3], directory / "source.nemo", progress)
+                                      model[3], directory / "source.nemo", progress, download_progress=install_progress)
             encoder = download_url(ENCODER_URL, "encoder_config.json", ENCODER_SIZE,
-                                   ENCODER_SHA, directory / "encoder.json", progress)
+                                   ENCODER_SHA, directory / "encoder.json", progress, download_progress=install_progress)
             output = directory / model[0]
-            progress(f"Converting English {variant} PnC to Q8 GGUF locally (approximately 0.6–0.8 GiB peak RAM)")
+            phase("converting", f"Converting English {variant} PnC to Q8 GGUF locally (approximately 0.6–0.8 GiB peak RAM)")
             env = dict(os.environ, TMPDIR=scratch, PYTHONNOUSERSITE="1", OMP_NUM_THREADS="1")
             env.pop("PYTHONPATH", None)
             env.pop("PYTHONHOME", None)
@@ -143,6 +148,7 @@ def install(runtime_dir, *, variant="bert", progress=print):
                            check=True, env=env, stdout=sys.stderr)
             with output.open("rb") as handle:
                 magic = handle.read(4)
+            phase("verifying", "Verifying converted punctuation model")
             if output.stat().st_size != model[4] or magic != b"GGUF":
                 raise RuntimeError("PnC conversion did not produce the expected GGUF")
             info = {"sdk_revision": SDK_REVISION, "checkpoint_sha256": model[3],

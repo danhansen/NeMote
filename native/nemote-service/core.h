@@ -53,6 +53,40 @@ inline bool installed(const Json& config, const std::string& family = "") {
     input.read(header, 4);
     return input && std::string(header, 4) == "GGUF";
 }
+inline fs::path pnc_directory(const Json& config) {
+    return fs::path(config.at("model_root").get<std::string>()) / "pnc";
+}
+inline bool pnc_file_installed(const fs::path& path, const std::string& variant) {
+    std::error_code error;
+    if (fs::file_size(path, error) != (variant == "bert" ? 138875840u : 93507552u) || error) return false;
+    char header[4]{};
+    std::ifstream input(path, std::ios::binary);
+    input.read(header, 4);
+    return input && std::string(header, 4) == "GGUF";
+}
+inline fs::path pnc_path(const Json& config, const std::string& variant) {
+    const auto filename = "pnc-" + variant + "-en.q8_0.gguf";
+    const auto shared = pnc_directory(config) / filename;
+    // Reuse v0.1.34's per-ASR downloads in place, without copying large files.
+    for (const auto& path : {shared, runtime(config, "english") / filename, runtime(config, "multilingual") / filename})
+        if (pnc_file_installed(path, variant)) return path;
+    return shared;
+}
+inline bool pnc_installed(const Json& config, const std::string& variant) {
+    return pnc_file_installed(pnc_path(config, variant), variant);
+}
+inline fs::path selected_pnc_path(const Json& config) {
+    const auto custom = config.at("pnc_model_path").get<std::string>();
+    return custom.empty() ? pnc_path(config, config.at("pnc_variant")) : fs::path(custom);
+}
+inline bool pnc_ready(const Json& config) {
+    if (!config.at("pnc").get<bool>()) return true;
+    if (config.at("pnc_model_path") != "") return fs::is_regular_file(selected_pnc_path(config));
+    return pnc_installed(config, config.at("pnc_variant"));
+}
+inline fs::path companion_installer(const Json& config) {
+    return fs::path(config.at("model_installer_path").get<std::string>()).parent_path() / "nemote-companion-install";
+}
 inline bool supported_language(const std::string& language) {
     static const std::vector<std::string> codes = {"en-US", "en-GB", "auto", "es-US", "es-ES", "fr-FR", "fr-CA",
         "de-DE", "it-IT", "pt-BR", "pt-PT", "nl-NL", "tr-TR", "ru-RU", "ar-AR", "hi-IN", "ja-JP", "ko-KR",
@@ -126,14 +160,17 @@ inline std::vector<std::string> worker_command(const Json& config) {
     auto add = [&](const char* key, const char* argument) { if (config.at(key) != "") { command.push_back(argument); command.push_back(config.at(key)); } };
     add("input_device", "--input-device");
     if (config.at("itn")) command.push_back("--itn");
-    if (config.at("pnc")) { command.push_back("--pnc"); add("pnc_variant", "--pnc-variant"); add("pnc_model_path", "--pnc-model"); }
+    if (config.at("pnc")) {
+        command.push_back("--pnc"); add("pnc_variant", "--pnc-variant");
+        command.insert(command.end(), {"--pnc-model", selected_pnc_path(config).string()});
+    }
     command.insert(command.end(), {"--endpoint-mode", config.at("endpoint_mode")});
     if (config.at("phrase_boosting")) {
         command.insert(command.end(), {"--phrase-boosting", "--boost-phrases", config.at("boost_phrases")});
         add("boost_tokenizer_path", "--boost-tokenizer");
     }
     if (config.at("vad_filtering")) { command.push_back("--vad-filtering"); add("vad_model_path", "--vad-model"); }
-    auto helper = fs::path(config.at("model_installer_path").get<std::string>()).parent_path() / "nemote-companion-install";
+    auto helper = companion_installer(config);
     if (fs::is_regular_file(helper)) command.insert(command.end(), {"--companion-installer", helper.string()});
     return command;
 }

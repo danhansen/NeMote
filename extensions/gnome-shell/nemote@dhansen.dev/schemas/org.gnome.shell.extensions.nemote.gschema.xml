@@ -102,13 +102,13 @@
     <key name="pnc-model-path" type="s">
       <default>''</default>
       <summary>Optional English PnC GGUF override</summary>
-      <description>Empty means download the chosen NVIDIA checkpoint and convert locally on first use.</description>
+      <description>Empty means use the chosen model installed through preferences. Dictation never downloads or converts PnC models.</description>
     </key>
     <key name="pnc-variant" type="s">
       <choices><choice value="bert"/><choice value="distilbert"/></choices>
       <default>'bert'</default>
       <summary>English punctuation and capitalization model</summary>
-      <description>BERT or smaller DistilBERT. Downloads and converts once on first use unless a model override is supplied.</description>
+      <description>BERT or smaller DistilBERT. Install explicitly through preferences before use, unless a model override is supplied.</description>
     </key>
     <key name="endpoint-mode" type="s">
       <default>'disabled'</default>

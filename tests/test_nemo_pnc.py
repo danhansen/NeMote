@@ -12,7 +12,7 @@ import unittest
     "NEMOTE_NEMO_TEST_WORKER", "NEMOTE_NEMO_TEST_MODEL", "NEMOTE_NEMO_TEST_PNC", "NEMOTE_NEMO_TEST_WAV")),
     "ASR/PnC/WAV integration fixtures not configured")
 class NemoPncTests(unittest.TestCase):
-    def test_cached_automatic_model_works_without_conversion_dependencies(self):
+    def test_installed_model_works_without_invoking_installer(self):
         source = Path(os.environ["NEMOTE_NEMO_TEST_PNC"]).resolve()
         receipt = source.with_name(source.name + ".json")
         if not receipt.is_file():
@@ -25,7 +25,7 @@ class NemoPncTests(unittest.TestCase):
             target = root / MODELS[variant][0]
             target.symlink_to(source)
             shutil.copy2(receipt, target.with_name(target.name + ".json"))
-            helper = Path(__file__).resolve().parents[1] / "scripts/nemote-companion-install"
+            helper = root / "nonexistent-installer"
             env = dict(os.environ, XDG_CACHE_HOME=str(root / "cache"), NEMOTE_PNC_PYTHON="/nonexistent-python",
                        https_proxy="http://127.0.0.1:9")
             result = subprocess.run([os.environ["NEMOTE_NEMO_TEST_WORKER"], "--model-dir", str(root),

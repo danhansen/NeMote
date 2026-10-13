@@ -35,6 +35,9 @@ def main():
         installer = root / "installer"
         shutil.copy2(fixture_root / "mock_model_installer.py", installer)
         installer.chmod(0o755)
+        pnc_installer = root / "nemote-companion-install"
+        shutil.copy2(fixture_root / "mock_pnc_installer.py", pnc_installer)
+        pnc_installer.chmod(0o755)
         config = root / "config/nemote/service.json" if args.legacy_config else root / "service.json"
         saved_config = root / "config/wordpipe/service.json" if args.legacy_config else config
         saved_config.parent.mkdir(parents=True, exist_ok=True)
@@ -95,6 +98,17 @@ def main():
             assert view["input_device"] == "" and view["supported_streaming_latencies_ms"] == [80, 160, 560, 1120]
             assert view["pnc"] is False and view["pnc_model_path"] == ""
             assert [item["title"] for item in call("ListModelProfiles")[0]] == ["English (lower WER)", "Multilingual"]
+            assert [item["id"] for item in call("ListPncModels")[0]] == ["pnc-bert", "pnc-distilbert"]
+            # Install independently of ASR and without enabling PnC or changing its selection.
+            empty_models = root / "empty-models"
+            runtime({"model_root": GLib.Variant("s", str(empty_models))})
+            call("InstallModel", GLib.Variant("(s)", ("pnc-bert",)))
+            wait(lambda state: state["installing"])
+            wait(lambda state: not state["installing"])
+            assert call("ListPncModels")[0][0]["installed"] is True
+            assert call("GetState")[0]["selected_model_installed"] is False
+            assert call("GetConfig")[0]["pnc"] is False
+            runtime({"model_root": GLib.Variant("s", str(models))})
             devices = call("ListInputDevices")[0]
             assert devices[0]["name"] == "Fixture microphone"
             for chunk in (80, 160, 560, 1120):
@@ -134,12 +148,47 @@ def main():
             except GLib.Error:
                 assert call("GetConfig")[0] == before
             runtime({"pnc": GLib.Variant("b", True), "pnc_variant": GLib.Variant("s", "distilbert")})
+            assert call("GetState")[0]["selected_pnc_model_installed"] is False
+            try:
+                call("Start")
+                raise AssertionError("Missing PnC model triggered worker startup")
+            except GLib.Error as error:
+                assert "preferences" in str(error)
+            assert call("GetState")[0]["listening"] is False
+            assert call("GetState")[0]["loading_model"] is False
+            # Failed explicit installation is recoverable and progress reaches the client.
+            failure = models / ".fail-pnc-install"
+            failure.touch()
+            call("InstallModel", GLib.Variant("(s)", ("pnc-distilbert",)))
+            wait(lambda state: state["installing"])
+            try:
+                call("Start")
+                raise AssertionError("Dictation started during PnC installation")
+            except GLib.Error:
+                pass
+            state = wait(lambda state: not state["installing"])
+            assert state["last_install_progress"]["phase"] == "error"
+            assert "Fixture download failed" in state["last_error"]
+            failure.unlink()
+            call("InstallModel", GLib.Variant("(s)", ("pnc-distilbert",)))
+            wait(lambda state: state["installing"])
+            state = wait(lambda state: not state["installing"])
+            assert state["last_install_progress"]["phase"] == "complete"
+            assert state["selected_pnc_model_installed"] is True
+            assert call("ListPncModels")[0][1]["installed"] is True
+            assert any(name == "InstallProgress" and values[0] == "pnc-distilbert" and
+                       values[1].get("completed_bytes") == 10 for name, values in signals)
+            # Older per-ASR downloads are reused in place.
+            pnc_model = models / "pnc/pnc-distilbert-en.q8_0.gguf"
+            legacy_model = models / "nemotron-nemo-en-q8" / pnc_model.name
+            pnc_model.rename(legacy_model)
+            assert call("ListPncModels")[0][1]["installed"] is True
             call("Start")
             state = wait(lambda state: state.get("loading_message") == "PnC fixture setup")
             assert state["loading_model"] is True
             state = wait(lambda state: state["listening"] and state["model_loaded"] and state["last_metrics"].get("pnc") is True)
             assert state["loading_message"] == ""
-            assert state["last_metrics"]["pnc_model_path"] == ""
+            assert state["last_metrics"]["pnc_model_path"] == str(legacy_model)
             assert state["last_metrics"]["pnc_variant"] == "distilbert"
             call("Stop")
             wait(lambda state: not state["listening"] and not state["stopping"])

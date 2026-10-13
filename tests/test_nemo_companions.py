@@ -9,6 +9,17 @@ from nemote import nemo_companions as companions
 
 
 class NemoCompanionTests(unittest.TestCase):
+    def test_structured_download_progress_matches_service_protocol(self):
+        data = b"GGUFfixture"
+        events = []
+        with tempfile.TemporaryDirectory() as directory, patch.object(companions, "urlopen", return_value=io.BytesIO(data)):
+            companions.download_url("https://fixture.invalid", "fixture.gguf", len(data),
+                hashlib.sha256(data).hexdigest(), Path(directory) / "model", lambda _: None,
+                download_progress=events.append)
+        self.assertEqual([event["fraction"] for event in events], [0.0, 1.0])
+        self.assertEqual(events[-1]["completed_bytes"], len(data))
+        self.assertEqual(events[-1]["total_bytes"], len(data))
+
     def test_download_verified_atomic_and_cached_without_network(self):
         data = b"verified tokenizer"
         asset = ("fixture/repo", "pinned", "tokenizer.model", len(data), hashlib.sha256(data).hexdigest())

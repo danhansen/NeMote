@@ -18,7 +18,9 @@ run_tests() {
     < extensions/gnome-shell/nemote@dhansen.dev/extension.js
   node --input-type=module --check \
     < extensions/gnome-shell/nemote@dhansen.dev/prefs.js
-  node --test tests/test_shortcut_state.mjs tests/test_model_state.mjs tests/test_service_lifecycle.mjs tests/test_preferences_refresh.mjs tests/test_text_insertion.mjs
+  node --input-type=module --check \
+    < extensions/gnome-shell/nemote@dhansen.dev/preferencesPage.js
+  node --test tests/*.mjs
   glib-compile-schemas --strict --dry-run \
     extensions/gnome-shell/nemote@dhansen.dev/schemas
 }

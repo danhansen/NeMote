@@ -43,12 +43,17 @@ def download(asset, destination, progress):
                         filename, size, digest, destination, progress)
 
 
-def download_url(url, filename, size, digest, destination, progress):
+def download_url(url, filename, size, digest, destination, progress, *, download_progress=None):
     destination = Path(destination)
     if destination.is_file() and destination.stat().st_size == size and sha(destination) == digest:
         return destination
     destination.parent.mkdir(parents=True, exist_ok=True)
     progress(f"Downloading NeMo companion: {filename}")
+    def report(count):
+        if download_progress:
+            download_progress({"phase": "downloading", "message": f"Downloading {filename}: {count / size:.0%} ({count / 1e6:.1f}/{size / 1e6:.1f} MB)",
+                               "fraction": count / size, "completed_bytes": count, "total_bytes": size})
+    report(0)
     output = tempfile.NamedTemporaryFile(dir=destination.parent, prefix=f".{destination.name}.", suffix=".part", delete=False)
     temporary = Path(output.name)
     try:
@@ -64,10 +69,12 @@ def download_url(url, filename, size, digest, destination, progress):
                 output.write(chunk)
                 if time.monotonic() - last_progress >= 1:
                     progress(f"Downloading {filename}: {count / size:.0%} ({count / 1e6:.1f}/{size / 1e6:.1f} MB)")
+                    report(count)
                     last_progress = time.monotonic()
         if count != size or actual.hexdigest() != digest:
             raise RuntimeError(f"Companion checksum/size verification failed: {filename}")
         temporary.replace(destination)
+        report(count)
     finally:
         output.close()
         temporary.unlink(missing_ok=True)
@@ -169,11 +176,11 @@ def silero_gguf(source):
     return bytes(header + payload)
 
 
-def install(runtime_dir, family, *, boosting=False, vad=False, pnc=False, pnc_variant="bert", progress=print):
+def install(runtime_dir, family, *, boosting=False, vad=False, pnc=False, pnc_variant="bert", progress=print, install_progress=None):
     runtime_dir = Path(runtime_dir)
     if pnc:
         from .pnc_install import install as install_pnc
-        install_pnc(runtime_dir, variant=pnc_variant, progress=progress)
+        install_pnc(runtime_dir, variant=pnc_variant, progress=progress, install_progress=install_progress)
     if boosting:
         download(TOKENIZERS[family], runtime_dir / "tokenizer.model", progress)
     if vad:
@@ -202,18 +209,26 @@ def main():
     parser.add_argument("--vad", action="store_true")
     parser.add_argument("--pnc", action="store_true", help="Download NVIDIA's PnC checkpoint and convert locally once")
     parser.add_argument("--pnc-variant", choices=("bert", "distilbert"), default="bert")
+    parser.add_argument("--install-progress", action="store_true", help="Emit service installer progress on stdout")
     args = parser.parse_args()
     def progress(message):
         print(message, file=sys.stderr, flush=True)
-        if args.pnc:
+        if args.pnc and not args.install_progress:
             # The worker inherits stdout; keep it strictly JSONL for the service.
             print(json.dumps({"event": "loading_model", "data": {"message": message}}), flush=True)
+    def install_progress(event):
+        print("nemote-progress " + json.dumps(event), flush=True)
     try:
         install(args.runtime_dir, args.model_family, boosting=args.boosting, vad=args.vad, pnc=args.pnc,
-                pnc_variant=args.pnc_variant, progress=progress)
+                pnc_variant=args.pnc_variant, progress=progress,
+                install_progress=install_progress if args.install_progress else None)
     except Exception as error:
         print(f"NeMo companion installation failed: {error}", file=sys.stderr)
+        if args.install_progress:
+            install_progress({"phase": "error", "message": str(error)})
         return 1
+    if args.install_progress:
+        install_progress({"phase": "complete", "message": "Punctuation model installed", "fraction": 1.0})
     return 0
 
 

@@ -2,16 +2,25 @@
 
 The **Restore Punctuation and Capitalization** switch enables a separate
 NeMo-Speech.cpp token classifier. It is experimental and off by default;
-it is not an LLM cleanup step. Choose **BERT** or **DistilBERT (smaller)** in
-**English Punctuation Model**.
+it is not an LLM cleanup step. Under **Text → Formatting → Punctuation Model**,
+choose **BERT — Higher Accuracy** or **DistilBERT — Faster**.
 
-Enable the switch while dictation is stopped. On the first dictation start,
-NeMote downloads the chosen checkpoint directly from NVIDIA and converts it
-locally using the pinned upstream converter. Progress appears in the status
-display and service logs. Subsequent starts verify and reuse the cached GGUF
-without downloading anything or importing PyTorch.
+While dictation is stopped, use the install button for **English PnC — BERT**
+or **English PnC — DistilBERT** on the **Models** page. This explicitly downloads the
+chosen checkpoint directly from NVIDIA and converts it locally using the
+pinned upstream converter. Download progress and preparation/conversion stages
+appear in preferences and service logs. Installation does not enable PnC or
+change the selected model: choose the model and enable the switch when ready.
+Dictation never downloads or converts PnC models. If the selected model is
+missing, install it in preferences or disable the switch before dictating.
 
-Alternatively, select a compatible English `pnc` GGUF in **PnC Model Override**;
+New models are stored under `<model-root>/pnc`, shared between ASR models.
+Existing per-ASR PnC downloads are reused in place. Normal starts load the
+installed GGUF without invoking the installer or importing PyTorch. The
+installer verifies cache receipts and checksums when invoked.
+
+Alternatively, enter a compatible English `pnc` GGUF path in **Advanced →
+Companion Model Overrides → Punctuation Model (.gguf)**;
 a nonempty override takes precedence over the model choice and bypasses setup.
 The model is loaded once per worker, sharing the recognizer's CPU backend.
 PnC adds model memory and postprocessing latency only when enabled.
@@ -42,7 +51,7 @@ it does not restore every kind of punctuation that Nemotron can emit.
 
 ## Model preparation
 
-No checkpoint weights or converted GGUFs are bundled or rehosted. Automatic
+No checkpoint weights or converted GGUFs are bundled or rehosted. Explicit
 setup downloads `punctuation_en_bert` (406 MB) or `punctuation_en_distilbert`
 (245 MB), version `1.0.0rc1`, directly from NVIDIA NGC. Downloaded source bytes
 and the encoder configuration must match pinned SHA-256 hashes before they
@@ -62,7 +71,7 @@ not the system Python. Tested environments used about 840–977 MB installed.
 PyYAML's small pure-Python wheel is bundled by the release builder; clients use
 binary wheels only and do not need a compiler, even if the system Python is
 newer than PyYAML's published platform wheels.
-These dependencies are installed only when automatic PnC conversion is needed;
+These dependencies are installed only when explicit PnC conversion is needed;
 normal dictation does not require them. The original checkpoint and temporary
 conversion files are deleted after setup, including on failure. Existing model
 files are not replaced unless conversion and output validation succeed.

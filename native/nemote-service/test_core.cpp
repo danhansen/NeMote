@@ -8,11 +8,15 @@ int main() {
     check(config["pnc"] == false && config["pnc_model_path"] == "");
     auto pnc_config = config;
     pnc_config["pnc"] = true;
-    validate(pnc_config); // Empty override means automatic local setup.
+    validate(pnc_config); // Missing models may be configured, but must be installed before Start.
+    check(!pnc_ready(pnc_config));
+    check(pnc_ready(config)); // Disabled PnC does not need a model.
     pnc_config["pnc_variant"] = "distilbert";
     validate(pnc_config);
     const auto automatic_pnc_args = worker_command(pnc_config);
-    check(std::find(automatic_pnc_args.begin(), automatic_pnc_args.end(), "--pnc-model") == automatic_pnc_args.end());
+    auto automatic_path = std::find(automatic_pnc_args.begin(), automatic_pnc_args.end(), "--pnc-model");
+    check(automatic_path != automatic_pnc_args.end() && *++automatic_path ==
+        "/home/test/.local/share/nemote/models/pnc/pnc-distilbert-en.q8_0.gguf");
     auto variant = std::find(automatic_pnc_args.begin(), automatic_pnc_args.end(), "--pnc-variant");
     check(variant != automatic_pnc_args.end() && *++variant == "distilbert");
     pnc_config["pnc_model_path"] = "/missing-pnc-model.gguf";

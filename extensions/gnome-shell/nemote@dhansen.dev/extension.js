@@ -3,16 +3,26 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
+import Pango from 'gi://Pango';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 
-import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension, gettext as extensionGettext} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {requiredModifiersHeld} from './shortcutState.js';
 import {ServiceLifecycle} from './serviceLifecycle.js';
+
+let _ = extensionGettext;
+
+// The isolated Shell audit supplies a no-op service facade and translator;
+// production uses exactly the same indicator class and Shell widgets.
+export function createIndicator(extension, gettext = extensionGettext) {
+    _ = gettext;
+    return new Indicator(extension);
+}
 
 const BUS_NAME = 'dev.nemote.Service';
 const OBJECT_PATH = '/dev/nemote/Service';
@@ -29,6 +39,7 @@ const SERVICE_XML = `
     <method name="GetConfig"><arg name="config" type="a{sv}" direction="out"/></method>
     <method name="ListBackends"><arg name="backends" type="aa{sv}" direction="out"/></method>
     <method name="ListModelProfiles"><arg name="profiles" type="aa{sv}" direction="out"/></method>
+    <method name="ListPncModels"><arg name="models" type="aa{sv}" direction="out"/></method>
     <method name="ListInputDevices"><arg name="devices" type="aa{sv}" direction="out"/></method>
     <method name="SetBackend"><arg name="backend" type="s" direction="in"/></method>
     <method name="SetModelProfile"><arg name="profile" type="s" direction="in"/></method>
@@ -58,6 +69,8 @@ class Indicator extends PanelMenu.Button {
         super(0.0, _('NeMote'));
         this._extension = extension;
         this._listening = false;
+        this._runtimeBusy = true;
+        this._statusProtected = true;
         this._lastVoiceLevel = 0.0;
         this._animationPhase = 0;
         this._animationSourceId = 0;
@@ -101,6 +114,10 @@ class Indicator extends PanelMenu.Button {
         this._statusItem = new PopupMenu.PopupMenuItem(_('Service unavailable'), {
             reactive: false,
         });
+        this._statusItem.label.style = 'max-width: 380px;';
+        this._statusItem.label.clutter_text.line_wrap = true;
+        this._statusItem.label.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
+        this._statusItem.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         this.menu.addMenuItem(this._statusItem);
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -129,27 +146,33 @@ class Indicator extends PanelMenu.Button {
     setState(state, available) {
         const previousInstalling = this._installing;
         const previousInstallingProfile = this._installingProfile;
+        const previousRuntimeBusy = this._runtimeBusy;
         const listening = available && Boolean(state?.listening);
         const stopping = Boolean(state?.stopping);
         const installing = Boolean(state?.installing);
         const loading = Boolean(state?.loading_model);
         const selectedModelInstalled = state?.selected_model_installed !== false;
+        const selectedPncInstalled = state?.selected_pnc_model_installed !== false;
+        this._statusProtected = !available || installing || loading || stopping ||
+            !selectedModelInstalled || !selectedPncInstalled || Boolean(state?.last_error);
         this._installing = installing;
         this._installingProfile = state?.installing_profile ?? '';
+        this._runtimeBusy = !available || installing || loading || listening || stopping;
         this._icon.icon_name = 'audio-input-microphone-symbolic';
         this._setListening(listening);
         this._toggleItem.label.text = listening || stopping
             ? _('Stop Dictation')
             : _('Start Dictation');
         const canToggleDictation = listening || stopping ||
-            (!loading && selectedModelInstalled);
+            (!loading && !installing && selectedModelInstalled && selectedPncInstalled);
         this._toggleItem.setSensitive(available && canToggleDictation);
         this._statusItem.label.text = available
             ? statusText(state, selectedModelInstalled)
             : _('Service unavailable');
         if (
             previousInstalling !== this._installing ||
-            previousInstallingProfile !== this._installingProfile
+            previousInstallingProfile !== this._installingProfile ||
+            previousRuntimeBusy !== this._runtimeBusy
         )
             this.setProfiles(this._profiles, this._selectedProfile);
     }
@@ -214,20 +237,17 @@ class Indicator extends PanelMenu.Button {
         const installing = this._installingProfile === profile.id;
         const progress = this._installProgressByProfile.get(profile.id) ?? {};
         const fraction = numberValue(progress.fraction);
-        const installEnabled = !this._installing;
+        const installEnabled = !this._runtimeBusy && !this._installing;
 
         row.titleLabel.text = profile.title;
-        row.titleLabel.style_class = profile.installed
-            ? ''
-            : 'nemote-model-title-missing';
-        row.item.reactive = profile.installed;
-        row.item.can_focus = profile.installed;
+        row.item.reactive = profile.installed && installEnabled;
+        row.item.can_focus = profile.installed && installEnabled;
         row.installButton.visible = !profile.installed && !installing;
         row.installButton.reactive = installEnabled;
         row.installButton.can_focus = installEnabled;
         row.installButton.style_class = installEnabled
-            ? 'nemote-model-download-button'
-            : 'nemote-model-download-button nemote-model-download-disabled';
+            ? 'button nemote-model-download-button'
+            : 'button nemote-model-download-button nemote-model-download-disabled';
         row.progress.box.visible = !profile.installed && installing;
         row.progress.fill.style =
             `width: ${Math.round(Math.max(0.0, Math.min(1.0, fraction ?? 0.0)) * 64)}px;`;
@@ -238,7 +258,7 @@ class Indicator extends PanelMenu.Button {
     }
 
     setMetrics(summary) {
-        if (summary)
+        if (summary && !this._statusProtected)
             this._statusItem.label.text = summary;
     }
 
@@ -510,7 +530,7 @@ export default class NeMoteExtension extends Extension {
         this._injector = new TextInjector();
         this._insertionFocusId = global.display.connect('notify::focus-window', () => this._injector?.cancel());
 
-        this._indicator = new Indicator(this);
+        this._indicator = createIndicator(this);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         this._settings.set_boolean('shortcut-capture-active', false);
@@ -1133,7 +1153,7 @@ export default class NeMoteExtension extends Extension {
         const installSummary = formatInstallProgress(state.last_install_progress ?? {});
         const metricsSummary = formatMetrics(state.last_metrics ?? {});
         if (state.installing && installSummary)
-            this._indicator?.setMetrics(installSummary);
+            this._indicator?.setStatusMessage(installSummary);
         else if (metricsSummary)
             this._indicator?.setMetrics(metricsSummary);
         this._indicator?.setVoiceLevel(numberValue(state.last_metrics?.last_rms) ?? 0.0);
@@ -1176,6 +1196,10 @@ function statusText(state, selectedModelInstalled) {
         return _('Stopping');
     if (!selectedModelInstalled)
         return _('Model missing');
+    if (state?.selected_pnc_model_installed === false)
+        return _('PnC model missing — install it in Preferences');
+    if (state?.last_error)
+        return state.last_error;
     return _('Ready');
 }
 
@@ -1206,10 +1230,10 @@ function formatInstallProgress(progress) {
     if (!profile && !message)
         return '';
     if (!profile)
-        return markupSafe(message);
+        return message;
     if (!message)
-        return markupSafe(profile);
-    return markupSafe(`${profile}: ${message}`);
+        return profile;
+    return `${profile}: ${message}`;
 }
 
 function installProgressLabel(fraction) {
@@ -1232,7 +1256,7 @@ function createInstallButton(onClicked) {
         y_align: Clutter.ActorAlign.CENTER,
     }));
     const button = new St.Button({
-        style_class: 'nemote-model-download-button',
+        style_class: 'button nemote-model-download-button',
         child: content,
         reactive: true,
         can_focus: true,
@@ -1280,9 +1304,5 @@ function normalizeVoiceLevel(rms) {
 
 function formatError(error) {
     const message = error?.message ?? String(error);
-    return markupSafe(message.replace(/^GDBus\.Error:[^:]+:\s*/, ''));
-}
-
-function markupSafe(value) {
-    return GLib.markup_escape_text(String(value), -1);
+    return message.replace(/^GDBus\.Error:[^:]+:\s*/, '');
 }
