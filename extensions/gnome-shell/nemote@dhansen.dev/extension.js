@@ -2,9 +2,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
-import Meta from 'gi://Meta';
 import Pango from 'gi://Pango';
-import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import {Extension, gettext as extensionGettext} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -12,7 +10,6 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import {requiredModifiersHeld} from './shortcutState.js';
 import {ServiceLifecycle} from './serviceLifecycle.js';
 
 let _ = extensionGettext;
@@ -487,25 +484,15 @@ export default class NeMoteExtension extends Extension {
         this._selectedProfile = '';
         this._signalIds = [];
         this._syncingSettings = false;
-        this._shortcutBound = false;
-        this._pushToTalkActive = false;
-        this._pushToTalkKeyCode = 0;
-        this._pushToTalkModifierMask = 0;
-        this._stageCapturedEventId = 0;
         this._injector = new TextInjector();
         this._insertionFocusId = global.display.connect('notify::focus-window', () => this._injector?.cancel());
 
         this._indicator = createIndicator(this);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
-        this._settings.set_boolean('shortcut-capture-active', false);
-        this._syncShortcutBinding();
         this._connectSettings();
         this._connectProxy();
         this._serviceLifecycle.enable();
-        this._stageCapturedEventId = global.stage.connect(
-            'captured-event',
-            (_actor, event) => this._handleCapturedEvent(event));
     }
 
     disable() {
@@ -519,11 +506,6 @@ export default class NeMoteExtension extends Extension {
         this._proxyCancellable = null;
         this._serviceLifecycle?.disable();
         this._settings?.disconnectObject(this);
-        this._unbindShortcut();
-        if (this._stageCapturedEventId) {
-            global.stage.disconnect(this._stageCapturedEventId);
-            this._stageCapturedEventId = 0;
-        }
 
         if (this._proxy) {
             if (this._nameOwnerSignalId)
@@ -556,101 +538,8 @@ export default class NeMoteExtension extends Extension {
         this._callRemote('SetModelProfile', profile, () => this._refreshConfigFromService());
     }
 
-    _bindShortcut() {
-        if (this._shortcutBound)
-            return;
-        const pushToTalk = this._settings.get_string('shortcut-mode') === 'push-to-talk';
-        const flags = Meta.KeyBindingFlags.IGNORE_AUTOREPEAT |
-            (pushToTalk ? Meta.KeyBindingFlags.TRIGGER_RELEASE : 0);
-        Main.wm.addKeybinding(
-            'toggle-shortcut',
-            this._settings,
-            flags,
-            Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
-            (_display, _window, event, binding) =>
-                this._handleShortcut(event, binding));
-        this._shortcutBound = true;
-    }
-
-    _unbindShortcut() {
-        this._stopPushToTalk();
-        if (!this._shortcutBound)
-            return;
-        Main.wm.removeKeybinding('toggle-shortcut');
-        this._shortcutBound = false;
-    }
-
-    _handleShortcut(event, binding) {
-        if (this._settings.get_string('shortcut-mode') !== 'push-to-talk') {
-            this.toggleDictation();
-            return;
-        }
-
-        if (event?.type() === Clutter.EventType.KEY_RELEASE) {
-            this._stopPushToTalk();
-            return;
-        }
-
-        if (this._pushToTalkActive)
-            return;
-        this._pushToTalkActive = true;
-        this._pushToTalkKeyCode = event?.get_key_code() ?? 0;
-        // get_mask() is the resolved, physical modifier mask used by the
-        // keyboard state events. get_modifiers() returns virtual masks such
-        // as SUPER_MASK, which cannot be compared to a physical MOD4 state.
-        this._pushToTalkModifierMask = binding?.get_mask() ?? 0;
-        this._callRemote('Start');
-    }
-
-    _handleCapturedEvent(event) {
-        if (!this._pushToTalkActive)
-            return Clutter.EVENT_PROPAGATE;
-
-        if (event.type() === Clutter.EventType.KEY_RELEASE) {
-            if (event.get_key_code() === this._pushToTalkKeyCode)
-                this._stopPushToTalk();
-        } else if (event.type() === Clutter.EventType.KEY_STATE) {
-            // Mutter emits a complete modifier-state event even when it
-            // consumes the original release (notably Super). Checking the
-            // resulting state makes release order irrelevant.
-            const [pressed, latched, locked] = event.get_key_state();
-            if (!requiredModifiersHeld(
-                this._pushToTalkModifierMask, pressed, latched, locked))
-                this._stopPushToTalk();
-        }
-
-        return Clutter.EVENT_PROPAGATE;
-    }
-
-    _stopPushToTalk() {
-        if (!this._pushToTalkActive)
-            return;
-        this._pushToTalkActive = false;
-        this._pushToTalkKeyCode = 0;
-        this._pushToTalkModifierMask = 0;
-        this._callRemote('Stop');
-    }
-
-    _syncShortcutBinding() {
-        if (this._settings.get_boolean('shortcut-capture-active'))
-            this._unbindShortcut();
-        else
-            this._bindShortcut();
-    }
-
     _connectSettings() {
-        this._settings.connectObject('changed::shortcut-capture-active', () => {
-            this._syncShortcutBinding();
-        }, this);
-        this._settings.connectObject('changed::shortcut-mode', () => {
-            this._unbindShortcut();
-            this._syncShortcutBinding();
-        }, this);
         this._settings.connectObject('changed', (_settings, key) => {
-            if (key === 'shortcut-capture-active')
-                return;
-            if (this._settings.get_boolean('shortcut-capture-active'))
-                return;
             if (!this._syncingSettings)
                 this._pushSetting(key);
         }, this);
@@ -689,6 +578,7 @@ export default class NeMoteExtension extends Extension {
 
     _refreshConnectedService() {
         this._setAvailable(true);
+        this._callRemote('SetShortcutMode', this._settings.get_string('shortcut-mode'));
         this._refreshState();
         this._refreshProfiles();
         this._refreshConfigFromService();
@@ -933,11 +823,9 @@ export default class NeMoteExtension extends Extension {
         case 'input-device':
             this._callRemote('SetInputDevice', this._settings.get_string('input-device'));
             break;
-        case 'toggle-shortcut': {
-            const shortcuts = this._settings.get_strv('toggle-shortcut');
-            this._callRemote('SetShortcut', shortcuts.length > 0 ? shortcuts[0] : '');
+        case 'shortcut-mode':
+            this._callRemote('SetShortcutMode', this._settings.get_string('shortcut-mode'));
             break;
-        }
         default:
             if (INSERTION_SETTINGS.includes(key))
                 this._pushInsertionOptions();

@@ -1,5 +1,6 @@
 #include "core.h"
 #include "interface.h"
+#include "shortcuts.h"
 #include <gio/gio.h>
 #include <glib-unix.h>
 #include <csignal>
@@ -101,6 +102,10 @@ public:
     std::string partial, committed, last_error, shell, loading_message;
     std::shared_ptr<Child> worker, installer;
     std::vector<std::weak_ptr<Child>> children;
+    std::shared_ptr<PortalShortcuts> shortcuts;
+    // Behavior remains a Shell preference, passed to this service on connect.
+    std::string shortcut_mode = "toggle";
+    bool shortcut_pressed = false, shortcut_started_dictation = false;
 
     explicit Service(const fs::path& path) : config_path(path) {
         fs::path prefix = fs::canonical("/proc/self/exe").parent_path().parent_path();
@@ -118,11 +123,14 @@ public:
         }
         validate(config);
     }
-    ~Service() { shutdown_children(); }
+    ~Service() { if (shortcuts) shortcuts->stop(); shutdown_children(); }
     Json config_view() const { auto result = config; result["model_preset"] = preset(config); result["supported_streaming_latencies_ms"] = latencies(); return result; }
     Json state() const {
         return {{"listening", listening}, {"stopping", stopping}, {"loading_model", loading}, {"model_loaded", loaded},
             {"loading_message", loading_message},
+            {"shortcut_status", shortcuts ? shortcuts->status : "unavailable"},
+            {"shortcut_description", shortcuts ? shortcuts->description : ""},
+            {"shortcut_error", shortcuts ? shortcuts->error : ""},
             {"installing", bool(installer)}, {"installing_profile", installer ? installer->profile : ""},
             {"session_id", session_id}, {"seq", seq}, {"backend", "nemo-speech"}, {"model_profile", "nemo-q8"},
             {"model_family", config.at("model_family")}, {"model_preset", preset(config)}, {"input_device", config.at("input_device")},
@@ -289,8 +297,38 @@ public:
     }
     void shutdown() {
         if (shutting_down) return;
-        shutting_down = true; stop_worker(); shutdown_children(); changed();
+        shutting_down = true;
+        if (shortcuts) shortcuts->stop();
+        stop_worker(); shutdown_children(); changed();
         g_main_loop_quit(loop);
+    }
+    void shortcut_event(bool active) {
+        if (active == shortcut_pressed) return; // Ignore key repeat.
+        shortcut_pressed = active;
+        if (!active) {
+            if (std::exchange(shortcut_started_dictation, false) && !shutting_down) stop();
+            return;
+        }
+        if (shell.empty() || shutting_down) return;
+        try {
+            if (shortcut_mode == "push-to-talk") {
+                // Do not stop a session that was started from the panel.
+                if (!listening && !stopping) {
+                    start();
+                    shortcut_started_dictation = true;
+                }
+            } else if (listening || stopping) stop();
+            else start();
+        } catch (const std::exception& error) { fail(error.what()); }
+    }
+    void ensure_shortcuts() {
+        if (shortcuts) return;
+        shortcuts = std::make_shared<PortalShortcuts>(bus, [this] { changed(); },
+            [this](bool active) {
+                try { shortcut_event(active); }
+                catch (const std::exception& error) { fail(error.what()); }
+            });
+        shortcuts->start();
     }
     Json profiles() const {
         Json rows = Json::array();
@@ -324,7 +362,16 @@ public:
             auto child = spawn({config["worker_path"], "--list-input-devices"}, Child::Devices);
             child->invocation = G_DBUS_METHOD_INVOCATION(g_object_ref(invocation));
         } else {
-            if (name == "RegisterShellClient") shell = sender;
+            if (name == "RegisterShellClient") { shell = sender; ensure_shortcuts(); }
+            else if (name == "ConfigureShortcut") { ensure_shortcuts(); shortcuts->configure(); }
+            else if (name == "SetShortcutMode") {
+                auto mode = string_arg();
+                if (mode != "toggle" && mode != "push-to-talk") throw std::invalid_argument("Unknown shortcut behavior");
+                if (mode != shortcut_mode) {
+                    shortcut_event(false);
+                    shortcut_mode = mode;
+                }
+            }
             else if (name == "Start") start();
             else if (name == "Stop") stop();
             else if (name == "Toggle") { if (listening || stopping) stop(); else start(); }
@@ -339,6 +386,8 @@ public:
                 if (next["model_family"] == "english" && next["language"] != "auto" && next["language"].get<std::string>().rfind("en-", 0) != 0) next["language"] = "en-US";
                 update(next, true);
             } else if (name == "SetInputDevice") { require_idle(); auto next = config; next["input_device"] = string_arg(); update(next, true); }
+            // Legacy clients may still mirror their old Shell accelerator.
+            // Never use it to override an assignment owned by the portal.
             else if (name == "SetShortcut") { auto next = config; next["shortcut"] = string_arg(); update(next, false); }
             else if (name == "SetInsertionOptions" || name == "SetRuntimeOptions") {
                 auto* dict = g_variant_get_child_value(params, 0);

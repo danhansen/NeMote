@@ -102,6 +102,8 @@ mkdir -p \
   "$STAGE_ROOT/share/gnome-shell/extensions"
 
 cmake --install "$SERVICE_BUILD" --prefix "$STAGE_ROOT"
+mkdir -p "$STAGE_ROOT/share/applications"
+install -m 0644 "$ROOT/packaging/dev.nemote.Service.desktop" "$STAGE_ROOT/share/applications/"
 install -m 0755 "$ROOT/scripts/nemote-companion-install" "$STAGE_ROOT/bin/nemote-companion-install"
 NEMO_WORKER_BUILD="${NEMOTE_NEMO_WORKER_BUILD:-$ROOT/build/nemote-worker}"
 NEMO_SOURCE="${NEMOTE_NEMO_SOURCE:-$ROOT/build/nemo-speech-cpp}"

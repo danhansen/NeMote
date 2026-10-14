@@ -91,7 +91,7 @@ function checkLayout(widget, context, issues) {
 async function audit() {
     Gtk.Settings.get_default().gtk_enable_animations = false;
     const originalFont = Gtk.Settings.get_default().gtk_font_name;
-    const manifest = {scope: 'Production GTK preferences, dropdowns, shortcut dialog and simulated service states. '
+    const manifest = {scope: 'Production GTK preferences, dropdowns and simulated service states. '
         + 'The headless launcher also captures the production GNOME panel in shell.html.', captures: [], issues: []};
     const cases = [
         {name: 'normal-light', width: 680, dark: false},
@@ -159,15 +159,10 @@ async function audit() {
                     await wait();
                     await reveal(preview.page, preview.page._shortcutRow);
                     preview.page._shortcutButton.emit('clicked');
-                    await wait(350);
-                    const editor = preview.page._shortcutButton._editor;
-                    const name = `${style.name}-shortcut-dialog`;
-                    const dimensions = await capture(editor, editor, `${name}.png`);
-                    manifest.captures.push({name, scenario, style: style.name, page: preview.page.title, section: 'Shortcut dialog',
-                        filename: `${name}.png`, ...dimensions});
-                    editor.close();
-                    if (preview.settings.get_boolean('shortcut-capture-active'))
-                        manifest.issues.push(`${style.name}: shortcut capture remains active after closing`);
+                    // The desktop owns the dialog now. The isolated preview
+                    // verifies delegation without opening real portal UI.
+                    if (!preview.calls.some(call => call.method === 'ConfigureShortcut'))
+                        manifest.issues.push(`${style.name}: shortcut configuration was not delegated`);
                 }
             } finally {
                 preview.close();

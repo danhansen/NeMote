@@ -15,6 +15,8 @@
     <method name="SetModelProfile"><arg name="profile" type="s" direction="in"/></method>
     <method name="SetInputDevice"><arg name="selector" type="s" direction="in"/></method>
     <method name="SetShortcut"><arg name="accelerator" type="s" direction="in"/></method>
+    <method name="SetShortcutMode"><arg name="mode" type="s" direction="in"/></method>
+    <method name="ConfigureShortcut"/>
     <method name="SetInsertionOptions"><arg name="options" type="a{sv}" direction="in"/></method>
     <method name="SetRuntimeOptions"><arg name="options" type="a{sv}" direction="in"/></method>
     <method name="InstallModel"><arg name="profile" type="s" direction="in"/></method>

@@ -49,7 +49,7 @@ test('all service options synchronize with schema types, including false and zer
     syncSettingsFromConfig(settings, {...config, shortcut: '<Control>space'});
     for (const key of keys)
         assert.equal(writes.get(key), values[types[key]], key);
-    assert.deepEqual(writes.get('toggle-shortcut'), ['<Control>space']);
+    assert.equal(writes.has('toggle-shortcut'), false);
 });
 
 test('missing, invalid and retired fields do not overwrite local settings', () => {
@@ -58,7 +58,7 @@ test('missing, invalid and retired fields do not overwrite local settings', () =
         show_overlay: true, unknown: 'ignored'});
     assert.equal(writes.size, 0);
     syncSettingsFromConfig(settings, {shortcut: ''});
-    assert.deepEqual(writes.get('toggle-shortcut'), []);
+    assert.equal(writes.size, 0);
 });
 
 test('Shell change routing uses the same option groups as serialization', () => {

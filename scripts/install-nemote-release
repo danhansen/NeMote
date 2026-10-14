@@ -143,6 +143,10 @@ cp -a "$PACKAGE_DIR/share" "$LIBEXEC_DIR/share"
 # on first use; the base installation needs no pip or ONNX packages.
 
 echo "Installing D-Bus activation service"
+if [ -f "$PACKAGE_DIR/share/applications/dev.nemote.Service.desktop" ]; then
+  mkdir -p "$DATA_HOME/applications"
+  cp "$PACKAGE_DIR/share/applications/dev.nemote.Service.desktop" "$DATA_HOME/applications/"
+fi
 mkdir -p "$DBUS_SERVICE_DIR"
 sed "s|@NEMOTE_LIBEXEC@|$LIBEXEC_DIR|g" \
   "$PACKAGE_DIR/share/dbus-1/services/$SERVICE_NAME.service" \

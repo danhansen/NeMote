@@ -4,7 +4,7 @@
     <key name="toggle-shortcut" type="as">
       <default>['&lt;Control&gt;&lt;Alt&gt;space']</default>
       <summary>Dictation shortcut</summary>
-      <description>Keyboard shortcut handled by GNOME Shell to control NeMote dictation.</description>
+      <description>Legacy shortcut retained for upgrades. New assignments are managed by the desktop Global Shortcuts portal.</description>
     </key>
     <key name="shortcut-mode" type="s">
       <choices>
@@ -18,7 +18,7 @@
     <key name="shortcut-capture-active" type="b">
       <default>false</default>
       <summary>Shortcut capture active</summary>
-      <description>Internal coordination flag used to release the active shortcut while preferences records a new one.</description>
+      <description>Deprecated compatibility flag for the retired shortcut capture dialog.</description>
     </key>
     <key name="backend" type="s">
       <default>'nemo-speech'</default>

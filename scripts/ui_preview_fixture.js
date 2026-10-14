@@ -71,6 +71,7 @@ export function createPreview(schemaDirectory, scenario = 'ready', width = 680) 
         settings.set_string('model-family', name === 'multilingual' ? 'multilingual' : 'english');
         settings.set_string('input-device', 'long-microphone');
         currentState = {selected_model_installed: name !== 'missing',
+            shortcut_status: 'ready', shortcut_description: 'Ctrl+Alt+Space',
             selected_pnc_model_installed: name !== 'converting',
             partial_text: '', last_commit_text: '', last_error: ''};
         if (name === 'downloading' || name === 'converting') {
@@ -141,8 +142,6 @@ export function createPreview(schemaDirectory, scenario = 'ready', width = 680) 
         close() {
             if (timer) { GLib.Source.remove(timer); timer = 0; }
             scenarioListeners.length = 0;
-            page._shortcutButton._editor?.close();
-            page._shortcutButton._editor?.run_dispose();
             window.close(); window.run_dispose();
         }};
 }

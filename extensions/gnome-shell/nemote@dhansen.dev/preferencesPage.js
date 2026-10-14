@@ -1,8 +1,6 @@
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
-import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
-import Gdk from 'gi://Gdk';
 import Gtk from 'gi://Gtk';
 import Pango from 'gi://Pango';
 
@@ -73,200 +71,6 @@ const LANGUAGES = [
     ['ms-MY', 'Malay'],
     ['th-TH', 'Thai'],
 ];
-
-const ShortcutSettingButton = GObject.registerClass({
-    Properties: {
-        shortcut: GObject.ParamSpec.string(
-            'shortcut',
-            'shortcut',
-            'The shortcut',
-            GObject.ParamFlags.READWRITE,
-            ''),
-    },
-    Signals: {
-        changed: {param_types: [GObject.TYPE_STRING]},
-    },
-}, class ShortcutSettingButton extends Gtk.Button {
-    constructor(settingsKey, settings) {
-        super({
-            halign: Gtk.Align.CENTER,
-            hexpand: false,
-            vexpand: false,
-            has_frame: false,
-        });
-        this._settingsKey = settingsKey;
-        this._settings = settings;
-        this._editor = null;
-        this._previousShortcut = '';
-        this._recordingShortcut = false;
-        this._shortcut = '';
-        this._label = new Gtk.ShortcutLabel({
-            disabled_text: _('Not Set'),
-            valign: Gtk.Align.CENTER,
-            hexpand: false,
-            vexpand: false,
-        });
-
-        this.connect('clicked', this._onActivated.bind(this));
-        this._settings.connect(`changed::${this._settingsKey}`, () => this.syncFromSettings());
-        this.set_child(this._label);
-        this.syncFromSettings();
-    }
-
-    set shortcut(value) {
-        this._shortcut = value;
-    }
-
-    get shortcut() {
-        return this._shortcut;
-    }
-
-    syncFromSettings() {
-        [this.shortcut] = this._settings.get_strv(this._settingsKey);
-        this._label.set_accelerator(this.shortcut ?? '');
-    }
-
-    _onActivated(widget) {
-        const controller = new Gtk.EventControllerKey();
-        const content = new Adw.StatusPage({
-            title: _('Set Dictation Shortcut'),
-            icon_name: 'preferences-desktop-keyboard-shortcuts-symbolic',
-            description: _('Press a key combination. Escape cancels; Backspace clears the shortcut.'),
-        });
-        const layout = new Adw.ToolbarView({content});
-        layout.add_top_bar(new Adw.HeaderBar());
-        this._editor = new Adw.Window({
-            title: _('Set Dictation Shortcut'),
-            modal: true,
-            hide_on_close: true,
-            transient_for: widget.get_root(),
-            default_width: 420,
-            default_height: 360,
-            content: layout,
-        });
-        this._editor.add_controller(controller);
-        controller.connect('key-pressed', this._onKeyPressed.bind(this));
-        this._editor.connect('close-request', () => {
-            this._finishRecording(false);
-            return false;
-        });
-        this._previousShortcut = this._settings.get_strv(this._settingsKey)[0] ?? '';
-        this._recordingShortcut = true;
-        this._settings.set_boolean('shortcut-capture-active', true);
-        this._settings.set_strv(this._settingsKey, []);
-        this._label.set_accelerator(this._previousShortcut);
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
-            this._editor?.present();
-            return GLib.SOURCE_REMOVE;
-        });
-    }
-
-    _onKeyPressed(_controller, keyval, keycode, state) {
-        let mask = state & Gtk.accelerator_get_default_mod_mask();
-        mask &= ~Gdk.ModifierType.LOCK_MASK;
-
-        if (!mask && keyval === Gdk.KEY_Escape) {
-            this._editor?.close();
-            return true;
-        }
-
-        if (keyval === Gdk.KEY_BackSpace) {
-            this._updateShortcut('');
-            this._editor?.close();
-            return true;
-        }
-
-        if (!this._isValidBinding(mask, keycode, keyval) ||
-            !this._isValidAccel(mask, keyval))
-            return true;
-
-        if (!keyval && !keycode) {
-            this._editor?.destroy();
-            return true;
-        }
-
-        const accelerator = Gtk.accelerator_name_with_keycode(
-            null,
-            keyval,
-            keycode,
-            mask);
-        this._updateShortcut(accelerator);
-        this._editor?.destroy();
-        return true;
-    }
-
-    _updateShortcut(accelerator) {
-        this.shortcut = accelerator;
-        this._label.set_accelerator(this.shortcut);
-        this._settings.set_strv(this._settingsKey, accelerator ? [accelerator] : []);
-        this._finishRecording(true);
-        this.emit('changed', this.shortcut);
-    }
-
-    _finishRecording(accepted) {
-        if (!this._recordingShortcut)
-            return;
-
-        this._recordingShortcut = false;
-        if (!accepted) {
-            this.shortcut = this._previousShortcut;
-            this._label.set_accelerator(this.shortcut);
-            this._settings.set_strv(this._settingsKey,
-                this._previousShortcut ? [this._previousShortcut] : []);
-        }
-        this._previousShortcut = '';
-        this._settings.set_boolean('shortcut-capture-active', false);
-    }
-
-    _keyvalIsForbidden(keyval) {
-        return [
-            Gdk.KEY_Home,
-            Gdk.KEY_Left,
-            Gdk.KEY_Up,
-            Gdk.KEY_Right,
-            Gdk.KEY_Down,
-            Gdk.KEY_Page_Up,
-            Gdk.KEY_Page_Down,
-            Gdk.KEY_End,
-            Gdk.KEY_Tab,
-            Gdk.KEY_KP_Enter,
-            Gdk.KEY_Return,
-            Gdk.KEY_Mode_switch,
-        ].includes(keyval);
-    }
-
-    _isValidBinding(mask, keycode, keyval) {
-        return !(
-            mask === 0 ||
-            (mask === Gdk.ModifierType.SHIFT_MASK &&
-                keycode !== 0 &&
-                ((keyval >= Gdk.KEY_a && keyval <= Gdk.KEY_z) ||
-                    (keyval >= Gdk.KEY_A && keyval <= Gdk.KEY_Z) ||
-                    (keyval >= Gdk.KEY_0 && keyval <= Gdk.KEY_9) ||
-                    (keyval >= Gdk.KEY_kana_fullstop &&
-                        keyval <= Gdk.KEY_semivoicedsound) ||
-                    (keyval >= Gdk.KEY_Arabic_comma &&
-                        keyval <= Gdk.KEY_Arabic_sukun) ||
-                    (keyval >= Gdk.KEY_Serbian_dje &&
-                        keyval <= Gdk.KEY_Cyrillic_HARDSIGN) ||
-                    (keyval >= Gdk.KEY_Greek_ALPHAaccent &&
-                        keyval <= Gdk.KEY_Greek_omega) ||
-                    (keyval >= Gdk.KEY_hebrew_doublelowline &&
-                        keyval <= Gdk.KEY_hebrew_taf) ||
-                    (keyval >= Gdk.KEY_Thai_kokai &&
-                        keyval <= Gdk.KEY_Thai_lekkao) ||
-                    (keyval >= Gdk.KEY_Hangul_Kiyeog &&
-                        keyval <= Gdk.KEY_Hangul_J_YeorinHieuh) ||
-                    (keyval === Gdk.KEY_space && mask === 0) ||
-                    this._keyvalIsForbidden(keyval)))
-        );
-    }
-
-    _isValidAccel(mask, keyval) {
-        return Gtk.accelerator_valid(keyval, mask) ||
-            (keyval === Gdk.KEY_Tab && mask !== 0);
-    }
-});
 
 const NeMotePage = GObject.registerClass(
 class NeMotePage extends Adw.PreferencesPage {
@@ -587,13 +391,17 @@ class NeMotePage extends Adw.PreferencesPage {
         });
         this._appendSection(section, shortcutGroup);
 
-        const shortcutButton = new ShortcutSettingButton('toggle-shortcut', this._settings);
-        shortcutButton.connect('changed',
-            (_button, accelerator) => this._callRemote('SetShortcut', accelerator));
-        shortcutButton.set_vexpand(false);
-        shortcutButton.set_valign(Gtk.Align.CENTER);
+        const shortcutButton = new Gtk.Button({
+            label: _('Configure…'),
+            valign: Gtk.Align.CENTER,
+            sensitive: false,
+        });
+        shortcutButton.connect('clicked', () => this._callRemote('ConfigureShortcut'));
         const shortcutRow = new Adw.ActionRow({
             title: _('Shortcut'),
+            subtitle: _('Managed by GNOME Settings'),
+            subtitle_lines: 0,
+            use_markup: false,
         });
         shortcutRow.add_suffix(shortcutButton);
         shortcutRow.set_activatable_widget(shortcutButton);
@@ -615,8 +423,10 @@ class NeMotePage extends Adw.PreferencesPage {
             if (this._syncingSettings)
                 return;
             const mode = SHORTCUT_MODES[row.selected]?.id;
-            if (mode)
+            if (mode) {
                 this._settings.set_string('shortcut-mode', mode);
+                this._callRemote('SetShortcutMode', mode);
+            }
         });
         shortcutGroup.add(this._shortcutModeRow);
         this._appendSection(section, vocabularyGroup);
@@ -1000,7 +810,6 @@ class NeMotePage extends Adw.PreferencesPage {
         this._shortcutModeRow.selected = this._selectedIndex(
             SHORTCUT_MODES,
             this._settings.get_string('shortcut-mode'));
-        this._syncShortcutValue();
     }
 
     _rebuildProfileRows() {
@@ -1114,6 +923,14 @@ class NeMotePage extends Adw.PreferencesPage {
     }
 
     _handleState(values) {
+        if (this._shortcutRow) {
+            this._shortcutRow.subtitle = values.shortcut_error ||
+                (values.shortcut_status === 'connecting' ? _('Connecting to desktop shortcuts…') :
+                    values.shortcut_status === 'configuring' ? _('Finish shortcut setup in GNOME Settings') :
+                    values.shortcut_description || _('Not configured — choose a shortcut in GNOME Settings'));
+            this._shortcutButton.sensitive =
+                !['connecting', 'configuring'].includes(values.shortcut_status);
+        }
         const selectedPreset = modelPresetFromValues(values);
         if (selectedPreset && selectedPreset !== this._selectedPreset) {
             this._selectedPreset = selectedPreset;
@@ -1254,10 +1071,6 @@ class NeMotePage extends Adw.PreferencesPage {
 
     _pushRuntimeOptions() {
         this._callRemote('SetRuntimeOptions', optionsFromSettings(this._settings, RUNTIME_SETTINGS));
-    }
-
-    _syncShortcutValue() {
-        this._shortcutButton?.syncFromSettings();
     }
 
     _callRemote(method, ...args) {

@@ -33,7 +33,7 @@ function harness() {
         Gtk: {StringList: Widget, TextBuffer: Widget, TextView: Widget,
             ScrolledWindow: Widget, Button: Widget, Switch: Widget, CheckButton: Widget, WrapMode: {WORD_CHAR: 0}, Align: {CENTER: 0},
             AccessibleProperty: {LABEL: 0, DESCRIPTION: 1}},
-        ShortcutSettingButton: Widget, SHORTCUT_MODES: [], shortcutModeTitle: () => '',
+        SHORTCUT_MODES: [], shortcutModeTitle: () => '',
     });
     const page = new Page();
     const writes = [];
@@ -42,6 +42,7 @@ function harness() {
             set_string: (...args) => writes.push(args), set_boolean: (...args) => writes.push(args)},
         _appendSection: (section, group) => section.add(group),
         _selectedIndex: () => 0, _pushRuntimeOptions() {}, _pushInsertionOptions() {},
+        _callRemote: (...args) => writes.push(args),
         textPage: new Widget(), _inputGroup: new Widget(),
     });
     const general = new Widget();
@@ -58,6 +59,15 @@ test('choice rows use the native inline selected value', () => {
         assert.doesNotMatch(options, /use_subtitle: true/);
         assert.doesNotMatch(options, /\n\s+subtitle:/, 'help must not replace selected text');
     }
+});
+
+test('shortcut configuration delegates to the desktop, without capturing keys', () => {
+    const {page, writes} = harness();
+    assert.equal(page._shortcutButton.label, 'Configure…');
+    page._shortcutButton.handlers.clicked();
+    assert.deepEqual(writes.at(-1), ['ConfigureShortcut']);
+    assert.doesNotMatch(source, /EventControllerKey|ShortcutSettingButton|shortcut-capture-active/);
+    assert.equal(page._shortcutRow.use_markup, false);
 });
 
 test('untrusted transcript, error and progress text is displayed literally', () => {

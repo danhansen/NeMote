@@ -45,6 +45,7 @@ class RenameMigrationTests(unittest.TestCase):
             service.write_text("#!/bin/sh\nexit 0\n")
             service.chmod(0o755)
             for relative in ("dbus-1/services/dev.nemote.Service.service",
+                             "applications/dev.nemote.Service.desktop",
                              "systemd/user/nemote-service.service",
                              "gnome-shell/extensions/nemote@dhansen.dev/schemas/dummy"):
                 path = package / "share" / relative
@@ -65,6 +66,7 @@ class RenameMigrationTests(unittest.TestCase):
                                check=True, capture_output=True, text=True)
             self.assertEqual(json.loads((config / "nemote/service.json").read_text()), settings)
             self.assertEqual(json.loads(old_config.read_text()), settings)
+            self.assertEqual((data / "applications/dev.nemote.Service.desktop").read_text(), "@NEMOTE_LIBEXEC@")
             self.assertTrue((data / "nemote/models").is_symlink())
             self.assertEqual((data / "nemote/models/important-model").read_bytes(), b"preserve me")
             for path in legacy_files:

@@ -13,9 +13,9 @@ EXTENSION = ROOT / "extensions/gnome-shell/nemote@dhansen.dev"
 
 def prefs_import_errors(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
-    module_constants, separator, _rest = text.partition("const ShortcutSettingButton")
+    module_constants, separator, _rest = text.partition("const NeMotePage")
     if not separator:
-        return [f"{path.name} is missing ShortcutSettingButton"]
+        return [f"{path.name} is missing NeMotePage"]
     if re.search(r"\b_\s*\(", module_constants):
         return [f"{path.name} calls gettext while importing; translate labels after initialization"]
     return []
@@ -39,7 +39,7 @@ def main() -> int:
                 errors.append(f"{name} must use shared {module}")
         # The retired overlay key stays in the schema for older Shell processes
         # during an upgrade, but must not drive any current UI behavior.
-        missing = sorted(key for key in keys - {"show-overlay"}
+        missing = sorted(key for key in keys - {"show-overlay", "shortcut-capture-active", "toggle-shortcut"}
                          if f"'{key}'" not in text + shared)
         if missing:
             errors.append(f"{name} does not reference settings: {', '.join(missing)}")

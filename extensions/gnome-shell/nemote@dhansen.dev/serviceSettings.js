@@ -40,6 +40,6 @@ export function syncSettingsFromConfig(settings, config) {
         if (type && typeof value === type.jsType)
             settings[type.setter](key, value);
     }
-    if (typeof config.shortcut === 'string')
-        settings.set_strv('toggle-shortcut', config.shortcut ? [config.shortcut] : []);
+    // The legacy toggle-shortcut key is no longer mirrored: assignments now
+    // belong to the desktop portal, not to our service configuration.
 }

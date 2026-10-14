@@ -27,7 +27,17 @@ The service and worker support one active dictation, and the NeMo state arenas
 have one slot. Batching and GPU execution are disabled. Runtime CPU plugins
 choose compatible kernels without client compilation.
 
-The Shell extension owns shortcuts, the panel indicator, and text insertion via GNOME's
+The native service owns a Global Shortcuts portal session. It registers its
+connection as `dev.nemote.Service` through the host Registry API, using the
+installed desktop entry for identity. First-time binding is user-initiated;
+existing portal assignments are restored after service or portal restarts.
+Preferences delegates editing to the portal's `ConfigureShortcuts` UI. Press
+and release signals implement toggle/push-to-talk without Shell key grabs or
+raw key-event monitoring. Losing the portal releases any held push-to-talk
+session. The shortcut behavior remains a GSettings preference, sent to the
+service when the Shell connects or preferences changes it.
+
+The Shell extension owns the panel indicator and text insertion via GNOME's
 input-method interface. Partials are replaceable preedit; commits insert only the
 uncommitted suffix. No clipboard, X11 automation, or extra keyboard daemon is used.
 Final EOF text is forwarded before `SessionStopped`; worker generations are

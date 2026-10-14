@@ -39,7 +39,15 @@ Downloads show byte/percentage progress, retry transport errors, resume saved
 partials, and verify the pinned model's SHA256 before installation. All four
 chunk sizes—80, 160, 560, and 1120 ms—use the same model file.
 
-The default shortcut is Ctrl+Alt+Space. Toggle and push-to-talk are supported.
+Choose **Dictation → Keyboard Shortcut → Configure…** to assign the shortcut
+in GNOME's own settings dialog. Toggle and push-to-talk are supported. Shortcut
+assignments are managed by the desktop Global Shortcuts portal, not NeMote.
+On upgrade, configure your shortcut once; the previous Shell binding is no
+longer grabbed. Existing portal assignments are restored on subsequent starts.
+This requires Global Shortcuts portal version 2 (`xdg-desktop-portal` and
+`xdg-desktop-portal-gnome`). If unavailable, preferences reports the problem;
+the panel's Start/Stop controls still work. GNOME currently activates portal
+shortcuts in normal desktop mode, not the overview or lock screen.
 Choose a microphone, language, chunk size, and CPU thread count in preferences.
 
 Preferences are organized into three pages:
@@ -129,7 +137,7 @@ This also requires GNOME Shell and `dbus-run-session`. It runs a private,
 software-rendered compositor with memory-only settings and no D-Bus service
 auto-activation. Open `build/ui-audit/index.html` for the preferences gallery and
 `build/ui-audit/shell.html` for the real GNOME panel menu. The audit covers all three
-pages (whole windows and individual sections), dropdowns and shortcut capture; normal/light and narrow/dark/large-text
+pages (whole windows and individual sections) and dropdowns; normal/light and narrow/dark/large-text
 layouts; and representative service states. Layout alerts are recorded in JSON
 manifests and make the command fail. Screenshots still require visual review:
 geometry checks alone cannot establish that a UI is correct.
