@@ -131,6 +131,7 @@ public:
             {"shortcut_status", shortcuts ? shortcuts->status : "unavailable"},
             {"shortcut_description", shortcuts ? shortcuts->description : ""},
             {"shortcut_error", shortcuts ? shortcuts->error : ""},
+            {"shortcut_hint", shortcuts ? shortcuts->hint : ""},
             {"installing", bool(installer)}, {"installing_profile", installer ? installer->profile : ""},
             {"session_id", session_id}, {"seq", seq}, {"backend", "nemo-speech"}, {"model_profile", "nemo-q8"},
             {"model_family", config.at("model_family")}, {"model_preset", preset(config)}, {"input_device", config.at("input_device")},

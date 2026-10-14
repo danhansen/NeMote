@@ -102,9 +102,11 @@ def main():
         raise SystemExit("Use dbus-run-session -- env NEMOTE_TEST_BUS=1; never use the desktop bus")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--service", type=Path, required=True)
+    parser.add_argument("--portal-version", type=int, choices=(1, 2), default=2)
     args = parser.parse_args()
     bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     portal = Portal(bus)
+    portal.version = args.portal_version
     with tempfile.TemporaryDirectory(prefix="nemote-shortcut-test-") as temporary:
         root = Path(temporary)
         model = root / "models/nemotron-nemo-en-q8/model.gguf"
@@ -117,7 +119,18 @@ def main():
         worker.chmod(0o755)
         config = root / "service.json"
         config.write_text(json.dumps({"model_root": str(root / "models"), "worker_path": str(worker)}))
-        process = subprocess.Popen([str(args.service), "--config", str(config)], stderr=subprocess.PIPE, text=True)
+        tools = root / "bin"
+        tools.mkdir()
+        settings_log = root / "settings.json"
+        settings_failure = root / "fail-settings"
+        launcher = tools / "gnome-control-center"
+        launcher.write_text("#!/usr/bin/env python3\nimport json, os, sys\nfrom pathlib import Path\n"
+            "Path(os.environ['NEMOTE_TEST_SETTINGS_LOG']).write_text(json.dumps(sys.argv[1:]))\n"
+            "sys.exit(5 if Path(os.environ['NEMOTE_TEST_SETTINGS_FAIL']).exists() else 0)\n")
+        launcher.chmod(0o755)
+        env = dict(os.environ, PATH=f"{tools}:{os.environ['PATH']}",
+            NEMOTE_TEST_SETTINGS_LOG=str(settings_log), NEMOTE_TEST_SETTINGS_FAIL=str(settings_failure))
+        process = subprocess.Popen([str(args.service), "--config", str(config)], env=env, stderr=subprocess.PIPE, text=True)
 
         def call(method, params=None):
             return bus.call_sync("dev.nemote.Service", "/dev/nemote/Service", "dev.nemote.Service1",
@@ -152,7 +165,23 @@ def main():
             wait(lambda state: state["shortcut_status"] == "ready")
             assert portal.calls.count("Register") == 1, "Retry must reuse registered identity"
             call("ConfigureShortcut")
-            wait(lambda state: state["shortcut_description"] == "Super+D")
+            if portal.version == 2:
+                wait(lambda state: state["shortcut_description"] == "Super+D")
+            else:
+                wait(lambda state: settings_log.exists() and bool(state["shortcut_hint"]))
+                assert json.loads(settings_log.read_text()) == ["applications", "dev.nemote.Service"]
+                assert "ConfigureShortcuts" not in portal.calls
+                original_session = portal.session
+                settings_failure.touch()
+                call("ConfigureShortcut")
+                wait(lambda state: "Could not open GNOME Settings" in state["shortcut_error"])
+                assert portal.session == original_session, "Editor failure must preserve the bound session"
+                settings_failure.unlink()
+                # GNOME Settings edits send this signal on v1 as well as v2.
+                portal.description = "Super+D"
+                bus.emit_signal(None, PATH, SHORTCUTS, "ShortcutsChanged",
+                    GLib.Variant("(oa(sa{sv}))", (portal.session, portal.shortcuts())))
+                wait(lambda state: state["shortcut_description"] == "Super+D" and not state["shortcut_error"])
 
             call("SetShortcutMode", GLib.Variant("(s)", ("push-to-talk",)))
             portal.key(True)
@@ -201,12 +230,12 @@ def main():
             wait(lambda state: state["shortcut_status"] == "ready")
             portal.release()
             wait(lambda state: state["shortcut_status"] == "unavailable")
-            portal.version = 1
+            portal.version = 0
             portal.own()
-            wait(lambda state: state["shortcut_status"] == "error" and "version 2" in state["shortcut_error"])
+            wait(lambda state: state["shortcut_status"] == "error" and "does not support" in state["shortcut_error"])
             call("Shutdown")
             assert process.wait(timeout=5) == 0
-            print("Portal setup, cancellation, repeat, press/release, reconfiguration, restart and version checks passed")
+            print(f"Portal v{args.portal_version}: setup, cancellation, repeat, press/release, reconfiguration, restart and version checks passed")
         finally:
             if process.poll() is None:
                 process.kill()

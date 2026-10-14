@@ -4,6 +4,5 @@ Name=NeMote
 Comment=Streaming voice dictation
 Icon=audio-input-microphone
 Exec=gnome-extensions prefs nemote@dhansen.dev
-NoDisplay=true
 Terminal=false
 Categories=Utility;Accessibility;

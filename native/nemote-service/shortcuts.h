@@ -72,6 +72,7 @@ class PortalShortcuts : public std::enable_shared_from_this<PortalShortcuts> {
         busy_ = bound_ = false;
         description.clear();
         if (activation_) activation_(false); // Never leave push-to-talk held after session loss.
+        hint.clear();
     }
     void fail(const std::string& message) {
         reset();
@@ -165,6 +166,37 @@ class PortalShortcuts : public std::enable_shared_from_this<PortalShortcuts> {
         request("CreateSession", g_variant_new("(@a{sv})", options({{"handle_token", token},
             {"session_handle_token", "nemote_session_" + std::to_string(serial_)}})));
     }
+    void edit_in_settings() {
+        // Portal v1 has no ConfigureShortcuts. Open GNOME's application page,
+        // whose shortcut editor updates the existing portal session. Never
+        // unbind or overwrite an assignment merely to display an editor.
+        configure_requested_ = false;
+        error.clear();
+        GError* launch_error = nullptr;
+        auto* process = g_subprocess_new(G_SUBPROCESS_FLAGS_NONE, &launch_error,
+            "gnome-control-center", "applications", "dev.nemote.Service", nullptr);
+        if (!process) {
+            error = std::string("Could not open GNOME Settings: ") + launch_error->message;
+            g_error_free(launch_error);
+            notify();
+            return;
+        }
+        hint = "In GNOME Settings, open NeMote's shortcut settings on its Apps page.";
+        notify();
+        struct Launch { std::shared_ptr<PortalShortcuts> self; unsigned generation; };
+        g_subprocess_wait_check_async(process, cancellable_, [](GObject* process, GAsyncResult* result, gpointer data) {
+            std::unique_ptr<Launch> launch(static_cast<Launch*>(data));
+            GError* error = nullptr;
+            const bool success = g_subprocess_wait_check_finish(G_SUBPROCESS(process), result, &error);
+            auto& self = *launch->self;
+            if (!success && !self.stopped_ && launch->generation == self.generation_) {
+                self.error = std::string("Could not open GNOME Settings: ") + error->message;
+                self.notify(); // A launch failure must not unbind a working shortcut.
+            }
+            g_clear_error(&error);
+        }, new Launch{shared_from_this(), generation_});
+        g_object_unref(process);
+    }
     void initialize() {
         if (stopped_ || busy_) return;
         busy_ = true;
@@ -179,7 +211,7 @@ class PortalShortcuts : public std::enable_shared_from_this<PortalShortcuts> {
                     g_variant_get(reply, "(v)", &value);
                     version_ = g_variant_get_uint32(value);
                     g_variant_unref(value);
-                    if (version_ < 2) { fail("Global Shortcuts portal version 2 is required. Update your desktop portal packages."); return; }
+                    if (version_ < 1) { fail("The desktop does not support the Global Shortcuts portal."); return; }
                     create_session();
                 });
         };
@@ -188,7 +220,7 @@ class PortalShortcuts : public std::enable_shared_from_this<PortalShortcuts> {
             g_variant_new("(s@a{sv})", "dev.nemote.Service", options()), discover);
     }
 public:
-    std::string status = "unavailable", description, error;
+    std::string status = "unavailable", description, error, hint;
     PortalShortcuts(GDBusConnection* bus, std::function<void()> changed, std::function<void(bool)> activation)
         : bus_(G_DBUS_CONNECTION(g_object_ref(bus))), changed_(std::move(changed)), activation_(std::move(activation)) {}
     ~PortalShortcuts() { stop(); g_clear_object(&cancellable_); g_object_unref(bus_); }
@@ -202,6 +234,8 @@ public:
                 g_variant_unref(first);
                 if (!ours) return;
                 if (std::string(signal) == "ShortcutsChanged") {
+                    self.hint.clear();
+                    self.error.clear();
                     auto* list = g_variant_get_child_value(parameters, 1);
                     GVariantBuilder results;
                     g_variant_builder_init(&results, G_VARIANT_TYPE_VARDICT);
@@ -259,6 +293,7 @@ public:
         if (!owner_present_) return;
         if (session_.empty()) { initialize(); return; }
         if (!bound_) { bind(); return; }
+        if (version_ == 1) { edit_in_settings(); return; }
         call(interface, "ConfigureShortcuts", g_variant_new("(os@a{sv})", session_.c_str(), "", options()),
             [this](GVariant*) { configure_requested_ = false; });
     }

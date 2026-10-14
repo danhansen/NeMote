@@ -13,6 +13,7 @@ run_tests() {
   dbus-run-session --config-file scripts/ui_preview_bus.conf -- env NEMOTE_TEST_BUS=1 python3 scripts/check_service_lifecycle.py --service "${NEMOTE_SERVICE_BUILD:-$ROOT/build/nemote-service}/nemote-service"
   dbus-run-session --config-file scripts/ui_preview_bus.conf -- env NEMOTE_TEST_BUS=1 python3 scripts/check_service_lifecycle.py --legacy-config --service "${NEMOTE_SERVICE_BUILD:-$ROOT/build/nemote-service}/nemote-service"
   dbus-run-session --config-file scripts/ui_preview_bus.conf -- env NEMOTE_TEST_BUS=1 python3 scripts/check_shortcut_portal.py --service "${NEMOTE_SERVICE_BUILD:-$ROOT/build/nemote-service}/nemote-service"
+  dbus-run-session --config-file scripts/ui_preview_bus.conf -- env NEMOTE_TEST_BUS=1 python3 scripts/check_shortcut_portal.py --portal-version 1 --service "${NEMOTE_SERVICE_BUILD:-$ROOT/build/nemote-service}/nemote-service"
   PYTHONPATH=src python3 -m unittest discover -s tests
   python3 scripts/check_gnome_dbus_xml.py
   sh -n scripts/install-nemote-release

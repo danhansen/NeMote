@@ -44,8 +44,11 @@ in GNOME's own settings dialog. Toggle and push-to-talk are supported. Shortcut
 assignments are managed by the desktop Global Shortcuts portal, not NeMote.
 On upgrade, configure your shortcut once; the previous Shell binding is no
 longer grabbed. Existing portal assignments are restored on subsequent starts.
-This requires Global Shortcuts portal version 2 (`xdg-desktop-portal` and
-`xdg-desktop-portal-gnome`). If unavailable, preferences reports the problem;
+Global Shortcuts portal versions 1 and 2 are supported (`xdg-desktop-portal`
+and `xdg-desktop-portal-gnome`). Both provide initial setup. For later edits,
+version 2 opens the configuration dialog directly; version 1 opens NeMote's
+Apps page in GNOME Settings, where you can edit its shortcuts.
+If the portal is unavailable, preferences reports the problem;
 the panel's Start/Stop controls still work. GNOME currently activates portal
 shortcuts in normal desktop mode, not the overview or lock screen.
 Choose a microphone, language, chunk size, and CPU thread count in preferences.

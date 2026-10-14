@@ -927,7 +927,8 @@ class NeMotePage extends Adw.PreferencesPage {
             this._shortcutRow.subtitle = values.shortcut_error ||
                 (values.shortcut_status === 'connecting' ? _('Connecting to desktop shortcuts…') :
                     values.shortcut_status === 'configuring' ? _('Finish shortcut setup in GNOME Settings') :
-                    values.shortcut_description || _('Not configured — choose a shortcut in GNOME Settings'));
+                    [values.shortcut_description, values.shortcut_hint].filter(Boolean).join(' · ') ||
+                    _('Not configured — choose a shortcut in GNOME Settings'));
             this._shortcutButton.sensitive =
                 !['connecting', 'configuring'].includes(values.shortcut_status);
         }

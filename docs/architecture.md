@@ -31,7 +31,10 @@ The native service owns a Global Shortcuts portal session. It registers its
 connection as `dev.nemote.Service` through the host Registry API, using the
 installed desktop entry for identity. First-time binding is user-initiated;
 existing portal assignments are restored after service or portal restarts.
-Preferences delegates editing to the portal's `ConfigureShortcuts` UI. Press
+Preferences delegates editing to the portal's `ConfigureShortcuts` UI on v2.
+On v1, initial setup still uses `BindShortcuts`; later edits open
+`gnome-control-center applications dev.nemote.Service` without unbinding the
+shortcut. The desktop entry is visible so GNOME's Apps page can list it. Press
 and release signals implement toggle/push-to-talk without Shell key grabs or
 raw key-event monitoring. Losing the portal releases any held push-to-talk
 session. The shortcut behavior remains a GSettings preference, sent to the
