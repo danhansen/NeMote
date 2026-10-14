@@ -187,6 +187,9 @@ class Capture {
     ma_device device_{};
     bool initialized_ = false;
     std::vector<float> ring_;
+    // Single producer (miniaudio) and consumer (the recognition thread).
+    // Publish the write cursor only after copying samples; never block audio
+    // capture behind inference. Overflow drops new audio and is reported.
     std::atomic<size_t> read_{0}, write_{0}, dropped_{0};
     std::string name_;
     static void callback(ma_device* device, void*, const void* input, ma_uint32 frames) {
@@ -299,6 +302,8 @@ class Session {
             }) : itn(raw);
         };
         if (args_.endpoint_mode == "preview") {
+            // Keep the normalized prefix visible while the next raw segment
+            // arrives. At a pause, normalize all raw words again for context.
             preview_.update(text, result.is_final, result.late_punctuation, normalize);
             if (result.is_final && !end_of_stream) ++preview_endpoints_;
             return;
@@ -421,6 +426,32 @@ static void run_capture(asr::Recognizer& model, const Args& args, asr::pnc::PncR
     }
 }
 
+// Use the same Session adapter as live capture so WAV benchmarks exercise
+// transcript accumulation, endpointing and postprocessing, not just inference.
+static void run_wav(asr::Recognizer& model, const Args& args, asr::pnc::PncRunner* pnc) {
+    for (int repeat = 0; repeat < args.wav_repeat; ++repeat) {
+        auto config = ma_decoder_config_init(ma_format_f32, 1, 16000);
+        ma_decoder decoder;
+        if (ma_decoder_init_file(args.wav.c_str(), &config, &decoder) != MA_SUCCESS)
+            throw std::runtime_error("could not read WAV: " + args.wav);
+        struct DecoderCleanup {
+            ma_decoder* decoder;
+            ~DecoderCleanup() { ma_decoder_uninit(decoder); }
+        } cleanup{&decoder};
+
+        Session session(model, args, pnc);
+        std::vector<float> audio(args.chunk_samples);
+        ma_uint64 count = 0;
+        while (true) {
+            auto status = ma_decoder_read_pcm_frames(&decoder, audio.data(), audio.size(), &count);
+            session.push(audio.data(), count);
+            if (status == MA_AT_END || count == 0) break;
+            if (status != MA_SUCCESS) throw std::runtime_error("WAV decode failed");
+        }
+        session.finish();
+    }
+}
+
 static void prepare_companions(Args& args, const std::filesystem::path& model) {
     const auto directory = model.parent_path();
     bool boosting = args.phrase_boosting && args.boost_tokenizer.empty() &&
@@ -531,29 +562,13 @@ int main(int argc, char** argv) {
              {"phrase_boosting", args.phrase_boosting}, {"vad_filtering", args.vad_filtering},
              {"endpoint_mode", args.endpoint_mode}, {"state_arena_slots", config.batching.state_arena_slots}}}});
         if (!args.wav.empty()) {
-            for (int repeat = 0; repeat < args.wav_repeat; ++repeat) {
-            ma_decoder_config decode_config = ma_decoder_config_init(ma_format_f32, 1, 16000);
-            ma_decoder decoder;
-            if (ma_decoder_init_file(args.wav.c_str(), &decode_config, &decoder) != MA_SUCCESS)
-                throw std::runtime_error("could not read WAV: " + args.wav);
-            struct Cleanup { ma_decoder* p; ~Cleanup() { ma_decoder_uninit(p); } } cleanup{&decoder};
-            Session session(model, args, pnc.get());
-            std::vector<float> audio(args.chunk_samples);
-            ma_uint64 count = 0;
-            while (true) {
-                auto status = ma_decoder_read_pcm_frames(&decoder, audio.data(), audio.size(), &count);
-                session.push(audio.data(), count);
-                if (status == MA_AT_END || count == 0) break;
-                if (status != MA_SUCCESS) throw std::runtime_error("WAV decode failed");
-            }
-            session.finish();
-            }
+            run_wav(model, args, pnc.get());
             return 0;
         }
         emit({{"event", "ready"}});
         SessionThread session;
-        // Also stop/join on malformed commands, shutdown, or stdin EOF.
-        auto join = [&] { session.stop(); };
+        // SessionThread also joins during exception unwinding, before the
+        // recognizer and PnC runner are destroyed.
         std::string line;
         while (std::getline(std::cin, line)) {
             if (line.empty()) continue;
@@ -563,8 +578,16 @@ int main(int argc, char** argv) {
                 if (name == "start") {
                     session.start([&](std::atomic<bool>& stop) { run_capture(model, args, pnc.get(), stop); },
                         [] { emit({{"event", "stopped"}}); });
-                } else if (name == "stop") { if (session.active()) join(); else { join(); emit({{"event", "stopped"}}); } }
-                else if (name == "shutdown") { join(); break; }
+                } else if (name == "stop") {
+                    // Active sessions publish stopped from their completion
+                    // callback. An idle worker still owes the caller a reply.
+                    const bool was_active = session.active();
+                    session.stop();
+                    if (!was_active) emit({{"event", "stopped"}});
+                } else if (name == "shutdown") {
+                    session.stop();
+                    break;
+                }
                 else if (name == "set_language") {
                     if (session.active()) throw std::invalid_argument("cannot change language while recognition is active");
                     session.stop();
@@ -575,7 +598,7 @@ int main(int argc, char** argv) {
                 } else throw std::invalid_argument("unknown command: " + name);
             } catch (const std::exception& error) { emit({{"event", "error"}, {"message", error.what()}}); }
         }
-        join();
+        session.stop();
     } catch (const std::exception& error) {
         emit({{"event", "error"}, {"message", error.what()}});
         std::cerr << "nemote-nemo-worker: " << error.what() << '\n';

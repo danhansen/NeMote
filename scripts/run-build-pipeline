@@ -14,12 +14,9 @@ run_tests() {
   PYTHONPATH=src python3 -m unittest discover -s tests
   python3 scripts/check_gnome_dbus_xml.py
   sh -n scripts/install-nemote-release
-  node --input-type=module --check \
-    < extensions/gnome-shell/nemote@dhansen.dev/extension.js
-  node --input-type=module --check \
-    < extensions/gnome-shell/nemote@dhansen.dev/prefs.js
-  node --input-type=module --check \
-    < extensions/gnome-shell/nemote@dhansen.dev/preferencesPage.js
+  for module in extensions/gnome-shell/nemote@dhansen.dev/*.js; do
+    node --input-type=module --check < "$module"
+  done
   node --test tests/*.mjs
   glib-compile-schemas --strict --dry-run \
     extensions/gnome-shell/nemote@dhansen.dev/schemas

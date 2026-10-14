@@ -40,7 +40,7 @@ def stop(process: subprocess.Popen | None) -> None:
 
 
 def source_signature() -> tuple:
-    paths = [*EXTENSION.glob("*.js"), *EXTENSION.glob("*.css"),
+    paths = [*EXTENSION.glob("*.js"), *EXTENSION.glob("*.css"), *EXTENSION.glob("*.xml"),
         *EXTENSION.glob("schemas/*.xml"), *ROOT.glob("scripts/*preview*.js")]
     return tuple(sorted((str(path), path.stat().st_mtime_ns) for path in paths))
 

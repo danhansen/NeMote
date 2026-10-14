@@ -3,8 +3,10 @@
 using namespace nemote;
 static void check(bool condition) { if (!condition) throw std::runtime_error("Core check failed"); }
 int main() {
-    auto config = defaults("/home/test", "/opt/nemote", "/home/test/.local/share");
+    auto config = defaults("/opt/nemote", "/home/test/.local/share");
     validate(config);
+    check(!config.contains("show_overlay"));
+    check(!migrate(config, {{"show_overlay", true}}).contains("show_overlay"));
     check(config["pnc"] == false && config["pnc_model_path"] == "");
     auto pnc_config = config;
     pnc_config["pnc"] = true;

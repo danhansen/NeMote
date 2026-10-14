@@ -68,7 +68,7 @@ Preferences are organized into three pages:
 - Vocabulary/phrase boosting favors names and jargon. Its tokenizer downloads
   automatically; boosting can also introduce incorrect matches.
 - Optional VAD masks non-speech features. Its Silero model downloads automatically.
-- Spoken-punctuation commands, overlay visibility, and insertion delay remain configurable.
+- Spoken-punctuation commands and insertion delay remain configurable.
 
 ITN grammars are shipped for English, Arabic, Chinese, French, German, Hindi,
 and Spanish. ITN is off by default. Pause endpointing and VAD are independent.

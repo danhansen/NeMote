@@ -16,44 +16,9 @@ export function createPreferencesPage(settings, {gettext = text => text, connect
 
 import {streamingChunkChoices} from './modelState.js';
 
-const BUS_NAME = 'dev.nemote.Service';
-const OBJECT_PATH = '/dev/nemote/Service';
-
-const SERVICE_XML = `
-<node>
-  <interface name="dev.nemote.Service1">
-    <method name="Start"/>
-    <method name="Stop"/>
-    <method name="Toggle"/>
-    <method name="Shutdown"/>
-    <method name="RegisterShellClient"/>
-    <method name="GetState"><arg name="state" type="a{sv}" direction="out"/></method>
-    <method name="GetConfig"><arg name="config" type="a{sv}" direction="out"/></method>
-    <method name="ListBackends"><arg name="backends" type="aa{sv}" direction="out"/></method>
-    <method name="ListModelProfiles"><arg name="profiles" type="aa{sv}" direction="out"/></method>
-    <method name="ListPncModels"><arg name="models" type="aa{sv}" direction="out"/></method>
-    <method name="ListInputDevices"><arg name="devices" type="aa{sv}" direction="out"/></method>
-    <method name="SetBackend"><arg name="backend" type="s" direction="in"/></method>
-    <method name="SetModelProfile"><arg name="profile" type="s" direction="in"/></method>
-    <method name="SetInputDevice"><arg name="selector" type="s" direction="in"/></method>
-    <method name="SetShortcut"><arg name="accelerator" type="s" direction="in"/></method>
-    <method name="SetInsertionOptions"><arg name="options" type="a{sv}" direction="in"/></method>
-    <method name="SetRuntimeOptions"><arg name="options" type="a{sv}" direction="in"/></method>
-    <method name="InstallModel"><arg name="profile" type="s" direction="in"/></method>
-    <signal name="StateChanged"><arg name="state" type="a{sv}"/></signal>
-    <signal name="ConfigChanged"><arg name="config" type="a{sv}"/></signal>
-    <signal name="SessionStarted"><arg name="session_id" type="t"/></signal>
-    <signal name="TextDelta"><arg name="session_id" type="t"/><arg name="seq" type="t"/><arg name="text" type="s"/></signal>
-    <signal name="Partial"><arg name="session_id" type="t"/><arg name="seq" type="t"/><arg name="full_text" type="s"/></signal>
-    <signal name="Commit"><arg name="session_id" type="t"/><arg name="seq" type="t"/><arg name="text" type="s"/></signal>
-    <signal name="SessionStopped"><arg name="session_id" type="t"/></signal>
-    <signal name="InstallProgress"><arg name="profile" type="s"/><arg name="progress" type="a{sv}"/></signal>
-    <signal name="Metrics"><arg name="metrics" type="a{sv}"/></signal>
-    <signal name="Error"><arg name="message" type="s"/></signal>
-  </interface>
-</node>`;
-
-const NeMoteProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
+import {BUS_NAME, OBJECT_PATH, NeMoteProxy} from './serviceClient.js';
+import {deepUnpackMap, formatInstallProgress, numberValue, formatError} from './serviceValues.js';
+import {INSERTION_SETTINGS, RUNTIME_SETTINGS, optionsFromSettings, syncSettingsFromConfig} from './serviceSettings.js';
 
 const PROFILES = [
     ['nemo-q8-english', 'English (lower WER)', 'Dedicated English Nemotron model.', 'nemo-q8', 'english'],
@@ -978,50 +943,7 @@ class NeMotePage extends Adw.PreferencesPage {
                 this._latencyValues = chunks;
                 this._latencyRow.model = Gtk.StringList.new(this._latencyValues.map(value => `${value} ms`));
             }
-            if (typeof values.backend === 'string')
-                this._settings.set_string('backend', values.backend);
-            if (typeof values.model_profile === 'string')
-                this._settings.set_string('model-profile', values.model_profile);
-            if (typeof values.model_family === 'string')
-                this._settings.set_string('model-family', values.model_family);
-            if (typeof values.streaming_latency_ms === 'number')
-                this._settings.set_uint('streaming-latency-ms', values.streaming_latency_ms);
-            if (typeof values.input_device === 'string')
-                this._settings.set_string('input-device', values.input_device);
-            if (typeof values.language === 'string')
-                this._settings.set_string('language', values.language);
-            if (typeof values.model_root === 'string')
-                this._settings.set_string('model-root', values.model_root);
-            if (typeof values.worker_path === 'string')
-                this._settings.set_string('worker-path', values.worker_path);
-            if (typeof values.model_installer_path === 'string')
-                this._settings.set_string('model-installer-path', values.model_installer_path);
-            if (typeof values.shortcut === 'string')
-                this._settings.set_strv('toggle-shortcut', values.shortcut ? [values.shortcut] : []);
-            if (typeof values.num_threads === 'number')
-                this._settings.set_uint('num-threads', values.num_threads);
-            if (typeof values.sample_rate === 'number')
-                this._settings.set_uint('sample-rate', values.sample_rate);
-            if (typeof values.spoken_punctuation === 'boolean')
-                this._settings.set_boolean('spoken-punctuation', values.spoken_punctuation);
-            if (typeof values.insert_partials === 'boolean')
-                this._settings.set_boolean('insert-partials', values.insert_partials);
-            if (typeof values.itn === 'boolean')
-                this._settings.set_boolean('itn', values.itn);
-            if (typeof values.endpoint_mode === 'string')
-                this._settings.set_string('endpoint-mode', values.endpoint_mode);
-            for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering'], ['pnc', 'pnc']]) {
-                if (typeof values[key] === 'boolean')
-                    this._settings.set_boolean(setting, values[key]);
-            }
-            for (const [key, setting] of [['boost_phrases', 'boost-phrases'], ['boost_tokenizer_path', 'boost-tokenizer-path'], ['vad_model_path', 'vad-model-path'], ['pnc_model_path', 'pnc-model-path'], ['pnc_variant', 'pnc-variant']]) {
-                if (typeof values[key] === 'string')
-                    this._settings.set_string(setting, values[key]);
-            }
-            if (typeof values.stream_insert_delay_ms === 'number')
-                this._settings.set_uint('stream-insert-delay-ms', values.stream_insert_delay_ms);
-            if (typeof values.show_overlay === 'boolean')
-                this._settings.set_boolean('show-overlay', false);
+            syncSettingsFromConfig(this._settings, values);
 
             this._syncComboSelections();
             this._syncDeviceSelection();
@@ -1327,38 +1249,11 @@ class NeMotePage extends Adw.PreferencesPage {
     }
 
     _pushInsertionOptions() {
-        this._callRemote('SetInsertionOptions', {
-            spoken_punctuation: new GLib.Variant('b',
-                this._settings.get_boolean('spoken-punctuation')),
-            insert_partials: new GLib.Variant('b',
-                this._settings.get_boolean('insert-partials')),
-            stream_insert_delay_ms: new GLib.Variant('u',
-                this._settings.get_uint('stream-insert-delay-ms')),
-            show_overlay: new GLib.Variant('b', false),
-        });
+        this._callRemote('SetInsertionOptions', optionsFromSettings(this._settings, INSERTION_SETTINGS));
     }
 
     _pushRuntimeOptions() {
-        this._callRemote('SetRuntimeOptions', {
-            itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
-            pnc: new GLib.Variant('b', this._settings.get_boolean('pnc')),
-            pnc_model_path: new GLib.Variant('s', this._settings.get_string('pnc-model-path')),
-            pnc_variant: new GLib.Variant('s', this._settings.get_string('pnc-variant')),
-            endpoint_mode: new GLib.Variant('s', this._settings.get_string('endpoint-mode')),
-            phrase_boosting: new GLib.Variant('b', this._settings.get_boolean('phrase-boosting')),
-            boost_phrases: new GLib.Variant('s', this._settings.get_string('boost-phrases')),
-            boost_tokenizer_path: new GLib.Variant('s', this._settings.get_string('boost-tokenizer-path')),
-            vad_filtering: new GLib.Variant('b', this._settings.get_boolean('vad-filtering')),
-            vad_model_path: new GLib.Variant('s', this._settings.get_string('vad-model-path')),
-            streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
-            model_root: new GLib.Variant('s', this._settings.get_string('model-root')),
-            language: new GLib.Variant('s', this._settings.get_string('language')),
-            worker_path: new GLib.Variant('s', this._settings.get_string('worker-path')),
-            model_installer_path: new GLib.Variant('s',
-                this._settings.get_string('model-installer-path')),
-            num_threads: new GLib.Variant('u', this._settings.get_uint('num-threads')),
-            sample_rate: new GLib.Variant('u', this._settings.get_uint('sample-rate')),
-        });
+        this._callRemote('SetRuntimeOptions', optionsFromSettings(this._settings, RUNTIME_SETTINGS));
     }
 
     _syncShortcutValue() {
@@ -1383,25 +1278,6 @@ class NeMotePage extends Adw.PreferencesPage {
         });
     }
 });
-
-function deepUnpackMap(value) {
-    if (!value)
-        return {};
-    const unpacked = deepUnpackValue(value);
-    if (!unpacked || typeof unpacked !== 'object' || Array.isArray(unpacked))
-        return {};
-    return unpacked;
-}
-
-function deepUnpackValue(value) {
-    const unpacked = value?.deep_unpack ? value.deep_unpack() : value;
-    if (!unpacked || typeof unpacked !== 'object' || Array.isArray(unpacked))
-        return unpacked;
-    const result = {};
-    for (const [key, variant] of Object.entries(unpacked))
-        result[key] = deepUnpackValue(variant);
-    return result;
-}
 
 function clearStringList(model) {
     while (model.get_n_items() > 0)
@@ -1443,33 +1319,6 @@ function formatMetrics(metrics) {
     if (droppedChunks)
         parts.push(`${droppedChunks} ${_('dropped')}`);
     return parts.join(' - ');
-}
-
-function formatInstallProgress(progress) {
-    const profile = typeof progress.profile === 'string' ? progress.profile : '';
-    const message = typeof progress.message === 'string'
-        ? progress.message
-        : typeof progress.phase === 'string'
-            ? progress.phase
-            : '';
-    if (!profile && !message)
-        return '';
-    if (!profile)
-        return message;
-    if (!message)
-        return profile;
-    return `${profile}: ${message}`;
-}
-
-function numberValue(value) {
-    if (typeof value === 'number' && Number.isFinite(value))
-        return value;
-    return null;
-}
-
-function formatError(error) {
-    const message = error?.message ?? String(error);
-    return message.replace(/^GDBus\.Error:[^:]+:\s*/, '');
 }
 
 // Follow GNOME Settings' cc-device-combo-row.c: let the popup request the

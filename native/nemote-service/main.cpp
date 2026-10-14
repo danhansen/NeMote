@@ -103,9 +103,8 @@ public:
     std::vector<std::weak_ptr<Child>> children;
 
     explicit Service(const fs::path& path) : config_path(path) {
-        fs::path home = g_get_home_dir();
         fs::path prefix = fs::canonical("/proc/self/exe").parent_path().parent_path();
-        auto base = defaults(home, prefix, g_get_user_data_dir());
+        auto base = defaults(prefix, g_get_user_data_dir());
         default_config = base;
         config = base;
         auto saved_path = path;
@@ -347,8 +346,11 @@ public:
                 try { options = from_variant(dict); } catch (...) { g_variant_unref(dict); throw; }
                 g_variant_unref(dict);
                 auto next = config;
-                const std::vector<std::string> insertion = {"spoken_punctuation", "insert_partials", "stream_insert_delay_ms", "show_overlay"};
+                const std::vector<std::string> insertion = {"spoken_punctuation", "insert_partials", "stream_insert_delay_ms"};
                 for (auto item = options.begin(); item != options.end(); ++item) {
+                    // Older extensions still send this removed UI option.
+                    // Accept it without persisting a setting that does nothing.
+                    if (name == "SetInsertionOptions" && item.key() == "show_overlay" && item->is_boolean()) continue;
                     if (!config.contains(item.key()) || item.key() == "backend" || item.key() == "model_profile" || item.key() == "model_family") throw std::invalid_argument("Unknown option: " + item.key());
                     bool is_insertion = std::find(insertion.begin(), insertion.end(), item.key()) != insertion.end();
                     if (is_insertion != (name == "SetInsertionOptions")) throw std::invalid_argument("Option belongs to a different settings group");
@@ -378,8 +380,9 @@ public:
                 } else {
                     if (id != "nemo-q8" && id != "nemo-q8-english") throw std::invalid_argument("Unknown NeMo model preset");
                     auto family = id == "nemo-q8" ? "multilingual" : "english";
-                    installer = spawn({config["model_installer_path"], "--profile", "nemo-q8", "--model-family", family,
-                        "--model-root", config["model_root"], "--streaming-latency-ms", std::to_string(config["streaming_latency_ms"].get<unsigned>())}, Child::Installer, id);
+                    // Chunk size is a runtime choice, not a different export.
+                    installer = spawn({config["model_installer_path"], "--model-family", family,
+                        "--model-root", config["model_root"]}, Child::Installer, id);
                     last_error.clear(); install_progress({{"phase", "starting"}, {"message", "Starting model download"}, {"fraction", 0.0}}, id);
                 }
                 changed();
@@ -435,6 +438,8 @@ void Service::read_line(const std::shared_ptr<Child>& child, bool stderr_stream)
 }
 
 void Service::finish_if_ready(const std::shared_ptr<Child>& child) {
+    // Process exit and pipe EOF arrive independently. Drain both streams
+    // before publishing completion, or the final transcript/progress is lost.
     if (!child->waited || !child->stdout_done || !child->stderr_done) return;
     if (child->timeout) { g_source_remove(child->timeout); child->timeout = 0; }
     auto* service = child->owner;

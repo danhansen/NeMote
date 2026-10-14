@@ -94,6 +94,9 @@ def main():
         try:
             wait(lambda state: True)
             view = call("GetConfig")[0]
+            assert "show_overlay" not in view
+            call("SetInsertionOptions", GLib.Variant("(a{sv})", ({"show_overlay": GLib.Variant("b", True)},)))
+            assert call("GetConfig")[0] == view, "Retired overlay option must be a compatibility no-op"
             assert view["backend"] == "nemo-speech" and view["model_profile"] == "nemo-q8"
             assert view["input_device"] == "" and view["supported_streaming_latencies_ms"] == [80, 160, 560, 1120]
             assert view["pnc"] is False and view["pnc_model_path"] == ""

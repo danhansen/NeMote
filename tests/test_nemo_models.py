@@ -10,13 +10,13 @@ from urllib.error import URLError
 
 from nemote.cli import build_parser, _cmd_model_install_family
 from nemote import nemo_models
-from nemote.models import profile_installed, profile_runtime_dir, profile_supports_streaming_latency
+from nemote.models import profile_runtime_dir
 
 
 class NemoModelTests(unittest.TestCase):
     def network_fixture(self, root, content):
         model = ("fixture/repo", "revision", "model.gguf", len(content), hashlib.sha256(content).hexdigest())
-        runtime = profile_runtime_dir(root, "nemo-q8", "english")
+        runtime = profile_runtime_dir(root, "english")
         runtime.mkdir(parents=True)
         partial = runtime / f".model.{model[4][:16]}.part"
         return model, runtime, partial
@@ -119,11 +119,8 @@ class NemoModelTests(unittest.TestCase):
             source = root / "source.gguf"
             source.write_bytes(content)
             runtime = nemo_models.install_nemo_model(root, "english", source=source, progress=lambda _: None)
-            self.assertEqual(runtime, profile_runtime_dir(root, "nemo-q8", "english"))
-            self.assertTrue(profile_installed(root, "nemo-q8", "english"))
-            for latency in (80, 160, 560, 1120):
-                self.assertTrue(profile_supports_streaming_latency(runtime, latency))
-            self.assertFalse(profile_supports_streaming_latency(runtime, 240))
+            self.assertEqual(runtime, profile_runtime_dir(root, "english"))
+            self.assertEqual((runtime / "model.gguf").read_bytes(), content)
             self.assertEqual(nemo_models.install_nemo_model(root, "english"), runtime)
             self.assertEqual(list(runtime.glob("*.part")), [])
 

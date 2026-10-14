@@ -66,13 +66,6 @@ test('untrusted transcript, error and progress text is displayed literally', () 
         assert.ok(start >= 0);
         assert.match(source.slice(start, source.indexOf('\n        });', start)), /use_markup: false/);
     }
-    const functions = vm.runInNewContext(`(() => {
-        ${source.slice(source.indexOf('function formatInstallProgress('), source.indexOf('function choiceListFactory('))}
-        return {formatInstallProgress, formatError};
-    })()`);
-    const text = '<error> & unavailable';
-    assert.equal(functions.formatInstallProgress({profile: 'model', message: text}), `model: ${text}`);
-    assert.equal(functions.formatError(new Error(text)), text);
 });
 
 test('punctuation enablement and models share the expandable text setting', () => {

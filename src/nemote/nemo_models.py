@@ -35,7 +35,7 @@ MODELS = {
 
 def install_nemo_model(model_root: Path, family: str, *, source: Path | None = None,
                        force: bool = False, progress=print) -> Path:
-    directory = profile_runtime_dir(model_root, "nemo-q8", family)
+    directory = profile_runtime_dir(model_root, family)
     directory.mkdir(parents=True, exist_ok=True)
     # A persistent lock inode makes retries safe even with multiple installers.
     with (directory / ".download.lock").open("a") as lock:
@@ -59,7 +59,7 @@ def _report(progress, phase, message, *, count=0, size=0):
 
 def _install_locked(model_root, family, source, force, progress):
     repo, revision, filename, size, expected_hash = MODELS[family]
-    destination = profile_runtime_dir(model_root, "nemo-q8", family) / "model.gguf"
+    destination = profile_runtime_dir(model_root, family) / "model.gguf"
     if destination.exists() and not force:
         if destination.stat().st_size == size:
             with destination.open("rb") as existing:

@@ -24,44 +24,9 @@ export function createIndicator(extension, gettext = extensionGettext) {
     return new Indicator(extension);
 }
 
-const BUS_NAME = 'dev.nemote.Service';
-const OBJECT_PATH = '/dev/nemote/Service';
-
-const SERVICE_XML = `
-<node>
-  <interface name="dev.nemote.Service1">
-    <method name="Start"/>
-    <method name="Stop"/>
-    <method name="Toggle"/>
-    <method name="Shutdown"/>
-    <method name="RegisterShellClient"/>
-    <method name="GetState"><arg name="state" type="a{sv}" direction="out"/></method>
-    <method name="GetConfig"><arg name="config" type="a{sv}" direction="out"/></method>
-    <method name="ListBackends"><arg name="backends" type="aa{sv}" direction="out"/></method>
-    <method name="ListModelProfiles"><arg name="profiles" type="aa{sv}" direction="out"/></method>
-    <method name="ListPncModels"><arg name="models" type="aa{sv}" direction="out"/></method>
-    <method name="ListInputDevices"><arg name="devices" type="aa{sv}" direction="out"/></method>
-    <method name="SetBackend"><arg name="backend" type="s" direction="in"/></method>
-    <method name="SetModelProfile"><arg name="profile" type="s" direction="in"/></method>
-    <method name="SetInputDevice"><arg name="selector" type="s" direction="in"/></method>
-    <method name="SetShortcut"><arg name="accelerator" type="s" direction="in"/></method>
-    <method name="SetInsertionOptions"><arg name="options" type="a{sv}" direction="in"/></method>
-    <method name="SetRuntimeOptions"><arg name="options" type="a{sv}" direction="in"/></method>
-    <method name="InstallModel"><arg name="profile" type="s" direction="in"/></method>
-    <signal name="StateChanged"><arg name="state" type="a{sv}"/></signal>
-    <signal name="ConfigChanged"><arg name="config" type="a{sv}"/></signal>
-    <signal name="SessionStarted"><arg name="session_id" type="t"/></signal>
-    <signal name="TextDelta"><arg name="session_id" type="t"/><arg name="seq" type="t"/><arg name="text" type="s"/></signal>
-    <signal name="Partial"><arg name="session_id" type="t"/><arg name="seq" type="t"/><arg name="full_text" type="s"/></signal>
-    <signal name="Commit"><arg name="session_id" type="t"/><arg name="seq" type="t"/><arg name="text" type="s"/></signal>
-    <signal name="SessionStopped"><arg name="session_id" type="t"/></signal>
-    <signal name="InstallProgress"><arg name="profile" type="s"/><arg name="progress" type="a{sv}"/></signal>
-    <signal name="Metrics"><arg name="metrics" type="a{sv}"/></signal>
-    <signal name="Error"><arg name="message" type="s"/></signal>
-  </interface>
-</node>`;
-
-const NeMoteProxy = Gio.DBusProxy.makeProxyWrapper(SERVICE_XML);
+import {BUS_NAME, OBJECT_PATH, NeMoteProxy} from './serviceClient.js';
+import {deepUnpackMap, formatInstallProgress, numberValue, formatError} from './serviceValues.js';
+import {INSERTION_SETTINGS, RUNTIME_SETTINGS, optionsFromSettings, syncSettingsFromConfig} from './serviceSettings.js';
 
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
@@ -946,50 +911,7 @@ export default class NeMoteExtension extends Extension {
                 : config.model_profile;
         this._syncingSettings = true;
         try {
-            if (typeof config.backend === 'string')
-                this._settings.set_string('backend', config.backend);
-            if (typeof config.model_profile === 'string')
-                this._settings.set_string('model-profile', config.model_profile);
-            if (typeof config.model_family === 'string')
-                this._settings.set_string('model-family', config.model_family);
-            if (typeof config.streaming_latency_ms === 'number')
-                this._settings.set_uint('streaming-latency-ms', config.streaming_latency_ms);
-            if (typeof config.input_device === 'string')
-                this._settings.set_string('input-device', config.input_device);
-            if (typeof config.language === 'string')
-                this._settings.set_string('language', config.language);
-            if (typeof config.model_root === 'string')
-                this._settings.set_string('model-root', config.model_root);
-            if (typeof config.worker_path === 'string')
-                this._settings.set_string('worker-path', config.worker_path);
-            if (typeof config.model_installer_path === 'string')
-                this._settings.set_string('model-installer-path', config.model_installer_path);
-            if (typeof config.shortcut === 'string')
-                this._settings.set_strv('toggle-shortcut', config.shortcut ? [config.shortcut] : []);
-            if (typeof config.num_threads === 'number')
-                this._settings.set_uint('num-threads', config.num_threads);
-            if (typeof config.sample_rate === 'number')
-                this._settings.set_uint('sample-rate', config.sample_rate);
-            if (typeof config.spoken_punctuation === 'boolean')
-                this._settings.set_boolean('spoken-punctuation', config.spoken_punctuation);
-            if (typeof config.insert_partials === 'boolean')
-                this._settings.set_boolean('insert-partials', config.insert_partials);
-            if (typeof config.itn === 'boolean')
-                this._settings.set_boolean('itn', config.itn);
-            if (typeof config.endpoint_mode === 'string')
-                this._settings.set_string('endpoint-mode', config.endpoint_mode);
-            for (const [key, setting] of [['phrase_boosting', 'phrase-boosting'], ['vad_filtering', 'vad-filtering'], ['pnc', 'pnc']]) {
-                if (typeof config[key] === 'boolean')
-                    this._settings.set_boolean(setting, config[key]);
-            }
-            for (const [key, setting] of [['boost_phrases', 'boost-phrases'], ['boost_tokenizer_path', 'boost-tokenizer-path'], ['vad_model_path', 'vad-model-path'], ['pnc_model_path', 'pnc-model-path'], ['pnc_variant', 'pnc-variant']]) {
-                if (typeof config[key] === 'string')
-                    this._settings.set_string(setting, config[key]);
-            }
-            if (typeof config.stream_insert_delay_ms === 'number')
-                this._settings.set_uint('stream-insert-delay-ms', config.stream_insert_delay_ms);
-            if (typeof config.show_overlay === 'boolean')
-                this._settings.set_boolean('show-overlay', false);
+            syncSettingsFromConfig(this._settings, config);
         } finally {
             this._syncingSettings = false;
         }
@@ -1001,7 +923,7 @@ export default class NeMoteExtension extends Extension {
 
         switch (key) {
         case 'backend':
-            this._callRemote('SetBackend', this._settings.get_string('backend'));
+            // A read-only compatibility setting: NeMo is the only backend.
             break;
         case 'model-profile':
         case 'model-family':
@@ -1016,75 +938,21 @@ export default class NeMoteExtension extends Extension {
             this._callRemote('SetShortcut', shortcuts.length > 0 ? shortcuts[0] : '');
             break;
         }
-        case 'spoken-punctuation':
-        case 'insert-partials':
-        case 'stream-insert-delay-ms':
-        case 'show-overlay':
-            this._pushInsertionOptions();
-            break;
-        case 'model-root':
-        case 'itn':
-        case 'pnc':
-        case 'pnc-model-path':
-        case 'pnc-variant':
-        case 'endpoint-mode':
-        case 'phrase-boosting':
-        case 'boost-phrases':
-        case 'boost-tokenizer-path':
-        case 'vad-filtering':
-        case 'vad-model-path':
-        case 'language':
-        case 'worker-path':
-        case 'model-installer-path':
-        case 'num-threads':
-        case 'sample-rate':
-        case 'streaming-latency-ms':
-            this._pushRuntimeOptions();
-            break;
         default:
+            if (INSERTION_SETTINGS.includes(key))
+                this._pushInsertionOptions();
+            else if (RUNTIME_SETTINGS.includes(key))
+                this._pushRuntimeOptions();
             break;
         }
     }
 
     _pushInsertionOptions() {
-        this._callRemote('SetInsertionOptions', {
-            spoken_punctuation: new GLib.Variant('b',
-                this._settings.get_boolean('spoken-punctuation')),
-            insert_partials: new GLib.Variant('b',
-                this._settings.get_boolean('insert-partials')),
-            stream_insert_delay_ms: new GLib.Variant('u',
-                this._settings.get_uint('stream-insert-delay-ms')),
-            show_overlay: new GLib.Variant('b', false),
-        });
+        this._callRemote('SetInsertionOptions', optionsFromSettings(this._settings, INSERTION_SETTINGS));
     }
 
     _pushRuntimeOptions() {
-        const language = this._settings.get_string('language');
-        const modelRoot = this._settings.get_string('model-root');
-        const workerPath = this._settings.get_string('worker-path');
-        const modelInstallerPath = this._settings.get_string('model-installer-path');
-
-        this._callRemote('SetRuntimeOptions', {
-            streaming_latency_ms: new GLib.Variant('u', this._settings.get_uint('streaming-latency-ms')),
-            itn: new GLib.Variant('b', this._settings.get_boolean('itn')),
-            pnc: new GLib.Variant('b', this._settings.get_boolean('pnc')),
-            pnc_model_path: new GLib.Variant('s', this._settings.get_string('pnc-model-path')),
-            pnc_variant: new GLib.Variant('s', this._settings.get_string('pnc-variant')),
-            endpoint_mode: new GLib.Variant('s', this._settings.get_string('endpoint-mode')),
-            phrase_boosting: new GLib.Variant('b', this._settings.get_boolean('phrase-boosting')),
-            boost_phrases: new GLib.Variant('s', this._settings.get_string('boost-phrases')),
-            boost_tokenizer_path: new GLib.Variant('s', this._settings.get_string('boost-tokenizer-path')),
-            vad_filtering: new GLib.Variant('b', this._settings.get_boolean('vad-filtering')),
-            vad_model_path: new GLib.Variant('s', this._settings.get_string('vad-model-path')),
-            model_root: new GLib.Variant('s', modelRoot),
-            language: new GLib.Variant('s', language),
-            worker_path: new GLib.Variant('s', workerPath),
-            model_installer_path: new GLib.Variant('s', modelInstallerPath),
-            num_threads: new GLib.Variant('u',
-                this._settings.get_uint('num-threads')),
-            sample_rate: new GLib.Variant('u',
-                this._settings.get_uint('sample-rate')),
-        });
+        this._callRemote('SetRuntimeOptions', optionsFromSettings(this._settings, RUNTIME_SETTINGS));
     }
 
     _syncProfileMenu(rebuild = false) {
@@ -1166,25 +1034,6 @@ export default class NeMoteExtension extends Extension {
     }
 }
 
-function deepUnpackMap(value) {
-    if (!value)
-        return {};
-    const unpacked = deepUnpackValue(value);
-    if (!unpacked || typeof unpacked !== 'object' || Array.isArray(unpacked))
-        return {};
-    return unpacked;
-}
-
-function deepUnpackValue(value) {
-    const unpacked = value?.deep_unpack ? value.deep_unpack() : value;
-    if (!unpacked || typeof unpacked !== 'object' || Array.isArray(unpacked))
-        return unpacked;
-    const result = {};
-    for (const [key, variant] of Object.entries(unpacked))
-        result[key] = deepUnpackValue(variant);
-    return result;
-}
-
 function statusText(state, selectedModelInstalled) {
     if (state?.installing)
         return _('Installing model');
@@ -1218,22 +1067,6 @@ function formatMetrics(metrics) {
     if (droppedChunks)
         parts.push(`${droppedChunks} ${_('dropped')}`);
     return parts.join(' - ');
-}
-
-function formatInstallProgress(progress) {
-    const profile = typeof progress.profile === 'string' ? progress.profile : '';
-    const message = typeof progress.message === 'string'
-        ? progress.message
-        : typeof progress.phase === 'string'
-            ? progress.phase
-            : '';
-    if (!profile && !message)
-        return '';
-    if (!profile)
-        return message;
-    if (!message)
-        return profile;
-    return `${profile}: ${message}`;
 }
 
 function installProgressLabel(fraction) {
@@ -1291,18 +1124,7 @@ function createInstallProgress() {
     return {box, fill, label};
 }
 
-function numberValue(value) {
-    if (typeof value === 'number' && Number.isFinite(value))
-        return value;
-    return null;
-}
-
 function normalizeVoiceLevel(rms) {
     const value = numberValue(rms) ?? 0.0;
     return Math.max(0.0, Math.min(1.0, (value - 0.004) * 18.0));
-}
-
-function formatError(error) {
-    const message = error?.message ?? String(error);
-    return message.replace(/^GDBus\.Error:[^:]+:\s*/, '');
 }

@@ -19,7 +19,7 @@ inline std::string trim(std::string text) {
     auto start = text.find_first_not_of(" \t\r\n");
     return start == std::string::npos ? "" : text.substr(start, text.find_last_not_of(" \t\r\n") - start + 1);
 }
-inline Json defaults(const fs::path&, const fs::path& prefix, const fs::path& data_home) {
+inline Json defaults(const fs::path& prefix, const fs::path& data_home) {
     // Reuse existing downloads in place: no copies of large models on upgrade.
     auto models = data_home / "nemote/models";
     if (!fs::exists(models) && fs::is_directory(data_home / "wordpipe/models"))
@@ -33,7 +33,7 @@ inline Json defaults(const fs::path&, const fs::path& prefix, const fs::path& da
         {"pnc", false}, {"pnc_variant", "bert"}, {"pnc_model_path", ""},
         {"phrase_boosting", false}, {"boost_phrases", ""}, {"boost_tokenizer_path", ""},
         {"vad_filtering", false}, {"vad_model_path", ""}, {"endpoint_mode", "disabled"},
-        {"insert_partials", true}, {"stream_insert_delay_ms", 0u}, {"show_overlay", true}};
+        {"insert_partials", true}, {"stream_insert_delay_ms", 0u}};
 }
 inline std::string preset(const Json& config) {
     return config.at("model_family") == "english" ? "nemo-q8-english" : "nemo-q8";
@@ -43,26 +43,26 @@ inline fs::path runtime(const Json& config, const std::string& family = "") {
     return fs::path(config.at("model_root").get<std::string>()) /
         (selected == "english" ? "nemotron-nemo-en-q8" : "nemotron-nemo-q8");
 }
-inline bool installed(const Json& config, const std::string& family = "") {
-    auto path = runtime(config, family) / "model.gguf";
-    auto selected = family.empty() ? config.at("model_family").get<std::string>() : family;
+inline bool gguf_installed(const fs::path& path, uintmax_t expected_size) {
+    // Cheap readiness probe for frequent UI/state queries. Full checksums are
+    // verified by the installer, not by re-reading large weights on every RPC.
     std::error_code error;
-    if (fs::file_size(path, error) != (selected == "english" ? 699872960u : 742090464u) || error) return false;
+    if (fs::file_size(path, error) != expected_size || error) return false;
     char header[4]{};
     std::ifstream input(path, std::ios::binary);
     input.read(header, 4);
     return input && std::string(header, 4) == "GGUF";
+}
+inline bool installed(const Json& config, const std::string& family = "") {
+    const auto selected = family.empty() ? config.at("model_family").get<std::string>() : family;
+    return gguf_installed(runtime(config, selected) / "model.gguf",
+        selected == "english" ? 699872960u : 742090464u);
 }
 inline fs::path pnc_directory(const Json& config) {
     return fs::path(config.at("model_root").get<std::string>()) / "pnc";
 }
 inline bool pnc_file_installed(const fs::path& path, const std::string& variant) {
-    std::error_code error;
-    if (fs::file_size(path, error) != (variant == "bert" ? 138875840u : 93507552u) || error) return false;
-    char header[4]{};
-    std::ifstream input(path, std::ios::binary);
-    input.read(header, 4);
-    return input && std::string(header, 4) == "GGUF";
+    return gguf_installed(path, variant == "bert" ? 138875840u : 93507552u);
 }
 inline fs::path pnc_path(const Json& config, const std::string& variant) {
     const auto filename = "pnc-" + variant + "-en.q8_0.gguf";
@@ -137,17 +137,18 @@ inline Json migrate(Json config, const Json& saved) {
         *item = value;
     }
     // CPAL indexes and the old worker executable are not valid in miniaudio.
-    bool old = config["backend"] == "parakeet" || config["model_profile"] == "fast" || config["model_profile"] == "compact";
+    const bool legacy_parakeet = config["backend"] == "parakeet" ||
+        config["model_profile"] == "fast" || config["model_profile"] == "compact";
     config["backend"] = "nemo-speech";
     config["model_profile"] = "nemo-q8";
     config["sample_rate"] = 16000u;
-    if (old) config["input_device"] = "";
+    if (legacy_parakeet) config["input_device"] = "";
     auto worker_name = fs::path(config["worker_path"].get<std::string>()).filename();
     if (worker_name == "wordpipe-parakeet-worker" || worker_name == "wordpipe-nemo-worker" || worker_name == "nemote-parakeet-worker")
         config["worker_path"] = worker_default;
     if (fs::path(config["model_installer_path"].get<std::string>()).filename() == "wordpipe-model-install")
         config["model_installer_path"] = installer_default;
-    if (old && config["model_family"] == "english" && config["language"] != "auto" &&
+    if (legacy_parakeet && config["model_family"] == "english" && config["language"] != "auto" &&
         config["language"].get<std::string>().rfind("en-", 0) != 0) config["language"] = "en-US";
     validate(config);
     return config;
@@ -157,7 +158,12 @@ inline std::vector<std::string> worker_command(const Json& config) {
         "--model-family", config.at("model_family"), "--num-threads", std::to_string(config.at("num_threads").get<unsigned>()),
         "--sample-rate", "16000", "--chunk-samples", std::to_string(config.at("streaming_latency_ms").get<unsigned>() * 16),
         "--language", config.at("language"), "--device", "cpu"};
-    auto add = [&](const char* key, const char* argument) { if (config.at(key) != "") { command.push_back(argument); command.push_back(config.at(key)); } };
+    auto add = [&](const char* key, const char* argument) {
+        if (config.at(key) != "") {
+            command.push_back(argument);
+            command.push_back(config.at(key));
+        }
+    };
     add("input_device", "--input-device");
     if (config.at("itn")) command.push_back("--itn");
     if (config.at("pnc")) {
@@ -180,6 +186,8 @@ inline std::string punctuation(const std::string& text, bool partial) {
     for (std::string word; input >> word;) words.push_back(word);
     auto lower = [](std::string word) { for (auto& c : word) if (c >= 'A' && c <= 'Z') c += 'a' - 'A'; return word; };
     if (partial && !words.empty()) {
+        // Hold an ambiguous command prefix until the next snapshot tells us
+        // whether it is ordinary speech or a two-word punctuation command.
         auto tail = lower(words.back());
         if (tail == "full" || tail == "question" || tail == "exclamation" || tail == "new") words.pop_back();
     }
