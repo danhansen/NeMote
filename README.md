@@ -42,11 +42,13 @@ chunk sizes—80, 160, 560, and 1120 ms—use the same model file.
 The default shortcut is Ctrl+Alt+Space. Toggle and push-to-talk are supported.
 Choose a microphone, language, chunk size, and CPU thread count in preferences.
 
-Preferences are organized into four pages:
+Preferences are organized into three pages:
 
-- **Dictation:** microphone, recognition, keyboard shortcut, and vocabulary.
-- **Text:** number/date formatting, punctuation, pauses, and live previews.
-- **Models:** explicit speech and punctuation model installation, with setup progress.
+- **Dictation:** microphone, speech model selection and installation, language,
+  chunk size, keyboard shortcut, and vocabulary.
+- **Text:** number/date formatting, punctuation models and installation, pauses,
+  and live previews. Expand punctuation restoration to manage its models, even
+  while the feature is off.
 - **Advanced:** runtime paths, CPU threads, model overrides, and diagnostics.
 
 ## Dictation options
@@ -126,7 +128,7 @@ scripts/preview-ui --headless --audit
 This also requires GNOME Shell and `dbus-run-session`. It runs a private,
 software-rendered compositor with memory-only settings and no D-Bus service
 auto-activation. Open `build/ui-audit/index.html` for the preferences gallery and
-`build/ui-audit/shell.html` for the real GNOME panel menu. The audit covers all four
+`build/ui-audit/shell.html` for the real GNOME panel menu. The audit covers all three
 pages (whole windows and individual sections), dropdowns and shortcut capture; normal/light and narrow/dark/large-text
 layouts; and representative service states. Layout alerts are recorded in JSON
 manifests and make the command fail. Screenshots still require visual review:

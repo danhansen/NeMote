@@ -76,7 +76,11 @@ function checkLayout(widget, context, issues) {
         if (!(child instanceof Gtk.Label) || !child.get_label()) continue;
         if (!child.get_text())
             issues.push(`${context}: nonempty label rendered as empty: ${child.get_label()}`);
-        if (child.get_layout().is_ellipsized())
+        // Closed ComboRows may ellipsize the right-hand value to fit the row;
+        // the open popup must still show each option in full.
+        const inlineChoice = child.get_ancestor(Adw.ComboRow) &&
+            child.get_ancestor(Gtk.ListView) && !child.get_ancestor(Gtk.Popover);
+        if (!inlineChoice && child.get_layout().is_ellipsized())
             issues.push(`${context}: ellipsized label: ${child.get_label()}`);
         const [success, bounds] = child.compute_bounds(widget);
         if (success && (bounds.origin.x < -1 || bounds.origin.x + bounds.size.width > width + 1))
@@ -100,6 +104,8 @@ async function audit() {
             const preview = createPreview(schemaDirectory, scenario, style.width);
             try {
                 preview.page._boostPhrasesRow.expanded = true;
+                preview.page._modelGroup.expanded = true;
+                preview.page._pncGroup.expanded = true;
                 preview.window.present();
                 await wait(350);
                 if (Math.abs(preview.window.get_width() - style.width) > 1)
@@ -118,7 +124,7 @@ async function audit() {
                     for (const group of groups) {
                         // All sections in the default state; otherwise capture
                         // the sections whose content changes with service state.
-                        if (scenario !== 'ready' && !['Speech Recognition', 'Punctuation and Capitalization', 'Transcript', 'Service', 'Model Setup'].includes(group.title))
+                        if (scenario !== 'ready' && !['Speech Recognition', 'Formatting', 'Transcript', 'Service'].includes(group.title))
                             continue;
                         await reveal(page, group);
                         const name = `${style.name}-${scenario}-${slug(page.title)}-${slug(group.title)}`;
@@ -131,8 +137,7 @@ async function audit() {
                 if (scenario === 'ready') {
                     preview.window.set_visible_page(preview.page);
                     await wait();
-                    for (const field of ['_profileRow', '_latencyRow', '_languageRow', '_deviceRow',
-                        '_pncVariantRow', '_endpointModeRow', '_insertPartialsRow', '_shortcutModeRow']) {
+                    for (const field of ['_latencyRow', '_languageRow', '_deviceRow', '_shortcutModeRow']) {
                         const row = preview.page[field];
                         const owner = row.get_ancestor(Adw.PreferencesPage);
                         preview.window.set_visible_page(owner);

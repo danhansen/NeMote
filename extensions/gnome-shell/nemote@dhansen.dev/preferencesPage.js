@@ -4,6 +4,7 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gdk from 'gi://Gdk';
 import Gtk from 'gi://Gtk';
+import Pango from 'gi://Pango';
 
 // The GNOME host supplies its translator; standalone previews use English.
 let _ = text => text;
@@ -13,7 +14,7 @@ export function createPreferencesPage(settings, {gettext = text => text, connect
     return new NeMotePage(settings, connectService);
 }
 
-import {installedModelProfiles, streamingChunkChoices} from './modelState.js';
+import {streamingChunkChoices} from './modelState.js';
 
 const BUS_NAME = 'dev.nemote.Service';
 const OBJECT_PATH = '/dev/nemote/Service';
@@ -327,11 +328,11 @@ class NeMotePage extends Adw.PreferencesPage {
             installed: false,
             runtime_dir: '',
         }));
-        this._selectableProfiles = installedModelProfiles(this._profiles);
         this._pncModels = [];
         this._deviceSelectors = [''];
         this._installRows = new Map();
         this._installButtons = new Map();
+        this._installChecks = new Map();
         this._installing = false;
         this._installingProfile = '';
         this._lastInstallProgress = {};
@@ -340,15 +341,11 @@ class NeMotePage extends Adw.PreferencesPage {
             title: _('Text'),
             icon_name: 'insert-text-symbolic',
         });
-        this.modelsPage = new Adw.PreferencesPage({
-            title: _('Models'),
-            icon_name: 'folder-download-symbolic',
-        });
         this.advancedPage = new Adw.PreferencesPage({
             title: _('Advanced'),
             icon_name: 'preferences-other-symbolic',
         });
-        this.pages = [this, this.textPage, this.modelsPage, this.advancedPage];
+        this.pages = [this, this.textPage, this.advancedPage];
         this._buildGeneralSection();
         this._buildAdvancedSection();
         if (connectService)
@@ -369,11 +366,10 @@ class NeMotePage extends Adw.PreferencesPage {
         this._buildInputGroup(this);
         this._buildModelGroup(this);
         this._buildBehaviorGroup(this);
-        const factory = choiceListFactory();
-        for (const row of [this._profileRow, this._latencyRow, this._languageRow,
-            this._deviceRow, this._pncVariantRow, this._endpointModeRow,
-            this._insertPartialsRow, this._shortcutModeRow])
-            row.list_factory = factory;
+        for (const row of [this._latencyRow, this._languageRow,
+            this._deviceRow, this._shortcutModeRow])
+            row.list_factory = choiceListFactory(row);
+        this._syncModelChoices();
     }
 
     _buildAdvancedSection() {
@@ -381,11 +377,12 @@ class NeMotePage extends Adw.PreferencesPage {
         this._buildTranscriptGroup(this.advancedPage);
         this._buildServiceGroup(this.advancedPage);
         this._runtimeControls = [this._deviceRow, this._latencyRow, this._languageRow,
-            this._itnRow, this._pncRow, this._pncVariantRow, this._endpointModeRow,
+            this._itnRow, this._pncRow,
+            ...this._endpointChoices.map(choice => choice.row),
             this._phraseBoostingRow, this._boostPhrasesRow, this._vadFilteringRow,
             this._modelRootRow, this._workerPathRow, this._modelInstallerPathRow,
             this._threadsRow, this._pncModelPathRow, this._boostTokenizerPathRow,
-            this._vadModelPathRow, this._insertPartialsRow];
+            this._vadModelPathRow, ...this._insertionChoices.map(choice => choice.row)];
     }
 
     _appendSection(section, widget) {
@@ -393,50 +390,21 @@ class NeMotePage extends Adw.PreferencesPage {
     }
 
     _buildModelGroup(section) {
-        this._modelGroup = new Adw.PreferencesGroup({
-            title: _('Speech Recognition'),
-            description: _('Install a model, then select it in Dictation. One download supports all chunk sizes.'),
-        });
-        this.modelsPage.add(this._modelGroup);
         const group = new Adw.PreferencesGroup({
-            title: _('Recognition'),
+            title: _('Speech Recognition'),
             description: _('Smaller chunks show text sooner but use more processing power'),
         });
-        const manageModels = new Gtk.Button({label: _('Manage Models'), valign: Gtk.Align.CENTER});
-        manageModels.connect('clicked', () => this.get_root().set_visible_page(this.modelsPage));
-        group.header_suffix = manageModels;
         this._appendSection(section, group);
-
-        this._profileModel = new Gtk.StringList();
-        this._selectableProfiles.forEach(profile => this._profileModel.append(profile.title));
-        this._profileRow = new Adw.ComboRow({
+        this._modelGroup = new Adw.ExpanderRow({
             title: _('Model'),
-            use_subtitle: true,
-            subtitle_lines: 0,
-            model: this._profileModel,
-            sensitive: this._selectableProfiles.length > 0,
+            subtitle: _('Choose or install a speech model'),
+            use_markup: false,
         });
-        this._profileRow.selected = this._selectedProfileIndex(this._selectedPresetId());
-        this._profileRow.connect('notify::selected', row => {
-            if (this._syncingSettings)
-                return;
-            const preset = this._selectableProfiles[row.selected];
-            if (!preset)
-                return;
-            this._selectedPreset = preset.id;
-            this._withSyncing(() => {
-                this._settings.set_string('model-profile', preset.model_profile);
-                this._settings.set_string('model-family', preset.model_family);
-            });
-            this._callRemote('SetModelProfile', preset.id);
-        });
-        group.add(this._profileRow);
+        group.add(this._modelGroup);
 
         this._latencyValues = [80, 160, 560, 1120];
         this._latencyRow = new Adw.ComboRow({
             title: _('Streaming Chunk Size'),
-            use_subtitle: true,
-            subtitle_lines: 0,
             model: Gtk.StringList.new(this._latencyValues.map(value => `${value} ms`)),
             selected: Math.max(0, this._latencyValues.indexOf(this._settings.get_uint('streaming-latency-ms'))),
         });
@@ -453,8 +421,6 @@ class NeMotePage extends Adw.PreferencesPage {
         this._languageModel = new Gtk.StringList();
         this._languageRow = new Adw.ComboRow({
             title: _('Dictation Language'),
-            use_subtitle: true,
-            subtitle_lines: 0,
             model: this._languageModel,
         });
         this._updateLanguageOptions();
@@ -483,8 +449,6 @@ class NeMotePage extends Adw.PreferencesPage {
         this._deviceModel.append(_('System Default'));
         this._deviceRow = new Adw.ComboRow({
             title: _('Microphone'),
-            use_subtitle: true,
-            subtitle_lines: 0,
             model: this._deviceModel,
         });
         this._deviceRow.connect('notify::selected', row => {
@@ -534,61 +498,45 @@ class NeMotePage extends Adw.PreferencesPage {
         });
         this._itnRow = row;
         group.add(row);
-        this._pncGroup = new Adw.PreferencesGroup({
-            title: _('Punctuation and Capitalization'),
-            description: _('Optional English text formatting. Setup downloads and converts the model on this computer.'),
-        });
-        this.modelsPage.add(this._pncGroup);
-        this._pncRow = new Adw.SwitchRow({
+        this._pncGroup = new Adw.ExpanderRow({
             title: _('Restore Punctuation and Capitalization'),
-            subtitle: _('Experimental · English only. Install a punctuation model in Models first.'),
-            active: this._settings.get_boolean('pnc'),
+            subtitle: _('Experimental · English only'),
+            subtitle_lines: 0,
+            use_markup: false,
         });
+        // Keep expansion independent of enablement so installation is available
+        // while punctuation restoration is off.
+        this._pncRow = new Gtk.Switch({
+            active: this._settings.get_boolean('pnc'),
+            valign: Gtk.Align.CENTER,
+        });
+        this._pncRow.update_property([Gtk.AccessibleProperty.LABEL],
+            [_('Restore Punctuation and Capitalization')]);
         this._pncRow.connect('notify::active', widget => {
             if (this._syncingSettings)
                 return;
             this._settings.set_boolean('pnc', widget.active);
+            this._syncModelChoices();
             this._pushRuntimeOptions();
         });
-        group.add(this._pncRow);
-        this._pncVariants = ['bert', 'distilbert'];
-        this._pncVariantRow = new Adw.ComboRow({
-            title: _('Punctuation Model'),
-            use_subtitle: true,
-            subtitle_lines: 0,
-            model: Gtk.StringList.new([_('BERT — Higher Accuracy'), _('DistilBERT — Faster')]),
-            selected: Math.max(0, this._pncVariants.indexOf(this._settings.get_string('pnc-variant'))),
-        });
-        this._pncVariantRow.connect('notify::selected', widget => {
-            if (this._syncingSettings)
-                return;
-            this._settings.set_string('pnc-variant', this._pncVariants[widget.selected] ?? 'bert');
-            this._pushRuntimeOptions();
-        });
-        group.add(this._pncVariantRow);
+        this._pncGroup.add_suffix(this._pncRow);
+        group.add(this._pncGroup);
         const endpointGroup = new Adw.PreferencesGroup({
             title: _('Pauses'),
-            description: _('After about 0.8 seconds of silence, apply the formatting enabled above. Preview updates require live text.'),
+            description: _('Choose what happens after about 0.8 seconds of silence'),
         });
         this.textPage.add(endpointGroup);
-        this._endpointModes = ['disabled', 'preview', 'commit'];
-        this._endpointModeRow = new Adw.ComboRow({
-            title: _('At Each Pause'),
-            use_subtitle: true,
-            subtitle_lines: 0,
-            model: Gtk.StringList.new([_('Do Nothing'), _('Format Preview'), _('Format and Insert Final Text')]),
-            selected: Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode'))),
-        });
-        this._endpointModeRow.connect('notify::selected', widget => {
-            if (this._syncingSettings)
-                return;
-            const mode = this._endpointModes[widget.selected];
-            if (!mode)
-                return;
+        this._endpointChoices = this._addRadioChoices(endpointGroup, [
+            ['disabled', _('Do nothing'),
+                _('Keep dictating through pauses. Apply automatic formatting and insert final text only when dictation stops.')],
+            ['preview', _('Format the preview'),
+                _('Apply enabled formatting to all text so far, without finalizing it. Requires live preview to see updates before dictation stops.')],
+            ['commit', _('Format and insert final text'),
+                _('Apply enabled formatting and finalize the text at each pause. Continue dictating a new segment without stopping the microphone.')],
+        ], this._settings.get_string('endpoint-mode'), mode => {
             this._settings.set_string('endpoint-mode', mode);
             this._pushRuntimeOptions();
         });
-        endpointGroup.add(this._endpointModeRow);
 
         const vocabularyGroup = new Adw.PreferencesGroup({title: _('Vocabulary')});
 
@@ -643,24 +591,18 @@ class NeMotePage extends Adw.PreferencesPage {
 
         const insertionGroup = new Adw.PreferencesGroup({
             title: _('Text Insertion'),
-            description: _('Live text can change while speaking. Final text is inserted when dictation stops or a pause finalizes it.'),
         });
         this.textPage.add(insertionGroup);
 
-        this._insertPartialsRow = new Adw.ComboRow({
-            title: _('Show While Speaking'),
-            use_subtitle: true,
-            subtitle_lines: 0,
-            model: Gtk.StringList.new([_('Live Preview and Final Text'), _('Final Text Only')]),
-            selected: this._settings.get_boolean('insert-partials') ? 0 : 1,
-        });
-        this._insertPartialsRow.connect('notify::selected', widget => {
-            if (this._syncingSettings)
-                return;
-            this._settings.set_boolean('insert-partials', widget.selected === 0);
+        this._insertionChoices = this._addRadioChoices(insertionGroup, [
+            [true, _('Live preview and final text'),
+                _('Show replaceable text in the focused application while speaking. Insert final text when dictation stops or a pause finalizes it.')],
+            [false, _('Final text only'),
+                _('Show no text while speaking. Insert text when dictation stops, or at each pause if “Format and insert final text” is selected.')],
+        ], this._settings.get_boolean('insert-partials'), value => {
+            this._settings.set_boolean('insert-partials', value);
             this._pushInsertionOptions();
         });
-        insertionGroup.add(this._insertPartialsRow);
 
         this._delayRow = Adw.SpinRow.new_with_range(0, 1000, 25);
         this._delayRow.title = _('Insertion Delay');
@@ -699,8 +641,6 @@ class NeMotePage extends Adw.PreferencesPage {
             this._shortcutModeModel.append(shortcutModeTitle(mode.id)));
         this._shortcutModeRow = new Adw.ComboRow({
             title: _('Shortcut Behavior'),
-            use_subtitle: true,
-            subtitle_lines: 0,
             model: this._shortcutModeModel,
         });
         this._shortcutModeRow.selected = this._selectedIndex(
@@ -715,6 +655,29 @@ class NeMotePage extends Adw.PreferencesPage {
         });
         shortcutGroup.add(this._shortcutModeRow);
         this._appendSection(section, vocabularyGroup);
+    }
+
+    _addRadioChoices(group, choices, selected, onSelected) {
+        let firstButton = null;
+        return choices.map(([value, title, subtitle]) => {
+            const button = new Gtk.CheckButton({valign: Gtk.Align.CENTER});
+            if (firstButton)
+                button.set_group(firstButton);
+            else
+                firstButton = button;
+            const row = new Adw.ActionRow({title, subtitle, subtitle_lines: 0,
+                activatable_widget: button, use_markup: false});
+            row.add_prefix(button);
+            button.update_property([Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION],
+                [title, subtitle]);
+            button.active = value === selected;
+            button.connect('toggled', () => {
+                if (button.active && !this._syncingSettings)
+                    onSelected(value);
+            });
+            group.add(row);
+            return {value, row, button};
+        });
     }
 
     _buildAdvancedGroup(section) {
@@ -849,12 +812,10 @@ class NeMotePage extends Adw.PreferencesPage {
             show_text: true,
             visible: false,
         });
-        const setup = new Adw.PreferencesGroup({title: _('Model Setup')});
-        this.modelsPage.add(setup);
-        setup.add(this._progressRow);
+        group.add(this._progressRow);
         const progressIndicator = new Adw.PreferencesRow({child: this._progressBar});
         this._progressBar.bind_property('visible', progressIndicator, 'visible', GObject.BindingFlags.SYNC_CREATE);
-        setup.add(progressIndicator);
+        group.add(progressIndicator);
 
         this._metricsRow = new Adw.ActionRow({
             title: _('Runtime Metrics'),
@@ -968,7 +929,6 @@ class NeMotePage extends Adw.PreferencesPage {
                 installed: Boolean(item.installed),
                 runtime_dir: item.runtime_dir ?? '',
             }));
-            this._rebuildProfileOptions();
             this._rebuildProfileRows();
             this._syncComboSelections();
         });
@@ -1072,14 +1032,12 @@ class NeMotePage extends Adw.PreferencesPage {
     }
 
     _syncComboSelections() {
-        if (!this._profileRow || !this._languageRow)
+        if (!this._languageRow)
             return;
-        const preset = this._selectedPresetId();
         const family = this._settings.get_string('model-family');
         const language = this._settings.get_string('language');
         this._withSyncing(() => {
             this._updateLanguageOptions(family, language);
-            this._profileRow.selected = this._selectedProfileIndex(preset);
             this._languageRow.selected = this._selectedIndex(this._languages, language);
         });
     }
@@ -1096,12 +1054,13 @@ class NeMotePage extends Adw.PreferencesPage {
 
     _syncControlValues() {
         this._spokenPunctuationRow.active = this._settings.get_boolean('spoken-punctuation');
-        this._insertPartialsRow.selected = this._settings.get_boolean('insert-partials') ? 0 : 1;
+        this._insertionChoices.find(choice => choice.value === this._settings.get_boolean('insert-partials')).button.active = true;
         this._itnRow.active = this._settings.get_boolean('itn');
         this._pncRow.active = this._settings.get_boolean('pnc');
         this._pncModelPathRow.text = this._settings.get_string('pnc-model-path');
-        this._pncVariantRow.selected = Math.max(0, this._pncVariants.indexOf(this._settings.get_string('pnc-variant')));
-        this._endpointModeRow.selected = Math.max(0, this._endpointModes.indexOf(this._settings.get_string('endpoint-mode')));
+        this._syncModelChoices();
+        (this._endpointChoices.find(choice => choice.value === this._settings.get_string('endpoint-mode')) ??
+            this._endpointChoices[0]).button.active = true;
         this._vadModelPathRow.text = this._settings.get_string('vad-model-path');
         this._boostTokenizerPathRow.text = this._settings.get_string('boost-tokenizer-path');
         const phrases = this._settings.get_string('boost-phrases');
@@ -1127,6 +1086,7 @@ class NeMotePage extends Adw.PreferencesPage {
             (id.startsWith('pnc-') ? this._pncGroup : this._modelGroup).remove(row);
         this._installRows.clear();
         this._installButtons.clear();
+        this._installChecks.clear();
 
         for (const profile of [...this._profiles, ...this._pncModels]) {
             const installing = this._installing && this._installingProfile === profile.id;
@@ -1135,8 +1095,12 @@ class NeMotePage extends Adw.PreferencesPage {
                 subtitle: this._profileSubtitle(profile),
                 use_markup: false,
             });
+            const check = new Gtk.Image({icon_name: 'object-select-symbolic',
+                accessible_role: Gtk.AccessibleRole.PRESENTATION, opacity: 0});
+            row.add_prefix(check);
+            row.connect('activated', () => this._selectModel(profile.id));
             const button = new Gtk.Button({
-                label: installing ? _('Installing…') : _('Install'),
+                icon_name: installing ? 'emblem-synchronizing-symbolic' : 'folder-download-symbolic',
                 valign: Gtk.Align.CENTER,
                 // Installation status is already shown in the subtitle; a
                 // disabled confirmation button is almost invisible in light themes.
@@ -1157,8 +1121,63 @@ class NeMotePage extends Adw.PreferencesPage {
             row.add_suffix(button);
             this._installRows.set(profile.id, row);
             this._installButtons.set(profile.id, button);
-            (profile.id.startsWith('pnc-') ? this._pncGroup : this._modelGroup).add(row);
+            this._installChecks.set(profile.id, check);
+            (profile.id.startsWith('pnc-') ? this._pncGroup : this._modelGroup).add_row(row);
         }
+        this._syncModelChoices();
+    }
+
+    _selectModel(id) {
+        const profile = [...this._profiles, ...this._pncModels].find(item => item.id === id);
+        if (!profile?.installed || this._runtimeBusy)
+            return;
+        if (id.startsWith('pnc-')) {
+            if (this._settings.get_string('pnc-model-path'))
+                return;
+            this._settings.set_string('pnc-variant', id.slice(4));
+            this._syncModelChoices();
+            this._pushRuntimeOptions();
+        } else {
+            this._selectedPreset = id;
+            this._withSyncing(() => {
+                this._settings.set_string('model-profile', profile.model_profile);
+                this._settings.set_string('model-family', profile.model_family);
+            });
+            this._syncModelChoices();
+            this._syncComboSelections();
+            this._callRemote('SetModelProfile', id);
+        }
+    }
+
+    _syncModelChoices() {
+        const customPnc = this._settings.get_string('pnc-model-path');
+        const selectedPnc = `pnc-${this._settings.get_string('pnc-variant')}`;
+        const selectedAsr = this._selectedPresetId();
+        for (const profile of [...this._profiles, ...this._pncModels]) {
+            const row = this._installRows.get(profile.id);
+            if (!row)
+                continue;
+            const pnc = profile.id.startsWith('pnc-');
+            const selected = profile.installed && (pnc ? !customPnc && profile.id === selectedPnc : profile.id === selectedAsr);
+            row.activatable = profile.installed && !this._runtimeBusy && !(pnc && customPnc);
+            // Leave the row sensitive: its independent download action must
+            // remain usable even when the model cannot yet be selected.
+            this._installChecks.get(profile.id).opacity = selected ? 1 : 0;
+            row.update_property([Gtk.AccessibleProperty.DESCRIPTION],
+                [selected ? _('Selected model') : profile.installed ? _('Installed model') : _('Not installed')]);
+        }
+        const asr = this._profiles.find(profile => profile.id === selectedAsr);
+        this._modelGroup.subtitle = asr?.installed ? asr.title : _('Select or download a speech model');
+        if (!this._pncGroup)
+            return;
+        const pnc = this._pncModels.find(profile => profile.id === selectedPnc);
+        const ready = Boolean(customPnc || pnc?.installed);
+        this._pncGroup.subtitle = customPnc
+            ? _('Experimental · English only · Custom model from Advanced')
+            : pnc?.installed ? `${_('Experimental · English only')} · ${pnc.title}`
+            : _('Experimental · English only · Select or download a model');
+        this._pncRow.sensitive = !this._runtimeBusy && (ready || this._pncRow.active);
+        this._pncRow.tooltip_text = ready ? _('Enable Punctuation Restoration') : _('Select an installed model before enabling');
     }
 
     _profileSubtitle(profile) {
@@ -1176,11 +1195,6 @@ class NeMotePage extends Adw.PreferencesPage {
         const selectedPreset = modelPresetFromValues(values);
         if (selectedPreset && selectedPreset !== this._selectedPreset) {
             this._selectedPreset = selectedPreset;
-            if (this._profileRow) {
-                this._withSyncing(() => {
-                    this._profileRow.selected = this._selectedProfileIndex(selectedPreset);
-                });
-            }
         }
         const previousInstalling = this._installing;
         const previousInstallingProfile = this._installingProfile;
@@ -1189,8 +1203,7 @@ class NeMotePage extends Adw.PreferencesPage {
         this._runtimeBusy = Boolean(values.loading_model || values.listening || values.stopping || values.installing);
         for (const control of this._runtimeControls ?? [])
             control.sensitive = !this._runtimeBusy;
-        if (this._profileRow)
-            this._profileRow.sensitive = !this._runtimeBusy && this._selectableProfiles.length > 0;
+        this._syncModelChoices();
         this._latencyRow.sensitive = !values.loading_model && !values.listening &&
             !values.stopping && !values.installing;
         const selectedModelInstalled = values.selected_model_installed !== false;
@@ -1206,7 +1219,7 @@ class NeMotePage extends Adw.PreferencesPage {
         else if (!selectedModelInstalled)
             this._statusRow.subtitle = _('Model missing');
         else if (!selectedPncInstalled)
-            this._statusRow.subtitle = _('Install the selected punctuation model in Models, or disable punctuation restoration in Text');
+            this._statusRow.subtitle = _('Install the selected punctuation model under Text → Restore Punctuation and Capitalization, or disable restoration');
         else if (values.last_error)
             this._statusRow.subtitle = values.last_error;
         else
@@ -1277,30 +1290,8 @@ class NeMotePage extends Adw.PreferencesPage {
         }
     }
 
-    _rebuildProfileOptions() {
-        this._withSyncing(() => {
-            this._selectableProfiles = installedModelProfiles(this._profiles);
-            clearStringList(this._profileModel);
-            this._selectableProfiles.forEach(profile =>
-                this._profileModel.append(profile.title));
-            const index = this._selectableProfiles.findIndex(
-                profile => profile.id === this._selectedPresetId());
-            this._profileRow.selected = index < 0 ? Gtk.INVALID_LIST_POSITION : index;
-        });
-        if (!this._profileRow)
-            return;
-        this._profileRow.sensitive = !this._runtimeBusy && this._selectableProfiles.length > 0;
-        if (this._selectableProfiles.length === 0)
-            this._profileRow.subtitle = _('No installed models');
-    }
-
     _selectedIndex(items, selectedId) {
         return Math.max(0, items.findIndex(item => item.id === selectedId));
-    }
-
-    _selectedProfileIndex(selectedId) {
-        const index = this._selectableProfiles.findIndex(profile => profile.id === selectedId);
-        return index < 0 ? Gtk.INVALID_LIST_POSITION : index;
     }
 
     _selectedPresetId() {
@@ -1481,22 +1472,35 @@ function formatError(error) {
     return message.replace(/^GDBus\.Error:[^:]+:\s*/, '');
 }
 
-function choiceListFactory() {
+// Follow GNOME Settings' cc-device-combo-row.c: let the popup request the
+// full label width, and reserve the checkmark's space independently of hover.
+// https://gitlab.gnome.org/GNOME/gnome-control-center/-/blob/main/panels/sound/cc-device-combo-row.c
+function choiceListFactory(row) {
     const factory = new Gtk.SignalListItemFactory();
     factory.connect('setup', (_factory, item) => {
-        const box = new Gtk.Box({spacing: 12, margin_start: 12, margin_end: 12,
-            margin_top: 8, margin_bottom: 8});
-        item._choiceLabel = new Gtk.Label({xalign: 0, wrap: true,
-            max_width_chars: 28, hexpand: true, use_markup: false});
-        item._choiceCheck = new Gtk.Image({icon_name: 'object-select-symbolic'});
+        const box = new Gtk.Box();
+        item._choiceLabel = new Gtk.Label({xalign: 0, width_chars: 1,
+            ellipsize: Pango.EllipsizeMode.END, valign: Gtk.Align.CENTER,
+            use_markup: false});
+        item._choiceCheck = new Gtk.Image({icon_name: 'object-select-symbolic',
+            accessible_role: Gtk.AccessibleRole.PRESENTATION});
         box.append(item._choiceLabel);
         box.append(item._choiceCheck);
         item.set_child(box);
-        item.connect('notify::selected', listItem => { listItem._choiceCheck.visible = listItem.selected; });
     });
     factory.connect('bind', (_factory, item) => {
         item._choiceLabel.label = item.item.get_string();
-        item._choiceCheck.visible = item.selected;
+        const update = () => {
+            item._choiceCheck.opacity = row.selected_item === item.item ? 1 : 0;
+        };
+        item._choiceSelectedId = row.connect('notify::selected-item', update);
+        update();
+    });
+    factory.connect('unbind', (_factory, item) => {
+        if (item._choiceSelectedId) {
+            row.disconnect(item._choiceSelectedId);
+            item._choiceSelectedId = 0;
+        }
     });
     return factory;
 }

@@ -2,14 +2,16 @@
 
 The **Restore Punctuation and Capitalization** switch enables a separate
 NeMo-Speech.cpp token classifier. It is experimental and off by default;
-it is not an LLM cleanup step. Under **Text → Formatting → Punctuation Model**,
-choose **BERT — Higher Accuracy** or **DistilBERT — Faster**.
+it is not an LLM cleanup step. Expand **Text → Restore Punctuation and Capitalization**
+to select **BERT** (higher accuracy) or **DistilBERT** (faster).
 
 While dictation is stopped, use the install button for **English PnC — BERT**
-or **English PnC — DistilBERT** on the **Models** page. This explicitly downloads the
+or **English PnC — DistilBERT** inside that expandable row. The section can be opened
+while restoration is off. Only installed models can be selected; download buttons
+remain available for missing models. This explicitly downloads the
 chosen checkpoint directly from NVIDIA and converts it locally using the
 pinned upstream converter. Download progress and preparation/conversion stages
-appear in preferences and service logs. Installation does not enable PnC or
+appear on the model row, in Advanced diagnostics, and in service logs. Installation does not enable PnC or
 change the selected model: choose the model and enable the switch when ready.
 Dictation never downloads or converts PnC models. If the selected model is
 missing, install it in preferences or disable the switch before dictating.

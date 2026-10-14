@@ -11,32 +11,43 @@ function harness() {
     class Row {
         constructor(options) { Object.assign(this, options); }
         add_suffix(button) { this.button = button; }
+        add_prefix() {}
+        update_property() {}
         connect(_signal, callback) { this.click = callback; }
     }
     const Page = vm.runInNewContext(`(class {
         ${method('_rebuildProfileRows', '_handleState')}
         ${method('_handleState', '_handleInstallProgress')}
         ${method('_setInstallProgress', '_syncInstallButtons')}
-        ${method('_syncInstallButtons', '_rebuildProfileOptions')}
+        ${method('_syncInstallButtons', '_selectedIndex')}
     })`, {
-        _: text => text, Adw: {ActionRow: Row}, Gtk: {Button: Row, Align: {CENTER: 0}},
+        _: text => text, Adw: {ActionRow: Row}, Gtk: {Button: Row, Image: Row, Align: {CENTER: 0},
+            AccessibleRole: {PRESENTATION: 0}, AccessibleProperty: {DESCRIPTION: 0}},
         modelPresetFromValues: () => null, formatMetrics: () => '', formatInstallProgress: progress => progress.message ?? '',
         numberValue: value => typeof value === 'number' ? value : null,
     });
     const page = new Page();
-    const group = () => ({rows: [], add(row) { this.rows.push(row); },
+    const group = () => ({rows: [], add_row(row) { this.rows.push(row); },
         remove(row) { this.rows.splice(this.rows.indexOf(row), 1); }});
     Object.assign(page, {
-        _profiles: [{id: 'nemo-q8-english', title: 'English', installed: true}],
+        _profiles: [{id: 'nemo-q8-english', title: 'English', installed: true,
+            model_profile: 'nemo-q8', model_family: 'english'}],
         _pncModels: [{id: 'pnc-bert', title: 'BERT', installed: false},
             {id: 'pnc-distilbert', title: 'DistilBERT', installed: true}],
-        _installRows: new Map(), _installButtons: new Map(),
+        _installRows: new Map(), _installButtons: new Map(), _installChecks: new Map(),
         _modelGroup: group(), _pncGroup: group(),
+        _pncRow: {active: false},
+        values: {'pnc-variant': 'bert', 'pnc-model-path': ''},
+        _selectedPresetId: () => 'nemo-q8-english',
+        _withSyncing(callback) { callback(); }, _syncComboSelections() {},
+        _pushRuntimeOptions() { this.calls.push(['SetRuntimeOptions']); },
         _installing: false, _installingProfile: '', _runtimeBusy: false,
         _latencyRow: {}, _statusRow: {}, _metricsRow: {}, _startButton: {}, _stopButton: {},
         _progressRow: {}, _progressBar: {}, calls: [],
         _callRemote(name, id) { this.calls.push([name, id]); },
     });
+    page._settings = {get_string: key => page.values[key] ?? '',
+        set_string: (key, value) => { page.values[key] = value; }};
     return page;
 }
 
@@ -81,18 +92,53 @@ test('missing selected PnC disables Start but leaves its install button availabl
 
 test('runtime controls and model selection stay disabled across a busy inventory refresh', () => {
     const page = harness();
-    page._profileRow = {};
-    page._selectableProfiles = [{}];
     page._runtimeControls = [{sensitive: true}, {sensitive: true}];
     page._rebuildProfileRows();
     for (const busy of [{loading_model: true}, {listening: true}, {stopping: true}, {installing: true}]) {
         page._handleState(busy);
         page._rebuildProfileRows();
-        assert.equal(page._profileRow.sensitive, false);
+        assert.equal(page._installRows.get('nemo-q8-english').activatable, false);
         assert.ok(page._runtimeControls.every(control => !control.sensitive));
         assert.equal(page._installButtons.get('pnc-bert').sensitive, false);
     }
     page._handleState({});
-    assert.equal(page._profileRow.sensitive, true);
+    assert.equal(page._installRows.get('nemo-q8-english').activatable, true);
     assert.ok(page._runtimeControls.every(control => control.sensitive));
+});
+
+test('only installed models can be selected and enablement requires a usable selection', () => {
+    const page = harness();
+    page._rebuildProfileRows();
+    assert.equal(page._installRows.get('pnc-bert').activatable, false);
+    assert.equal(page._pncRow.sensitive, false);
+    page._pncRow.active = true;
+    page._syncModelChoices();
+    assert.equal(page._pncRow.sensitive, true, 'a missing model must not prevent turning restoration off');
+    page._pncRow.active = false;
+    page._syncModelChoices();
+    assert.equal(page._pncRow.sensitive, false);
+    page._selectModel('pnc-bert');
+    assert.deepEqual(page.calls, []);
+    page._selectModel('pnc-distilbert');
+    assert.equal(page.values['pnc-variant'], 'distilbert');
+    assert.equal(page._installChecks.get('pnc-distilbert').opacity, 1);
+    assert.equal(page._pncRow.sensitive, true);
+    assert.equal(page._pncRow.active, false, 'choosing a model does not enable restoration');
+    page._runtimeBusy = true;
+    const calls = page.calls.length;
+    page._selectModel('nemo-q8-english');
+    assert.equal(page.calls.length, calls);
+});
+
+test('custom punctuation overrides are explicit and do not misleadingly select a managed model', () => {
+    const page = harness();
+    page.values['pnc-model-path'] = '/tmp/custom.gguf';
+    page._rebuildProfileRows();
+    assert.match(page._pncGroup.subtitle, /Custom model/);
+    assert.equal(page._pncRow.sensitive, true);
+    assert.equal(page._installRows.get('pnc-distilbert').activatable, false);
+    assert.equal(page._installChecks.get('pnc-distilbert').opacity, 0);
+    page._selectModel('pnc-distilbert');
+    assert.equal(page.values['pnc-variant'], 'bert');
+    assert.deepEqual(page.calls, []);
 });

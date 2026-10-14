@@ -50,7 +50,6 @@ export function createPreview(schemaDirectory, scenario = 'ready', width = 680) 
         {name: 'MX Brio Analog Stereo', selector: 'usb-microphone', is_default: true},
     ];
     function refresh() {
-        page._rebuildProfileOptions();
         page._rebuildProfileRows();
         page._syncFromConfig(config());
         page._refreshInputDevices();
