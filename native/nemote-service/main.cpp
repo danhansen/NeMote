@@ -324,11 +324,22 @@ public:
     }
     void ensure_shortcuts() {
         if (shortcuts) return;
-        shortcuts = std::make_shared<PortalShortcuts>(bus, [this] { changed(); },
+        shortcuts = std::make_shared<PortalShortcuts>(bus, [this] {
+            if (shortcuts->setup_completed && !config.at("shortcut_portal_configured").get<bool>()) {
+                auto next = config;
+                next["shortcut_portal_configured"] = true;
+                try { persist(next); config = std::move(next); }
+                catch (const std::exception& error) {
+                    shortcuts->error = std::string("Could not save shortcut setup: ") + error.what();
+                }
+            }
+            changed();
+        },
             [this](bool active) {
                 try { shortcut_event(active); }
                 catch (const std::exception& error) { fail(error.what()); }
             });
+        shortcuts->setup_completed = config.at("shortcut_portal_configured").get<bool>();
         shortcuts->start();
     }
     Json profiles() const {

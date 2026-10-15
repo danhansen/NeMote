@@ -131,6 +131,7 @@ class PortalShortcuts : public std::enable_shared_from_this<PortalShortcuts> {
         auto token = request_token([this, edit_after_restore](GVariant* results) {
             read_shortcuts(results);
             bound_ = true;
+            setup_completed = true;
             busy_ = false;
             configure_requested_ = false;
             status = "ready";
@@ -155,9 +156,11 @@ class PortalShortcuts : public std::enable_shared_from_this<PortalShortcuts> {
             session_ = handle;
             auto token = request_token([this](GVariant* results) {
                 read_shortcuts(results);
-                // Restore an existing assignment silently. First-time setup is
-                // deliberately deferred until the user clicks Configure.
-                if (!description.empty() || configure_requested_)
+                // GNOME may list only this session's bindings, not persisted
+                // assignments. Remember successful setup and bind each fresh
+                // session; GNOME owns and restores the actual key combination.
+                // First-time setup still waits for an explicit Configure click.
+                if (setup_completed || !description.empty() || configure_requested_)
                     bind(configure_requested_ && !description.empty());
                 else { busy_ = false; status = "not-configured"; notify(); }
             });
@@ -220,6 +223,7 @@ class PortalShortcuts : public std::enable_shared_from_this<PortalShortcuts> {
             g_variant_new("(s@a{sv})", "dev.nemote.Service", options()), discover);
     }
 public:
+    bool setup_completed = false;
     std::string status = "unavailable", description, error, hint;
     PortalShortcuts(GDBusConnection* bus, std::function<void()> changed, std::function<void(bool)> activation)
         : bus_(G_DBUS_CONNECTION(g_object_ref(bus))), changed_(std::move(changed)), activation_(std::move(activation)) {}

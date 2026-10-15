@@ -31,6 +31,10 @@ The native service owns a Global Shortcuts portal session. It registers its
 connection as `dev.nemote.Service` through the host Registry API, using the
 installed desktop entry for identity. First-time binding is user-initiated;
 existing portal assignments are restored after service or portal restarts.
+The service persists only a `shortcut_portal_configured` setup flag, not the
+key combination. After successful setup, every new session calls `BindShortcuts`
+even if `ListShortcuts` is empty (as it is on GNOME before binding). Upgrades
+from versions before 0.1.40 may need one final Configure click to record this flag.
 Preferences delegates editing to the portal's `ConfigureShortcuts` UI on v2.
 On v1, initial setup still uses `BindShortcuts`; later edits open
 `gnome-control-center applications dev.nemote.Service` without unbinding the

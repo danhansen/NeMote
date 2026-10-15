@@ -26,7 +26,7 @@ inline Json defaults(const fs::path& prefix, const fs::path& data_home) {
         models = data_home / "wordpipe/models";
     return {{"backend", "nemo-speech"}, {"model_profile", "nemo-q8"}, {"model_family", "english"},
         {"streaming_latency_ms", 560u}, {"input_device", ""}, {"language", "en-US"},
-        {"shortcut", "<Control><Alt>space"}, {"model_root", models.string()},
+        {"shortcut", "<Control><Alt>space"}, {"shortcut_portal_configured", false}, {"model_root", models.string()},
         {"worker_path", (prefix / "bin/nemote-nemo-worker").string()},
         {"model_installer_path", (prefix / "bin/nemote-model-install").string()},
         {"sample_rate", 16000u}, {"num_threads", 2u}, {"spoken_punctuation", true}, {"itn", false},

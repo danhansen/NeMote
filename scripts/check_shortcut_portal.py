@@ -33,6 +33,7 @@ class Portal:
         self.bus = bus
         self.description = ""
         self.session = ""
+        self.bound = False
         self.cancel = False
         self.calls = []
         self.version = 2
@@ -73,6 +74,7 @@ class Portal:
         handle = f"{PATH}/request/{peer}/{options['handle_token']}"
         results = {}
         if name == "CreateSession":
+            self.bound = False
             self.session = f"{PATH}/session/{peer}/{options['session_handle_token']}"
             close_xml = '<node><interface name="org.freedesktop.portal.Session"><method name="Close"/></interface></node>'
             info = Gio.DBusNodeInfo.new_for_xml(close_xml).interfaces[0]
@@ -83,8 +85,11 @@ class Portal:
             assert args[0] == self.session
             if name == "BindShortcuts" and not self.cancel:
                 assert args[1][0][0] == "dictation"
+                self.bound = True
                 self.description = self.description or "Ctrl+Alt+Space"
-            results["shortcuts"] = GLib.Variant("a(sa{sv})", self.shortcuts())
+            # GNOME lists only bindings in this session, even if Settings has
+            # retained an assignment from a previous login.
+            results["shortcuts"] = GLib.Variant("a(sa{sv})", self.shortcuts() if self.bound else [])
         code = 1 if name == "BindShortcuts" and self.cancel else 0
         self.cancel = False
         # Deliberately emit before replying: clients must subscribe beforehand.
@@ -161,9 +166,11 @@ def main():
             portal.cancel = True
             call("ConfigureShortcut")
             wait(lambda state: state["shortcut_status"] == "error")
+            assert not json.loads(config.read_text()).get("shortcut_portal_configured", False)
             call("ConfigureShortcut")
             wait(lambda state: state["shortcut_status"] == "ready")
             assert portal.calls.count("Register") == 1, "Retry must reuse registered identity"
+            assert json.loads(config.read_text())["shortcut_portal_configured"]
             call("ConfigureShortcut")
             if portal.version == 2:
                 wait(lambda state: state["shortcut_description"] == "Super+D")
@@ -228,6 +235,24 @@ def main():
             wait(lambda state: state["shortcut_status"] == "error")
             call("ConfigureShortcut")
             wait(lambda state: state["shortcut_status"] == "ready")
+            portal.release()
+            wait(lambda state: state["shortcut_status"] == "unavailable")
+            # A new process must restore the saved binding without Configure.
+            call("Shutdown")
+            assert process.wait(timeout=5) == 0
+            process.stderr.close()
+            portal.own()
+            calls_before = len(portal.calls)
+            process = subprocess.Popen([str(args.service), "--config", str(config)], env=env, stderr=subprocess.PIPE, text=True)
+            wait(lambda state: True)
+            call("RegisterShellClient")
+            wait(lambda state: state["shortcut_status"] == "ready")
+            assert portal.calls[calls_before:] == ["Register", "CreateSession", "ListShortcuts", "BindShortcuts"]
+            portal.key(True)
+            wait(lambda state: state["listening"])
+            portal.key(False)
+            call("Stop")
+            wait(lambda state: not state["listening"] and not state["stopping"])
             portal.release()
             wait(lambda state: state["shortcut_status"] == "unavailable")
             portal.version = 0
